@@ -43,8 +43,6 @@ import SeoHead from './components/SeoHead';
 import { slugify } from './utils/slugify';
 import { trackAddToCart } from './utils/analytics';
 import FloatingContactButton from './components/FloatingContactButton';
-import CurrencyModal from './components/CurrencyModal';
-import ConsultationBanner from './components/ConsultationBanner';
 
 const CART_STORAGE_KEY = 'tesla-parts-cart';
 
@@ -671,19 +669,6 @@ const App: React.FC = () => {
       <FloatingContactButton
         isOpen={isDrawerOpen}
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-      />
-
-      {/* Consultation Floating Banner */}
-      <ConsultationBanner
-        phoneNumber={contactInfo.phone}
-        telegram={socialLinks.telegram}
-        viber={socialLinks.viber}
-      />
-
-      {/* Currency Modal (asks on first visit) */}
-      <CurrencyModal
-        currentCurrency={currency}
-        onSelectCurrency={setCurrency}
       />
 
       <CartDrawer
