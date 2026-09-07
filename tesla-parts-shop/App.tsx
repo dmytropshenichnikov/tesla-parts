@@ -210,6 +210,7 @@ const App: React.FC = () => {
   // Cart & Settings
   const [cart, setCart] = useState<CartItem[]>(() => getInitialCart());
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [uahPerUsd, setUahPerUsd] = useState(DEFAULT_EXCHANGE_RATE_UAH_PER_USD);
   const [socialLinks, setSocialLinks] = useState({
@@ -485,6 +486,9 @@ const App: React.FC = () => {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         headerPages={headerPages}
+        isDrawerOpen={isDrawerOpen}
+        onOpenDrawer={() => setIsDrawerOpen(true)}
+        onCloseDrawer={() => setIsDrawerOpen(false)}
       />
 
       <main className="flex-grow container mx-auto px-4 py-8">
@@ -663,13 +667,10 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating Quick Action / Menu Button */}
+      {/* Floating Animated Quick Menu Trigger Button */}
       <FloatingContactButton
-        phoneNumber={contactInfo.phone}
-        telegram={socialLinks.telegram}
-        viber={socialLinks.viber}
-        currency={currency}
-        onSelectCurrency={setCurrency}
+        isOpen={isDrawerOpen}
+        onClick={() => setIsDrawerOpen(!isDrawerOpen)}
       />
 
       {/* Consultation Floating Banner */}

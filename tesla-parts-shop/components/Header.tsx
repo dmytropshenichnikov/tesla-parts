@@ -36,6 +36,9 @@ interface HeaderProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   headerPages: Page[];
+  isDrawerOpen?: boolean;
+  onOpenDrawer?: () => void;
+  onCloseDrawer?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -52,10 +55,16 @@ const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchQueryChange,
   headerPages,
+  isDrawerOpen: propIsDrawerOpen,
+  onOpenDrawer,
+  onCloseDrawer,
 }) => {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [localDrawerOpen, setLocalDrawerOpen] = useState(false);
+  const isDrawerOpen = propIsDrawerOpen !== undefined ? propIsDrawerOpen : localDrawerOpen;
+  const handleOpenDrawer = onOpenDrawer || (() => setLocalDrawerOpen(true));
+  const handleCloseDrawer = onCloseDrawer || (() => setLocalDrawerOpen(false));
 
   // Дропдаун для десктопа (коли категорій > 4)
   const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
@@ -349,7 +358,7 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Menu Drawer Button (Hamburger) */}
             <button
-              onClick={() => setIsMobileDrawerOpen(true)}
+              onClick={handleOpenDrawer}
               className="md:hidden p-1.5 text-gray-800 hover:text-tesla-red rounded-lg hover:bg-gray-100 transition"
               aria-label="Відкрити меню"
             >
@@ -402,13 +411,13 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Slide-over Mobile Drawer */}
-      {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end md:hidden">
+      {/* Slide-over Mobile & Quick Menu Drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsMobileDrawerOpen(false)}
+            onClick={handleCloseDrawer}
           />
 
           {/* Drawer Content */}
@@ -436,7 +445,7 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
 
                   <button
-                    onClick={() => setIsMobileDrawerOpen(false)}
+                    onClick={handleCloseDrawer}
                     className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition"
                     aria-label="Закрити меню"
                   >
@@ -453,7 +462,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 <Link
                   to="/reviews"
-                  onClick={() => setIsMobileDrawerOpen(false)}
+                  onClick={handleCloseDrawer}
                   className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-red-50/50 rounded-xl transition group mb-1"
                 >
                   <span className="flex items-center gap-2">
@@ -469,7 +478,7 @@ const Header: React.FC<HeaderProps> = ({
                     <Link
                       key={page.slug}
                       to={`/info/${page.slug}`}
-                      onClick={() => setIsMobileDrawerOpen(false)}
+                      onClick={handleCloseDrawer}
                       className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-950 hover:bg-gray-50 rounded-xl transition group"
                     >
                       <span>{page.title}</span>
@@ -481,7 +490,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 <Link
                   to="/profile"
-                  onClick={() => setIsMobileDrawerOpen(false)}
+                  onClick={handleCloseDrawer}
                   className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition group"
                 >
                   <span className="flex items-center gap-2.5">
