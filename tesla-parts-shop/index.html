@@ -93,21 +93,7 @@
           font-size: 16px !important;
         }
       }
-      /* Smooth fluid entrance for route and content transitions */
-      @keyframes pageFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(6px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .page-transition {
-        animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        will-change: opacity, transform;
-      }
+
       /* Smooth slide-in for right-side drawers (Cart & Menu) */
       @keyframes drawerSlideIn {
         from {
@@ -240,21 +226,7 @@
       .animate-backdrop-fade-out {
         animation: backdropFadeOut 0.24s ease-out forwards;
       }
-      /* Staggered cascading item entrance */
-      @keyframes cascadeFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      .animate-cascade-item {
-        animation: cascadeFadeIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        will-change: opacity, transform;
-      }
+
     </style>
     <script type="importmap">
       {

@@ -212,7 +212,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto page-transition pb-12">
+    <div className="max-w-6xl mx-auto pb-12">
       <SeoHead
         title={product.meta_title || product.name}
         description={product.meta_description}

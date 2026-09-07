@@ -496,8 +496,7 @@ const App: React.FC = () => {
       />
 
       <main className="flex-grow container mx-auto px-4 py-8">
-        <div key={location.pathname} className="page-transition">
-          <Routes>
+        <Routes>
             <Route
               path="/"
               element={
@@ -571,7 +570,6 @@ const App: React.FC = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
       </main>
 
       {/* ОНОВЛЕНИЙ ФУТЕР З ПОСИЛАННЯМИ (LINKS) ДЛЯ SEO */}
@@ -860,7 +858,7 @@ const SearchView: React.FC<SearchViewProps> = ({
   const fallbackTitle = `Пошук: ${normalizedQuery} | Tesla Parts Center`;
   const fallbackDescription = `Результати пошуку "${normalizedQuery}" у Tesla Parts Center. Знайдіть сумісні запчастини для свого авто.`;
   return (
-    <div className="mt-4 sm:mt-6 page-transition">
+    <div className="mt-4 sm:mt-6">
       <SeoHead
         title={seoRecord?.meta_title}
         description={seoRecord?.meta_description}
@@ -1103,7 +1101,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
   const loading = loadingProducts || loadingCategory;
 
   return (
-    <div className="mt-8 page-transition" key={`${categorySlug}-${selectedSubcategory || 'root'}`}>
+    <div className="mt-8">
       <SeoHead
         title={category.meta_title}
         description={category.meta_description}
@@ -1140,12 +1138,8 @@ const CategoryView: React.FC<CategoryViewProps> = ({
 
       {subcategoriesToShow.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
-          {subcategoriesToShow.map((sub, idx) => (
-            <div
-              key={sub.id}
-              className="animate-cascade-item"
-              style={{ animationDelay: `${Math.min(idx * 40, 480)}ms` }}
-            >
+          {subcategoriesToShow.map((sub) => (
+            <div key={sub.id}>
               <SubcategoryCard
                 subcategory={sub}
                 to={`/category/${categorySlug}/sub/${sub.id}`}

@@ -301,13 +301,12 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 {isDesktopDropdownOpen && (
                   <div className="absolute left-0 top-full mt-2 w-52 bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    {sortedCategories.slice(4).map((cat, idx) => (
+                    {sortedCategories.slice(4).map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsDesktopDropdownOpen(false)}
-                        style={{ animationDelay: `${idx * 40}ms` }}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition-all hover:translate-x-1 duration-150 animate-cascade-item"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition-all hover:translate-x-1 duration-150"
                       >
                         {cat.name}
                       </Link>
@@ -336,20 +335,17 @@ const Header: React.FC<HeaderProps> = ({
               </button>
 
               {isMobileCategoryOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200">
                   <div className="py-1 max-h-80 overflow-y-auto">
                     <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
                       Категорії запчастин
                     </div>
-                    {sortedCategories.map((cat, idx) => (
+                    {sortedCategories.map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsMobileCategoryOpen(false)}
-                        style={{
-                          animationDelay: `${idx * 45}ms`,
-                        }}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1.5 duration-150 animate-cascade-item"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1.5 duration-150"
                       >
                         {cat.name}
                       </Link>

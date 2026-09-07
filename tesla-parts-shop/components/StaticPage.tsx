@@ -67,7 +67,7 @@ const StaticPage: React.FC<StaticPageProps> = ({ slug, seo }) => {
         : trimmedContent;
 
   return (
-    <div className="py-12 max-w-2xl mx-auto page-transition">
+    <div className="py-12 max-w-2xl mx-auto">
       <SeoHead
         title={seo?.meta_title}
         description={seo?.meta_description}

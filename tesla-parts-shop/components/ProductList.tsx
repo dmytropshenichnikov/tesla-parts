@@ -108,10 +108,9 @@ const ProductList: React.FC<ProductListProps> = ({
             <Link
               key={product.id}
               to={`/product/${product.id}`}
-              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden animate-cascade-item"
+              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
               style={{
                 WebkitTapHighlightColor: 'transparent',
-                animationDelay: `${Math.min(index * 35, 450)}ms`,
               }}
             >
               {/* Product Photo & Stock Badge */}

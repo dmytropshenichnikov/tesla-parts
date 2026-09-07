@@ -83,8 +83,7 @@ export const ReviewsPage: React.FC = () => {
             {reviews.map((review, index) => (
               <div
                 key={review.id}
-                className="break-inside-avoid bg-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer animate-cascade-item"
-                style={{ animationDelay: `${Math.min(index * 45, 600)}ms` }}
+                className="break-inside-avoid bg-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => openImage(index)}
               >
                 <img
