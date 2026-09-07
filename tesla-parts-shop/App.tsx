@@ -35,7 +35,7 @@ import {
   Page,
 } from './types';
 import { api } from './services/api';
-import { CheckCircle, Instagram, Send, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Instagram, Send, ArrowLeft, X, Search } from 'lucide-react';
 import TeslaPartsCenterLogo from './components/ShopLogo';
 import ViberIcon from './components/ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
@@ -519,6 +519,7 @@ const App: React.FC = () => {
                   addToCart={addToCart}
                   searchQuery={searchQuery}
                   seoRecord={staticSeo['search']}
+                  onClearSearch={() => setSearchQuery('')}
                 />
               }
             />
@@ -811,6 +812,7 @@ interface SearchViewProps {
   addToCart: (product: Product) => void;
   searchQuery: string;
   seoRecord?: StaticSeoRecord;
+  onClearSearch?: () => void;
 }
 
 const SearchView: React.FC<SearchViewProps> = ({
@@ -819,9 +821,18 @@ const SearchView: React.FC<SearchViewProps> = ({
   addToCart,
   searchQuery,
   seoRecord,
+  onClearSearch,
 }) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleClearAndReturn = () => {
+    if (onClearSearch) {
+      onClearSearch();
+    }
+    navigate('/');
+  };
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -849,27 +860,68 @@ const SearchView: React.FC<SearchViewProps> = ({
   const fallbackTitle = `Пошук: ${normalizedQuery} | Tesla Parts Center`;
   const fallbackDescription = `Результати пошуку "${normalizedQuery}" у Tesla Parts Center. Знайдіть сумісні запчастини для свого авто.`;
   return (
-    <div className="mt-8">
+    <div className="mt-4 sm:mt-6 page-transition">
       <SeoHead
         title={seoRecord?.meta_title}
         description={seoRecord?.meta_description}
         fallbackTitle={fallbackTitle}
         fallbackDescription={fallbackDescription}
       />
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">
-          Результати пошуку: "{searchQuery}"
-        </h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleClearAndReturn}
+            className="p-2 -ml-2 text-gray-500 hover:text-tesla-red hover:bg-gray-100 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer"
+            title="Назад до каталогу"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <span>Результати пошуку:</span>
+            <span className="text-tesla-red font-extrabold">"{searchQuery}"</span>
+          </h1>
+          {!loading && (
+            <span className="text-xs sm:text-sm font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+              Знайдено: {products.length}
+            </span>
+          )}
+        </div>
+
+        <button
+          onClick={handleClearAndReturn}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-red-50 hover:text-tesla-red text-gray-700 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95 cursor-pointer group border border-transparent hover:border-tesla-red/20 shadow-xs"
+        >
+          <X size={16} className="text-gray-500 group-hover:text-tesla-red transition-transform group-hover:rotate-90 duration-200" />
+          <span>Закрити пошук</span>
+        </button>
       </div>
+
       {loading ? (
         <LoadingSpinner />
-      ) : (
+      ) : products.length > 0 ? (
         <ProductList
           products={products}
           currency={currency}
           uahPerUsd={uahPerUsd}
           onAddToCart={addToCart}
         />
+      ) : (
+        <div className="text-center py-16 px-4 bg-white rounded-2xl border border-gray-100 shadow-xs max-w-lg mx-auto my-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+            <Search size={30} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Нічого не знайдено</h3>
+          <p className="text-gray-500 text-sm mb-6">
+            За запитом "{searchQuery}" товарів не знайдено. Перевірте номер деталі або скористайтеся каталогом.
+          </p>
+          <button
+            onClick={handleClearAndReturn}
+            className="inline-flex items-center gap-2 bg-tesla-red hover:bg-red-700 text-white px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200 active:scale-95 cursor-pointer shadow-md"
+          >
+            <ArrowLeft size={16} />
+            <span>Повернутися до каталогу</span>
+          </button>
+        </div>
       )}
     </div>
   );

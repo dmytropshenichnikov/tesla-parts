@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Category, Currency, Page } from '../types';
 import TeslaPartsCenterLogo from './ShopLogo';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/currency';
 import { slugify } from '../utils/slugify';
 import ViberIcon from './ViberIcon';
@@ -60,6 +60,9 @@ const Header: React.FC<HeaderProps> = ({
   onOpenDrawer,
   onCloseDrawer,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
 
@@ -68,13 +71,19 @@ const Header: React.FC<HeaderProps> = ({
     setIsMobileSearchOpen(true);
   };
 
-  const handleCloseMobileSearch = () => {
+  const handleCloseMobileSearch = (shouldClearQuery = false) => {
     if (isMobileSearchClosing) return;
     setIsMobileSearchClosing(true);
     setTimeout(() => {
       setIsMobileSearchOpen(false);
       setIsMobileSearchClosing(false);
-    }, 220);
+      if (shouldClearQuery || location.pathname === '/search') {
+        onSearchQueryChange('');
+        if (location.pathname === '/search') {
+          navigate('/');
+        }
+      }
+    }, 280);
   };
 
   const [localDrawerOpen, setLocalDrawerOpen] = useState(false);
@@ -358,7 +367,7 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук деталей..."
-                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
+                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 pr-8 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                 />
@@ -366,6 +375,22 @@ const Header: React.FC<HeaderProps> = ({
                   className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-tesla-red transition-colors duration-200"
                   size={18}
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSearchChange('');
+                      if (location.pathname === '/search') {
+                        navigate('/');
+                      }
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 bg-gray-200/70 hover:bg-gray-300 rounded-full transition-all duration-150 cursor-pointer active:scale-90"
+                    title="Очистити пошук"
+                    aria-label="Очистити пошук"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
             </form>
 
@@ -428,21 +453,21 @@ const Header: React.FC<HeaderProps> = ({
         {isMobileSearchOpen && (
           <div
             className={`md:hidden absolute top-0 left-0 w-full h-full bg-white/95 backdrop-blur-md z-30 flex items-center px-4 shadow-md border-b border-gray-100 ${
-              isMobileSearchClosing ? 'animate-backdrop-fade-out' : 'animate-search-reveal'
+              isMobileSearchClosing ? 'animate-search-wave-dismiss' : 'animate-search-wave'
             }`}
           >
             <form
               onSubmit={(e) => {
                 handleSearchSubmit(e);
-                handleCloseMobileSearch();
+                handleCloseMobileSearch(false);
               }}
               className="flex items-center gap-2 w-full"
             >
-              <div className="relative flex-grow overflow-hidden">
+              <div className="relative flex-grow animate-input-wave-fluid">
                 <input
                   type="text"
                   placeholder="Пошук запчастин..."
-                  className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-2 focus:ring-tesla-red/20 transition-colors shadow-inner"
+                  className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 pr-9 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-2 focus:ring-tesla-red/20 transition-colors shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus
@@ -451,10 +476,26 @@ const Header: React.FC<HeaderProps> = ({
                   className="absolute left-3 top-3 text-tesla-red"
                   size={18}
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSearchChange('');
+                      if (location.pathname === '/search') {
+                        navigate('/');
+                      }
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 bg-gray-200/80 hover:bg-gray-300 rounded-full transition-all duration-150 cursor-pointer active:scale-90"
+                    title="Очистити поле"
+                    aria-label="Очистити поле"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
               <button
                 type="button"
-                onClick={handleCloseMobileSearch}
+                onClick={() => handleCloseMobileSearch(true)}
                 className="text-gray-500 hover:text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition-all duration-200 active:scale-85 hover:rotate-90 cursor-pointer"
                 aria-label="Закрити пошук"
               >

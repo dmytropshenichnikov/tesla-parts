@@ -133,6 +133,60 @@
       .animate-backdrop-fade {
         animation: backdropFadeIn 0.22s ease-out forwards;
       }
+      /* Liquid wave expansion for mobile search */
+      @keyframes searchWaveReveal {
+        0% {
+          opacity: 0;
+          clip-path: circle(0% at calc(100% - 85px) 50%);
+        }
+        25% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 1;
+          clip-path: circle(150% at calc(100% - 85px) 50%);
+        }
+      }
+      @keyframes searchWaveDismiss {
+        0% {
+          opacity: 1;
+          clip-path: circle(150% at calc(100% - 24px) 50%);
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          clip-path: circle(0% at calc(100% - 24px) 50%);
+        }
+      }
+      .animate-search-wave {
+        animation: searchWaveReveal 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: clip-path, opacity;
+      }
+      .animate-search-wave-dismiss {
+        animation: searchWaveDismiss 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        will-change: clip-path, opacity;
+      }
+      /* Fluid bloom for input container inside search */
+      @keyframes inputWaveFluid {
+        0% {
+          opacity: 0;
+          transform: translateY(4px);
+          box-shadow: 0 0 0 0 rgba(232, 33, 39, 0.25);
+        }
+        50% {
+          box-shadow: 0 0 16px 2px rgba(232, 33, 39, 0.12);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+          box-shadow: 0 0 0 0 rgba(232, 33, 39, 0);
+        }
+      }
+      .animate-input-wave-fluid {
+        animation: inputWaveFluid 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
       /* Smooth reveal for mobile search overlay */
       @keyframes searchDrop {
         from {
