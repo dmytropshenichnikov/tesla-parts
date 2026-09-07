@@ -54,10 +54,12 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
   // Дропдаун для десктопа (коли категорій > 4)
   const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
 
-  // Дропдаун для мобільного/планшета (замість бургера)
+  // Дропдаун для мобільного/планшета
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
 
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
@@ -109,10 +111,10 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
-      {/* Top Row: Utilities & Info */}
-      <div className="bg-tesla-dark text-gray-300 text-xs py-1.5 px-3 sm:px-4 border-b border-gray-800">
+      {/* Top Row: Utilities & Info (Hidden on mobile, shown on desktop) */}
+      <div className="hidden md:block bg-tesla-dark text-gray-300 text-xs py-1.5 px-3 sm:px-4 border-b border-gray-800">
         <div className="container mx-auto flex items-center justify-between gap-2">
-          {/* Left on Mobile / Left on Desktop: Phone & Messengers */}
+          {/* Left on Desktop: Phone & Messengers */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {phoneNumber && (
               <a
@@ -203,69 +205,68 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Second Row: Main Nav, Logo, Cart */}
+      {/* Main Row: Logo, Nav, Actions */}
       <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
-          {/* Logo */}
+          {/* Logo (Clean & Roomy on Left) */}
           <TeslaPartsCenterLogo />
 
-          {/* === НАВІГАЦІЯ КАТЕГОРІЙ === */}
-          <div className="flex-1 max-w-2xl px-1 sm:px-4 md:px-8">
-            {/* 1. ВАРІАНТ ДЛЯ ВЕЛИКИХ ДЕСКТОПІВ (XL+) - Повний список */}
-            <div className="hidden xl:flex items-center gap-6 font-medium text-tesla-dark whitespace-nowrap">
-              {sortedCategories.slice(0, 4).map((cat) => (
-                <Link
-                  key={cat.id}
-                  to={`/category/${slugify(cat.name)}`}
-                  className="hover:text-tesla-red transition"
+          {/* Desktop Navigation (XL+) */}
+          <div className="hidden xl:flex items-center gap-6 font-medium text-tesla-dark whitespace-nowrap">
+            {sortedCategories.slice(0, 4).map((cat) => (
+              <Link
+                key={cat.id}
+                to={`/category/${slugify(cat.name)}`}
+                className="hover:text-tesla-red transition"
+              >
+                {cat.name}
+              </Link>
+            ))}
+            {sortedCategories.length > 4 && (
+              <div className="relative" ref={desktopDropdownRef}>
+                <button
+                  onClick={() =>
+                    setIsDesktopDropdownOpen(!isDesktopDropdownOpen)
+                  }
+                  className="flex items-center hover:text-tesla-red transition"
                 >
-                  {cat.name}
-                </Link>
-              ))}
-              {sortedCategories.length > 4 && (
-                <div className="relative" ref={desktopDropdownRef}>
-                  <button
-                    onClick={() =>
-                      setIsDesktopDropdownOpen(!isDesktopDropdownOpen)
-                    }
-                    className="flex items-center hover:text-tesla-red transition"
-                  >
-                    Усі категорії <ChevronDown size={16} className="ml-1" />
-                  </button>
-                  <div
-                    className={`absolute left-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md overflow-hidden z-10 ${isDesktopDropdownOpen ? 'block' : 'hidden'}`}
-                  >
-                    {sortedCategories.slice(4).map((cat) => (
-                      <Link
-                        key={cat.id}
-                        to={`/category/${slugify(cat.name)}`}
-                        onClick={() => setIsDesktopDropdownOpen(false)}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        {cat.name}
-                      </Link>
-                    ))}
-                  </div>
+                  Усі категорії <ChevronDown size={16} className="ml-1" />
+                </button>
+                <div
+                  className={`absolute left-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md overflow-hidden z-10 ${isDesktopDropdownOpen ? 'block' : 'hidden'}`}
+                >
+                  {sortedCategories.slice(4).map((cat) => (
+                    <Link
+                      key={cat.id}
+                      to={`/category/${slugify(cat.name)}`}
+                      onClick={() => setIsDesktopDropdownOpen(false)}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
-            {/* 2. ВАРІАНТ ДЛЯ МОБІЛЬНИХ/ПЛАНШЕТІВ (< XL) - Кнопка "Каталог" */}
+          {/* Right Actions Group: Catalog (Mobile), Search, Cart, Profile, Menu Drawer */}
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            {/* Catalog Button for Mobile / Tablet (Placed to the RIGHT, as requested) */}
             <div className="xl:hidden relative" ref={mobileCategoryRef}>
               <button
                 onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-lg border border-gray-200 shadow-xs"
+                className="flex items-center gap-1 font-bold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-xl border border-gray-200/80 shadow-xs"
               >
-                <Menu size={14} className="text-gray-600" />
                 <span>Каталог</span>
                 <ChevronDown size={13} className="text-gray-500" />
               </button>
 
-              {/* Випадаюче меню для мобілок (Каталог + Інформація) */}
+              {/* Mobile Categories Dropdown */}
               <div
-                className={`absolute left-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
+                className={`absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
               >
-                <div className="py-1 max-h-72 overflow-y-auto">
+                <div className="py-1 max-h-80 overflow-y-auto">
                   <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
                     Категорії запчастин
                   </div>
@@ -280,38 +281,9 @@ const Header: React.FC<HeaderProps> = ({
                     </Link>
                   ))}
                 </div>
-
-                {/* Інформаційні сторінки магазину */}
-                <div className="border-t border-gray-100 bg-gray-50/80 py-2">
-                  <div className="px-4 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                    Інформація
-                  </div>
-                  <Link
-                    to="/reviews"
-                    onClick={() => setIsMobileCategoryOpen(false)}
-                    className="block px-4 py-2 text-xs text-gray-700 hover:text-tesla-red font-medium transition-colors"
-                  >
-                    ⭐ Відгуки про магазин
-                  </Link>
-                  {headerPages
-                    .filter((page) => page.is_published)
-                    .map((page) => (
-                      <Link
-                        key={page.slug}
-                        to={`/info/${page.slug}`}
-                        onClick={() => setIsMobileCategoryOpen(false)}
-                        className="block px-4 py-1.5 text-xs text-gray-600 hover:text-tesla-red transition-colors"
-                      >
-                        {page.title}
-                      </Link>
-                    ))}
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions: Search, Cart, Profile, Checkout */}
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Desktop Search Bar */}
             <form
               onSubmit={handleSearchSubmit}
@@ -341,13 +313,13 @@ const Header: React.FC<HeaderProps> = ({
               <Search size={20} />
             </button>
 
-            {/* Profile */}
+            {/* Profile (Desktop) */}
             <Link
               to="/profile"
-              className="text-tesla-dark hover:text-tesla-red p-1.5 rounded-full hover:bg-gray-100 transition"
+              className="hidden sm:flex text-tesla-dark hover:text-tesla-red p-1.5 rounded-full hover:bg-gray-100 transition"
               title="Особистий кабінет"
             >
-              <User size={20} className="sm:w-6 sm:h-6" />
+              <User size={20} />
             </Link>
 
             {/* Cart */}
@@ -374,7 +346,16 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Checkout */}
+            {/* Mobile Menu Drawer Button (Hamburger) */}
+            <button
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="md:hidden p-1.5 text-gray-800 hover:text-tesla-red rounded-lg hover:bg-gray-100 transition"
+              aria-label="Відкрити меню"
+            >
+              <Menu size={22} />
+            </button>
+
+            {/* Checkout (Desktop) */}
             <Link
               to="/checkout"
               className="hidden sm:block bg-tesla-red hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition text-sm shadow-sm whitespace-nowrap"
@@ -397,8 +378,8 @@ const Header: React.FC<HeaderProps> = ({
               <div className="relative flex-grow">
                 <input
                   type="text"
-                  placeholder="Пошук..."
-                  className="w-full bg-gray-100 rounded-lg py-3 px-4 pl-10"
+                  placeholder="Пошук запчастин..."
+                  className="w-full bg-gray-100 rounded-lg py-3 px-4 pl-10 text-sm"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus
@@ -411,16 +392,143 @@ const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="text-tesla-dark"
+                className="text-tesla-dark p-2"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </form>
           </div>
         )}
       </div>
+
+      {/* Slide-over Mobile Drawer */}
+      {isMobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end md:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+
+          {/* Drawer Content */}
+          <div className="relative w-full max-w-[290px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div>
+              {/* Header inside drawer */}
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <TeslaPartsCenterLogo />
+                <button
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="p-1.5 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition"
+                  aria-label="Закрити меню"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+
+              {/* Direct Call Button */}
+              {phoneNumber && (
+                <div className="mt-4">
+                  <a
+                    href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition"
+                  >
+                    <Phone size={16} />
+                    <span>{phoneNumber}</span>
+                  </a>
+                </div>
+              )}
+
+              {/* Messengers */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {socialLinks.telegram && (
+                  <a
+                    href={socialLinks.telegram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#229ED9] hover:bg-[#1e8cc1] text-white text-xs font-semibold shadow-xs transition"
+                  >
+                    <Send size={14} />
+                    <span>Telegram</span>
+                  </a>
+                )}
+                {socialLinks.viber && (
+                  <a
+                    href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#7360F2] hover:bg-[#6250e0] text-white text-xs font-semibold shadow-xs transition"
+                  >
+                    <ViberIcon size={14} color="white" />
+                    <span>Viber</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Currency Selector */}
+              <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Валюта цін
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.values(Currency).map((cur) => (
+                    <button
+                      key={cur}
+                      onClick={() => setCurrency(cur)}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition ${
+                        currency === cur
+                          ? 'bg-tesla-red text-white shadow-xs'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {cur === Currency.UAH ? '₴ UAH' : '$ USD'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation Links */}
+              <div className="mt-5 flex flex-col gap-1">
+                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
+                  Навігація
+                </div>
+                <Link
+                  to="/reviews"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 rounded-xl transition"
+                >
+                  ⭐ Відгуки про магазин
+                </Link>
+                {headerPages
+                  .filter((page) => page.is_published)
+                  .map((page) => (
+                    <Link
+                      key={page.slug}
+                      to={`/info/${page.slug}`}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition"
+                    >
+                      {page.title}
+                    </Link>
+                  ))}
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition flex items-center gap-2"
+                >
+                  <User size={16} />
+                  <span>Особистий кабінет</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Footer / Copyright */}
+            <div className="pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
+              TESLA PARTS CENTER &copy; {new Date().getFullYear()}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
-
 export default Header;

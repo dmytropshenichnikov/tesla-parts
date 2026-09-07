@@ -140,7 +140,7 @@ const ProductList: React.FC<ProductListProps> = ({
                 <div>
                   {/* Car Models Tags */}
                   {models.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1.5">
+                    <div className="flex flex-wrap gap-1 mb-2">
                       {models.map((model, idx) => (
                         <span
                           key={idx}
@@ -152,31 +152,34 @@ const ProductList: React.FC<ProductListProps> = ({
                     </div>
                   )}
 
-                  {/* Part Numbers & Cross Block */}
-                  <div className="flex items-center justify-between gap-1.5 mb-2 text-[11px]">
-                    {product.detail_number ? (
-                      <span
-                        className="font-mono text-[10px] font-bold text-tesla-red bg-red-50 border border-red-100/80 px-1.5 py-0.5 rounded flex-shrink-0"
-                        title={`Артикул: ${product.detail_number}`}
-                      >
-                        #{product.detail_number}
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-                    {crossNumbers.length > 0 && (
-                      <span className="text-[10px] font-mono text-gray-400 truncate" title={`Аналоги: ${crossNumbers.join(', ')}`}>
-                        Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
-                      </span>
-                    )}
-                  </div>
-
                   {/* Full Product Title (No truncation, no horizontal cutting) */}
                   <h3
-                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors"
+                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors mb-2"
                   >
                     {cleanName}
                   </h3>
+
+                  {/* Part Numbers & Cross Block (Placed under title with subtle neutral styling) */}
+                  {(product.detail_number || crossNumbers.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1 text-[11px]">
+                      {product.detail_number && (
+                        <span
+                          className="font-mono text-[10px] sm:text-[11px] font-medium text-gray-700 bg-gray-100 border border-gray-200/80 px-1.5 py-0.5 rounded flex-shrink-0"
+                          title={`Оригінальний номер: ${product.detail_number}`}
+                        >
+                          #{product.detail_number}
+                        </span>
+                      )}
+                      {crossNumbers.length > 0 && (
+                        <span
+                          className="text-[10px] sm:text-[11px] font-mono text-gray-500 truncate"
+                          title={`Аналоги: ${crossNumbers.join(', ')}`}
+                        >
+                          Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Price & Action Button */}
