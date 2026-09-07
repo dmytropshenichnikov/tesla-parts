@@ -60,11 +60,8 @@ const Header: React.FC<HeaderProps> = ({
   // Дропдаун для мобільного/планшета (замість бургера)
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
 
-  const [isPagesDropdownOpen, setIsPagesDropdownOpen] = useState(false);
-
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
   const mobileCategoryRef = useRef<HTMLDivElement>(null);
-  const pagesDropdownRef = useRef<HTMLDivElement>(null);
 
   // Закриття при кліку зовні
   useEffect(() => {
@@ -80,12 +77,6 @@ const Header: React.FC<HeaderProps> = ({
         !mobileCategoryRef.current.contains(event.target as Node)
       ) {
         setIsMobileCategoryOpen(false);
-      }
-      if (
-        pagesDropdownRef.current &&
-        !pagesDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsPagesDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -190,49 +181,15 @@ const Header: React.FC<HeaderProps> = ({
               ))}
           </nav>
 
-          {/* Right: Info Dropdown (Mobile) + Currency Switcher */}
+          {/* Right: Currency Switcher */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Mobile Navigation Dropdown */}
-            <div className="relative md:hidden" ref={pagesDropdownRef}>
-              <button
-                onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
-                className="flex items-center gap-1 text-[11px] text-gray-300 hover:text-white transition py-0.5 px-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700/80 whitespace-nowrap"
-              >
-                <span>Інформація</span>
-                <ChevronDown size={12} className="text-gray-400" />
-              </button>
-              {isPagesDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-xl overflow-hidden z-50 border border-gray-100 text-gray-800 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <Link
-                    to="/reviews"
-                    onClick={() => setIsPagesDropdownOpen(false)}
-                    className="block w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-100 font-medium"
-                  >
-                    ⭐ Відгуки
-                  </Link>
-                  {headerPages
-                    .filter((page) => page.is_published)
-                    .map((page) => (
-                      <Link
-                        key={page.slug}
-                        to={`/info/${page.slug}`}
-                        onClick={() => setIsPagesDropdownOpen(false)}
-                        className="block w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-50 last:border-0 font-medium"
-                      >
-                        {page.title}
-                      </Link>
-                    ))}
-                </div>
-              )}
-            </div>
-
             {/* Currency Selector (Clean Segmented Control) */}
             <div className="flex items-center bg-gray-800/90 rounded-md p-0.5 border border-gray-700/80">
               {Object.values(Currency).map((cur) => (
                 <button
                   key={cur}
                   onClick={() => setCurrency(cur)}
-                  className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded transition ${
+                  className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded transition ${
                     currency === cur
                       ? 'bg-tesla-red text-white shadow-xs'
                       : 'text-gray-400 hover:text-gray-200'
@@ -304,20 +261,51 @@ const Header: React.FC<HeaderProps> = ({
                 <ChevronDown size={13} className="text-gray-500" />
               </button>
 
-              {/* Випадаюче меню для мобілок */}
+              {/* Випадаюче меню для мобілок (Каталог + Інформація) */}
               <div
-                className={`absolute left-0 top-full mt-2 w-56 bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100 z-30 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
+                className={`absolute left-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
               >
-                {sortedCategories.map((cat) => (
+                <div className="py-1 max-h-72 overflow-y-auto">
+                  <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
+                    Категорії запчастин
+                  </div>
+                  {sortedCategories.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      to={`/category/${slugify(cat.name)}`}
+                      onClick={() => setIsMobileCategoryOpen(false)}
+                      className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-colors"
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Інформаційні сторінки магазину */}
+                <div className="border-t border-gray-100 bg-gray-50/80 py-2">
+                  <div className="px-4 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    Інформація
+                  </div>
                   <Link
-                    key={cat.id}
-                    to={`/category/${slugify(cat.name)}`}
+                    to="/reviews"
                     onClick={() => setIsMobileCategoryOpen(false)}
-                    className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-50 last:border-0 font-medium"
+                    className="block px-4 py-2 text-xs text-gray-700 hover:text-tesla-red font-medium transition-colors"
                   >
-                    {cat.name}
+                    ⭐ Відгуки про магазин
                   </Link>
-                ))}
+                  {headerPages
+                    .filter((page) => page.is_published)
+                    .map((page) => (
+                      <Link
+                        key={page.slug}
+                        to={`/info/${page.slug}`}
+                        onClick={() => setIsMobileCategoryOpen(false)}
+                        className="block px-4 py-1.5 text-xs text-gray-600 hover:text-tesla-red transition-colors"
+                      >
+                        {page.title}
+                      </Link>
+                    ))}
+                </div>
               </div>
             </div>
           </div>

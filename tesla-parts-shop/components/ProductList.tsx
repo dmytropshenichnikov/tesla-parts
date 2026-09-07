@@ -138,36 +138,42 @@ const ProductList: React.FC<ProductListProps> = ({
               {/* Product Information */}
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  {/* Meta Row: Model tag + Part number */}
-                  <div className="flex items-center justify-between gap-1.5 mb-1.5 text-[11px]">
-                    {models.length > 0 ? (
-                      <span className="font-semibold text-gray-600 truncate max-w-[65%]" title={models.join(', ')}>
-                        {models.slice(0, 2).join(', ')}{models.length > 2 ? ` +${models.length - 2}` : ''}
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-gray-400">Tesla</span>
-                    )}
-                    {product.detail_number && (
+                  {/* Car Models Tags */}
+                  {models.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                      {models.map((model, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        >
+                          {model}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Part Numbers & Cross Block */}
+                  <div className="flex items-center justify-between gap-1.5 mb-2 text-[11px]">
+                    {product.detail_number ? (
                       <span
                         className="font-mono text-[10px] font-bold text-tesla-red bg-red-50 border border-red-100/80 px-1.5 py-0.5 rounded flex-shrink-0"
                         title={`Артикул: ${product.detail_number}`}
                       >
                         #{product.detail_number}
                       </span>
+                    ) : (
+                      <span />
+                    )}
+                    {crossNumbers.length > 0 && (
+                      <span className="text-[10px] font-mono text-gray-400 truncate" title={`Аналоги: ${crossNumbers.join(', ')}`}>
+                        Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
+                      </span>
                     )}
                   </div>
 
-                  {/* Cross numbers (if any) */}
-                  {crossNumbers.length > 0 && (
-                    <div className="text-[10px] font-mono text-gray-400 truncate mb-1" title={`Аналоги: ${crossNumbers.join(', ')}`}>
-                      Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
-                    </div>
-                  )}
-
-                  {/* Clean Title */}
+                  {/* Full Product Title (No truncation, no horizontal cutting) */}
                   <h3
-                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug line-clamp-2 h-[2.5rem] sm:h-[2.75rem] overflow-hidden group-hover:text-tesla-red transition-colors"
-                    title={cleanName}
+                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors"
                   >
                     {cleanName}
                   </h3>
