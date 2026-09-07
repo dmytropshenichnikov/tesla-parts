@@ -9,6 +9,7 @@ import {
   ChevronDown,
   User,
   Phone,
+  ChevronRight,
 } from 'lucide-react';
 import { Category, Currency, Page } from '../types';
 import TeslaPartsCenterLogo from './ShopLogo';
@@ -411,41 +412,124 @@ const Header: React.FC<HeaderProps> = ({
           />
 
           {/* Drawer Content */}
-          <div className="relative w-full max-w-[290px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-right duration-200">
+          <div className="relative w-full max-w-[310px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-right duration-200">
             <div>
-              {/* Header inside drawer */}
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              {/* Header inside drawer: Logo + Currency pill + Close */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
                 <TeslaPartsCenterLogo />
-                <button
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="p-1.5 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-100 transition"
-                  aria-label="Закрити меню"
-                >
-                  <X size={22} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Compact Currency Switcher */}
+                  <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200/60">
+                    {Object.values(Currency).map((cur) => (
+                      <button
+                        key={cur}
+                        onClick={() => setCurrency(cur)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition ${
+                          currency === cur
+                            ? 'bg-white text-gray-900 shadow-xs'
+                            : 'text-gray-500 hover:text-gray-800'
+                        }`}
+                      >
+                        {cur === Currency.UAH ? '₴ UAH' : '$ USD'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition"
+                    aria-label="Закрити меню"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
-              {/* Direct Call Button */}
-              {phoneNumber && (
-                <div className="mt-4">
-                  <a
-                    href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition"
-                  >
-                    <Phone size={16} />
-                    <span>{phoneNumber}</span>
-                  </a>
+              {/* Navigation Links */}
+              <div className="mt-4 flex flex-col">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                  Меню
                 </div>
+
+                <Link
+                  to="/reviews"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-red-50/50 rounded-xl transition group mb-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-amber-500">⭐</span>
+                    <span>Відгуки про магазин</span>
+                  </span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                </Link>
+
+                {headerPages
+                  .filter((page) => page.is_published)
+                  .map((page) => (
+                    <Link
+                      key={page.slug}
+                      to={`/info/${page.slug}`}
+                      onClick={() => setIsMobileDrawerOpen(false)}
+                      className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-950 hover:bg-gray-50 rounded-xl transition group"
+                    >
+                      <span>{page.title}</span>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    </Link>
+                  ))}
+
+                <div className="my-2 border-t border-gray-100" />
+
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition group"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <User size={16} className="text-gray-500" />
+                    <span>Особистий кабінет</span>
+                  </span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Bottom: Contacts & Support Card */}
+            <div className="pt-4 border-t border-gray-100 mt-6">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 px-1">
+                Контакти та консультація
+              </div>
+
+              {/* Direct Call Card */}
+              {phoneNumber && (
+                <a
+                  href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
+                  className="flex items-center justify-between p-3 rounded-xl bg-gray-950 hover:bg-black text-white transition group shadow-xs mb-2"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                      <Phone size={15} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-400 uppercase font-semibold">Телефон</div>
+                      <div className="text-xs sm:text-sm font-bold tracking-tight font-mono text-white">
+                        {phoneNumber}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    Подзвонити
+                  </span>
+                </a>
               )}
 
-              {/* Messengers */}
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              {/* Messengers Row */}
+              <div className="grid grid-cols-2 gap-2">
                 {socialLinks.telegram && (
                   <a
                     href={socialLinks.telegram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#229ED9] hover:bg-[#1e8cc1] text-white text-xs font-semibold shadow-xs transition"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#0088cc] border border-[#229ED9]/20 text-xs font-semibold transition shadow-2xs"
                   >
                     <Send size={14} />
                     <span>Telegram</span>
@@ -456,74 +540,18 @@ const Header: React.FC<HeaderProps> = ({
                     href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#7360F2] hover:bg-[#6250e0] text-white text-xs font-semibold shadow-xs transition"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-[#7360F2]/10 hover:bg-[#7360F2]/20 text-[#6250e0] border border-[#7360F2]/20 text-xs font-semibold transition shadow-2xs"
                   >
-                    <ViberIcon size={14} color="white" />
+                    <ViberIcon size={14} color="#6250e0" />
                     <span>Viber</span>
                   </a>
                 )}
               </div>
 
-              {/* Currency Selector */}
-              <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Валюта цін
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.values(Currency).map((cur) => (
-                    <button
-                      key={cur}
-                      onClick={() => setCurrency(cur)}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-bold transition ${
-                        currency === cur
-                          ? 'bg-tesla-red text-white shadow-xs'
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                      }`}
-                    >
-                      {cur === Currency.UAH ? '₴ UAH' : '$ USD'}
-                    </button>
-                  ))}
-                </div>
+              {/* Copyright */}
+              <div className="mt-4 text-center text-[11px] text-gray-400">
+                Tesla Parts Center &copy; {new Date().getFullYear()}
               </div>
-
-              {/* Navigation Links */}
-              <div className="mt-5 flex flex-col gap-1">
-                <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
-                  Навігація
-                </div>
-                <Link
-                  to="/reviews"
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 rounded-xl transition"
-                >
-                  ⭐ Відгуки про магазин
-                </Link>
-                {headerPages
-                  .filter((page) => page.is_published)
-                  .map((page) => (
-                    <Link
-                      key={page.slug}
-                      to={`/info/${page.slug}`}
-                      onClick={() => setIsMobileDrawerOpen(false)}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition"
-                    >
-                      {page.title}
-                    </Link>
-                  ))}
-                <Link
-                  to="/profile"
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition flex items-center gap-2"
-                >
-                  <User size={16} />
-                  <span>Особистий кабінет</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Footer / Copyright */}
-            <div className="pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
-              TESLA PARTS CENTER &copy; {new Date().getFullYear()}
             </div>
           </div>
         </div>
