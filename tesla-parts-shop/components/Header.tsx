@@ -442,9 +442,7 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук запчастин..."
-                  className={`w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-3 focus:ring-tesla-red/15 transition-all ${
-                    isMobileSearchClosing ? 'animate-input-collapse' : 'animate-input-expand'
-                  }`}
+                  className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-2 focus:ring-tesla-red/20 transition-colors shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus

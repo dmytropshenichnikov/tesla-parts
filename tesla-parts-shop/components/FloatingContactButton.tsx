@@ -55,7 +55,7 @@ export const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
 
         {/* Ambient Breathing Radial Aura */}
         {!isOpen && (
-          <div className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-tesla-red/30 via-neutral-600/20 to-tesla-red/20 blur-md animate-aura pointer-events-none" />
+          <div className="absolute -inset-1.5 rounded-full bg-tesla-red/35 blur-md animate-aura pointer-events-none" />
         )}
 
         {/* Main Floating Action Button */}
@@ -63,8 +63,8 @@ export const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
           onClick={onClick}
           className={`relative rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ease-out transform active:scale-90 cursor-pointer ${
             isOpen
-              ? 'w-14 h-14 bg-neutral-950 text-white rotate-90 border border-tesla-red/60 shadow-tesla-red/20'
-              : 'w-14 h-14 bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 hover:from-neutral-750 hover:to-neutral-900 text-white border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.45)] hover:shadow-[0_12px_35px_rgba(232,33,39,0.35)] hover:scale-105'
+              ? 'w-14 h-14 bg-neutral-900 text-white rotate-90 border border-white/20 shadow-xl'
+              : 'w-14 h-14 bg-gradient-to-tr from-red-700 via-tesla-red to-red-500 hover:from-red-600 hover:to-red-400 text-white border-2 border-white/30 shadow-[0_10px_28px_rgba(232,33,39,0.45)] hover:shadow-[0_14px_35px_rgba(232,33,39,0.6)] hover:scale-105'
           }`}
           style={{ width: '56px', height: '56px' }}
           aria-label="Відкрити меню сайту"

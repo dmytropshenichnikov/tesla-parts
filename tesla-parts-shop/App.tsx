@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
 import {
   Routes,
   Route,
@@ -184,7 +184,13 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname]);
 
   return null;
@@ -530,6 +536,8 @@ const App: React.FC = () => {
                   onAddToCart={addToCart}
                   categories={categories}
                   previousPath={previousPathRef.current}
+                  socialLinks={socialLinks}
+                  phoneNumber={contactInfo.phone}
                 />
               }
             />
@@ -1156,6 +1164,8 @@ interface ProductDetailRouteProps {
   onAddToCart: (product: Product) => void;
   categories: Category[];
   previousPath: string | null;
+  socialLinks?: { telegram?: string; viber?: string; instagram?: string };
+  phoneNumber?: string;
 }
 
 const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
@@ -1164,6 +1174,8 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
   onAddToCart,
   categories,
   previousPath,
+  socialLinks,
+  phoneNumber,
 }) => {
   const { productId } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
@@ -1185,6 +1197,12 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
     };
     fetchProduct();
   }, [productId]);
+
+  useLayoutEffect(() => {
+    if (!loading && product) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [loading, product]);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -1214,6 +1232,8 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
       uahPerUsd={uahPerUsd}
       onAddToCart={onAddToCart}
       backUrl={backUrl}
+      socialLinks={socialLinks}
+      phoneNumber={phoneNumber}
     />
   );
 };
