@@ -227,13 +227,13 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Second Row: Main Nav, Logo, Cart */}
-      <div className="container mx-auto px-4 py-2 md:py-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo */}
           <TeslaPartsCenterLogo />
 
           {/* === НАВІГАЦІЯ КАТЕГОРІЙ === */}
-          <div className="flex-1 max-w-2xl px-4 md:px-8">
+          <div className="flex-1 max-w-2xl px-2 sm:px-4 md:px-8">
             {/* 1. ВАРІАНТ ДЛЯ ВЕЛИКИХ ДЕСКТОПІВ (XL+) - Повний список */}
             <div className="hidden xl:flex items-center gap-6 font-medium text-tesla-dark whitespace-nowrap">
               {sortedCategories.slice(0, 4).map((cat) => (
@@ -277,21 +277,21 @@ const Header: React.FC<HeaderProps> = ({
             <div className="xl:hidden relative" ref={mobileCategoryRef}>
               <button
                 onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                className="flex items-center font-medium text-tesla-dark hover:text-tesla-red transition whitespace-nowrap"
+                className="flex items-center font-medium text-xs sm:text-sm text-tesla-dark hover:text-tesla-red transition whitespace-nowrap bg-gray-50 hover:bg-gray-100 py-1.5 px-2.5 rounded-lg border border-gray-200"
               >
-                Усі категорії <ChevronDown size={16} className="ml-1" />
+                <span>Категорії</span> <ChevronDown size={14} className="ml-1 text-gray-500" />
               </button>
 
               {/* Випадаюче меню для мобілок */}
               <div
-                className={`absolute left-0 top-full mt-2 w-56 bg-white shadow-lg rounded-md overflow-hidden z-20 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
+                className={`absolute left-0 top-full mt-2 w-56 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-100 z-30 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
               >
                 {sortedCategories.map((cat) => (
                   <Link
                     key={cat.id}
                     to={`/category/${slugify(cat.name)}`}
                     onClick={() => setIsMobileCategoryOpen(false)}
-                    className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-50 last:border-0"
+                    className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-50 last:border-0 font-medium"
                   >
                     {cat.name}
                   </Link>
@@ -300,8 +300,8 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Cart & Checkout */}
-          <div className="flex items-center gap-4">
+          {/* Actions: Search, Cart, Profile, Checkout */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Desktop Search Bar */}
             <form
               onSubmit={handleSearchSubmit}
@@ -311,7 +311,7 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук..."
-                  className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-tesla-red focus:bg-white transition outline-none"
+                  className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-tesla-red focus:bg-white transition outline-none text-sm"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                 />
@@ -322,17 +322,36 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </form>
 
+            {/* Mobile Search Toggle */}
+            <button
+              className="md:hidden text-tesla-dark p-1.5 rounded-full hover:bg-gray-100 transition"
+              onClick={() => setIsMobileSearchOpen(true)}
+              aria-label="Пошук"
+            >
+              <Search size={20} />
+            </button>
+
+            {/* Profile */}
+            <Link
+              to="/profile"
+              className="text-tesla-dark hover:text-tesla-red p-1.5 rounded-full hover:bg-gray-100 transition"
+              title="Особистий кабінет"
+            >
+              <User size={20} className="sm:w-6 sm:h-6" />
+            </Link>
+
+            {/* Cart */}
             <div
               onClick={onCartClick}
-              className="flex items-center gap-3 cursor-pointer group"
+              className="flex items-center gap-2 cursor-pointer group p-1 sm:p-0"
             >
               <div className="relative">
                 <ShoppingCart
                   className="text-tesla-dark group-hover:text-tesla-red transition"
-                  size={24}
+                  size={20}
                 />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-tesla-red text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                  <span className="absolute -top-2 -right-2 bg-tesla-red text-white text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full">
                     {cartCount}
                   </span>
                 )}
@@ -345,30 +364,13 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            <Link
-              to="/profile"
-              className="text-tesla-dark hover:text-tesla-red transition"
-              title="Особистий кабінет"
-            >
-              <User size={24} />
-            </Link>
-
+            {/* Checkout */}
             <Link
               to="/checkout"
-              className="hidden sm:block bg-tesla-red hover:bg-red-700 text-white px-5 py-2 rounded-md font-medium transition text-sm shadow-sm whitespace-nowrap"
+              className="hidden sm:block bg-tesla-red hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition text-sm shadow-sm whitespace-nowrap"
             >
               Оформити
             </Link>
-
-            {/* Mobile Search Toggle */}
-            <button
-              className="md:hidden text-tesla-dark"
-              onClick={() => setIsMobileSearchOpen(true)}
-            >
-              <Search size={24} />
-            </button>
-
-            {/* БУРГЕР МЕНЮ ПРИБРАНО ПОВНІСТЮ */}
           </div>
         </div>
 

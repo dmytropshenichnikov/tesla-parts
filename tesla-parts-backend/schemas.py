@@ -14,6 +14,7 @@ class ProductBase(BaseModel):
     sort_order: int | None = 0
     detail_number: str | None = None
     cross_number: str | None = None # Made optional
+    search_keywords: str | None = None
     meta_title: str | None = None
     meta_description: str | None = None
     is_popular: bool = False

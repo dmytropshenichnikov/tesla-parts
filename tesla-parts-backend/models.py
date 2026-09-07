@@ -53,6 +53,7 @@ class Product(SQLModel, table=True):
     sort_order: int = Field(default=0, index=True)
     detail_number: Optional[str] = None
     cross_number: Optional[str] = None # Made optional
+    search_keywords: Optional[str] = None # Hidden synonyms/keywords for search
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
     is_popular: bool = Field(default=False, index=True)

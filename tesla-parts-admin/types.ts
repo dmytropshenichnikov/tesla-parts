@@ -36,6 +36,7 @@ export interface Product {
   detail_number?: string;
   priceUSD?: number;
   cross_number: string;
+  search_keywords?: string;
   meta_title?: string;
   meta_description?: string;
   is_popular: boolean;

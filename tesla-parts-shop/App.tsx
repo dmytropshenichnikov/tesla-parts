@@ -42,6 +42,7 @@ import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
 import SeoHead from './components/SeoHead';
 import { slugify } from './utils/slugify';
 import { trackAddToCart } from './utils/analytics';
+import FloatingContactButton from './components/FloatingContactButton';
 
 const CART_STORAGE_KEY = 'tesla-parts-cart';
 
@@ -659,6 +660,13 @@ const App: React.FC = () => {
             '© 2024 Tesla Parts Center. Всі права захищені.'}
         </div>
       </footer>
+
+      {/* Floating Quick Contact Button */}
+      <FloatingContactButton
+        phoneNumber={contactInfo.phone}
+        telegram={socialLinks.telegram}
+        viber={socialLinks.viber}
+      />
 
       <CartDrawer
         isOpen={isCartOpen}

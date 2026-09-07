@@ -97,6 +97,7 @@ export const ProductForm: React.FC = () => {
     sort_order: undefined as number | undefined,
     detail_number: '',
     cross_number: '',
+    search_keywords: '',
     meta_title: '',
     meta_description: '',
   });
@@ -140,6 +141,7 @@ export const ProductForm: React.FC = () => {
         sort_order: product.sort_order || 0,
         detail_number: product.detail_number || '',
         cross_number: product.cross_number || '',
+        search_keywords: product.search_keywords || '',
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
       });
@@ -501,7 +503,7 @@ export const ProductForm: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Номер деталі
+                Номер деталі (Оригінал)
               </label>
               <input
                 type="text"
@@ -513,20 +515,42 @@ export const ProductForm: React.FC = () => {
                 placeholder="112201"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cross-номер
-              </label>
-              <input
-                type="text"
-                value={formData.cross_number}
-                onChange={(e) =>
-                  setFormData({ ...formData, cross_number: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Наприклад: 5Q0972887B"
-              />
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cross-номери (Аналоги / Замінники)
+            </label>
+            <textarea
+              rows={2}
+              value={formData.cross_number}
+              onChange={(e) =>
+                setFormData({ ...formData, cross_number: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 font-mono text-sm"
+              placeholder="Наприклад: 149070101E, 149070100C, 149070100D (розділяйте комами)"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Вказуйте кілька крос-номерів через кому. Поле розширено для зручності введення великих списків.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Пошукові синоніми / Ключові слова для пошуку (не видно клієнтам)
+            </label>
+            <input
+              type="text"
+              value={formData.search_keywords}
+              onChange={(e) =>
+                setFormData({ ...formData, search_keywords: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Наприклад: Рычаг, тяга підвіски, прямий важіль (клієнти зможуть знайти товар за цими словами)"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Слова та синоніми, які не відображатимуться в карточці на сайті, але допомагають клієнтам знаходити запчастину в пошуку.
+            </p>
           </div>
 
           <div>

@@ -152,20 +152,23 @@ def read_products(
             )
         )
 
-    # 3. Search Filter
+    # 3. Search Filter (Word-by-word tokenized search with normalisation)
     if search:
-        search_term = f"%{search}%"
-        # Normalize search for cross/detail numbers (remove dashes/spaces) could be an improvement, 
-        # but basic ILIKE is a good start.
-        search_term_clean = f"%{search.replace('-', '')}%"
-        query = query.where(
-            or_(
-                col(Product.name).ilike(search_term),
-                func.replace(Product.detail_number, "-", "").ilike(search_term_clean),
-                col(Product.cross_number).ilike(search_term_clean),
-                col(Product.description).ilike(search_term_clean)
+        # Split search into individual words/tokens, ignoring extra spaces
+        tokens = [t.strip() for t in search.split() if t.strip()]
+        for token in tokens:
+            search_term = f"%{token}%"
+            search_term_clean = f"%{token.replace('-', '')}%"
+            query = query.where(
+                or_(
+                    col(Product.name).ilike(search_term),
+                    func.replace(Product.detail_number, "-", "").ilike(search_term_clean),
+                    col(Product.cross_number).ilike(search_term_clean),
+                    col(Product.search_keywords).ilike(search_term),
+                    col(Product.category).ilike(search_term),
+                    col(Product.description).ilike(search_term)
+                )
             )
-        )
 
     # 4. Sorting
     # Priority: Sort Order (DESC), In Stock (DESC), then Name (ASC)
@@ -218,6 +221,7 @@ async def create_product(
     sort_order: Optional[int] = Form(None),
     detail_number: Optional[str] = Form(None),
     cross_number: Optional[str] = Form(None),
+    search_keywords: Optional[str] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
@@ -280,6 +284,7 @@ async def create_product(
         sort_order=sort_order,
         detail_number=detail_number,
         cross_number=cross_number,
+        search_keywords=search_keywords,
         meta_title=meta_title,
         meta_description=meta_description,
         is_popular=is_popular,
@@ -326,6 +331,7 @@ async def update_product(
     sort_order: int = Form(0),
     detail_number: Optional[str] = Form(None),
     cross_number: Optional[str] = Form(None),
+    search_keywords: Optional[str] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
@@ -348,6 +354,7 @@ async def update_product(
     product.sort_order = sort_order
     product.detail_number = detail_number
     product.cross_number = cross_number
+    product.search_keywords = search_keywords
     product.meta_title = meta_title
     product.meta_description = meta_description
     product.is_popular = is_popular

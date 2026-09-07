@@ -39,6 +39,7 @@ export interface Product {
   sort_order?: number;
   detail_number?: string;
   cross_number?: string;
+  search_keywords?: string;
   is_popular?: boolean;
   meta_title?: string | null;
   meta_description?: string | null;

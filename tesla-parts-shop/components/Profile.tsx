@@ -222,9 +222,15 @@ export const Profile: React.FC = () => {
                   </div>
                 )}
                 <NovaPostWidget
-                  onSelect={(data) =>
-                    setAddress(`М. ${data.city}, ${data.address}`)
-                  }
+                  onSelect={(data) => {
+                    const cityPart = data.city.toLowerCase().startsWith('м.') || data.city.toLowerCase().startsWith('село') || data.city.toLowerCase().startsWith('с.')
+                      ? data.city
+                      : `м. ${data.city}`;
+                    const formatted = data.description
+                      ? `${cityPart}, ${data.description} (${data.address})`
+                      : `${cityPart}, ${data.address}`;
+                    setAddress(formatted);
+                  }}
                 />
               </div>
               <button

@@ -1,6 +1,7 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 import os
 from dotenv import load_dotenv
 from sqlmodel import Session, select
@@ -13,6 +14,12 @@ SMTP_EMAIL = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SENDER_NAME = "TESLA PARTS CENTER"
+
+def get_from_header() -> str:
+    if SMTP_EMAIL:
+        return formataddr((SENDER_NAME, SMTP_EMAIL))
+    return ""
 FRONTEND_URL = os.getenv("WEBSITE_URL", "http://localhost:3000")
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
@@ -55,7 +62,7 @@ def send_verification_email(to_email: str, token: str):
         
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Підтвердження електронної пошти"
-    msg["From"] = SMTP_EMAIL
+    msg["From"] = get_from_header()
     msg["To"] = to_email
     
     html = f"""
@@ -99,7 +106,7 @@ def send_reset_password_email(to_email: str, token: str):
         
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Скидання пароля"
-    msg["From"] = SMTP_EMAIL
+    msg["From"] = get_from_header()
     msg["To"] = to_email
     
     html = f"""
@@ -141,7 +148,7 @@ def send_custom_email(to_email: str, subject: str, body: str):
         
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = SMTP_EMAIL
+    msg["From"] = get_from_header()
     msg["To"] = to_email
     
     full_body = f"""

@@ -78,78 +78,137 @@ const ProductList: React.FC<ProductListProps> = ({
           {title}
         </h2>
       )}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
         {products.map((product) => {
           const { original, final } = getDiscountedPriceInfo(product);
+
+          // Clean title: remove part number prefix if it is already displayed
+          let cleanName = product.name;
+          if (product.detail_number && cleanName.toLowerCase().startsWith(product.detail_number.toLowerCase())) {
+            cleanName = cleanName.substring(product.detail_number.length).replace(/^[\s\-–—:]+/, '');
+          }
+
+          // Parse categories / car models into badges
+          const models = product.category
+            ? product.category
+                .split(',')
+                .map((m) => m.trim())
+                .filter(Boolean)
+            : [];
+
+          // Cross numbers preview
+          const crossNumbers = product.cross_number
+            ? product.cross_number
+                .split(',')
+                .map((c) => c.trim())
+                .filter(Boolean)
+            : [];
+
           return (
             <Link
               key={product.id}
               to={`/product/${product.id}`}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 xl:hover:shadow-md transition overflow-hidden flex flex-col cursor-pointer group select-none"
+              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >
-              <div className="relative w-full pb-[100%] bg-gray-100">
+              {/* Product Photo & Stock Badge */}
+              <div className="relative w-full pb-[95%] bg-gray-50 overflow-hidden">
                 <img
                   src={product.image}
                   alt={product.name}
-                  className="absolute inset-0 w-full h-full object-cover xl:group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                {!product.inStock && (
-                  <div className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded">
-                    Немає в наявності
-                  </div>
-                )}
+                
+                {/* Stock status badge on photo */}
+                <div className="absolute top-2 left-2 z-10">
+                  {product.inStock ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                      В наявності
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center bg-gray-800/90 backdrop-blur-sm text-gray-200 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
+                      Під замовлення
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="text-xs text-gray-500 mb-1">
-                  {product.category}
+              {/* Product Information */}
+              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  {/* Car Models Tags */}
+                  {models.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                      {models.slice(0, 2).map((model, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-gray-100 text-gray-700 text-[10px] font-medium px-1.5 py-0.5 rounded"
+                        >
+                          {model}
+                        </span>
+                      ))}
+                      {models.length > 2 && (
+                        <span className="bg-gray-50 text-gray-500 text-[10px] font-medium px-1 py-0.5 rounded">
+                          +{models.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Part Numbers Block */}
+                  <div className="text-[11px] font-mono text-gray-500 mb-1 flex flex-wrap items-center gap-x-2">
+                    {product.detail_number && (
+                      <span className="bg-red-50 text-tesla-red font-semibold px-1 rounded">
+                        #{product.detail_number}
+                      </span>
+                    )}
+                    {crossNumbers.length > 0 && (
+                      <span className="text-gray-400 truncate max-w-[120px] sm:max-w-none" title={`Аналоги: ${crossNumbers.join(', ')}`}>
+                        Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Clean Title */}
+                  <h3 className="font-medium text-xs sm:text-sm text-gray-900 leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-tesla-red transition-colors">
+                    {cleanName}
+                  </h3>
                 </div>
-                {product.detail_number && (
-                  <div className="text-xs text-gray-500 mb-1">
-                    {product.detail_number}
-                  </div>
-                )}
-                {product.cross_number && (
-                  <div className="text-[11px] text-gray-400 mb-1">
-                    Cross: {product.cross_number}
-                  </div>
-                )}
 
-                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[3rem] active:text-tesla-red xl:group-hover:text-tesla-red transition-colors">
-                  {product.name}
-                </h3>
-
-                <div className="mt-auto pt-4 flex items-center justify-between">
+                {/* Price & Action Button (Aligned to bottom) */}
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                   <div className="flex flex-col">
                     {original > final && (
-                      <span className="text-sm line-through text-gray-400">
+                      <span className="text-[11px] sm:text-xs line-through text-gray-400">
                         {formatCurrency(original, currency)}
                       </span>
                     )}
-                    <span className="text-lg font-bold text-tesla-dark">
+                    <span className="text-base sm:text-lg font-bold text-tesla-dark tracking-tight">
                       {formatCurrency(final, currency)}
                     </span>
                   </div>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAddToCart(product);
-                  }}
-                  disabled={!product.inStock}
-                  // ЗМІНА 6: Те саме для кнопки - active для моб, hover для ПК
-                  className={`p-2 rounded-full transition ${
-                    product.inStock
-                      ? 'bg-tesla-light text-tesla-dark active:bg-tesla-red active:text-white xl:hover:bg-tesla-red xl:hover:text-white'
-                      : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                  }`}
-                  aria-label="Додати в кошик"
-                >
-                  <ShoppingBag size={20} />
-                </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAddToCart(product);
+                    }}
+                    disabled={!product.inStock}
+                    className={`p-2 sm:p-2.5 rounded-xl transition-all shadow-sm ${
+                      product.inStock
+                        ? 'bg-tesla-red text-white hover:bg-red-700 active:scale-95'
+                        : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                    }`}
+                    aria-label="Додати в кошик"
+                    title={product.inStock ? "Додати в кошик" : "Немає в наявності"}
+                  >
+                    <ShoppingBag size={18} />
+                  </button>
+                </div>
               </div>
-            </div>
             </Link>
           );
         })}
