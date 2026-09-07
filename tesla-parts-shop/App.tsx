@@ -663,11 +663,13 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Floating Quick Contact Button */}
+      {/* Floating Quick Action / Menu Button */}
       <FloatingContactButton
         phoneNumber={contactInfo.phone}
         telegram={socialLinks.telegram}
         viber={socialLinks.viber}
+        currency={currency}
+        onSelectCurrency={setCurrency}
       />
 
       {/* Consultation Floating Banner */}
