@@ -4,20 +4,20 @@ import teslaLogo from '../static/tesla-logo.png';
 
 const TeslaPartsCenterLogo = () => {
   return (
-    <Link to="/" className="cursor-pointer flex items-center gap-2 sm:gap-3 flex-shrink-0">
+    <Link to="/" className="cursor-pointer flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
       <img
         src={teslaLogo}
         alt="Tesla Logo"
-        className="h-8 sm:h-10 md:h-12 w-auto object-contain"
+        className="h-7 sm:h-9 md:h-11 w-auto object-contain"
       />
-      <div className="flex flex-col items-start font-tesla tracking-tight">
-        <span className="text-tesla-red font-bold text-base sm:text-xl md:text-2xl leading-none">
+      <div className="flex flex-col items-start font-tesla tracking-tight select-none">
+        <span className="text-tesla-red font-black text-xs sm:text-lg md:text-xl leading-[0.95]">
           TESLA
         </span>
-        <span className="text-black font-bold text-base sm:text-xl md:text-2xl leading-none">
+        <span className="text-black font-black text-xs sm:text-lg md:text-xl leading-[0.95]">
           PARTS
         </span>
-        <span className="text-black font-bold text-base sm:text-xl md:text-2xl leading-none">
+        <span className="text-black font-black text-xs sm:text-lg md:text-xl leading-[0.95]">
           CENTER
         </span>
       </div>

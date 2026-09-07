@@ -21,15 +21,15 @@ const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
     <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
       {/* Expanded Quick Contact Menu */}
       {isOpen && (
-        <div className="mb-3 flex flex-col gap-2 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-gray-100 transition-all animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="mb-3 flex flex-col gap-2 bg-white p-3 rounded-2xl shadow-2xl border border-gray-200 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
           {telegram && (
             <a
               href={telegram}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-800 hover:bg-blue-50 hover:text-[#229ED9] transition"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-gray-800 hover:bg-blue-50 hover:text-[#229ED9] transition"
             >
-              <div className="w-8 h-8 rounded-full bg-[#229ED9] text-white flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#229ED9] text-white flex items-center justify-center shadow-xs">
                 <Send size={16} />
               </div>
               <span>Telegram</span>
@@ -41,9 +41,9 @@ const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
               href={`viber://chat?number=${encodeURIComponent(viber)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-800 hover:bg-purple-50 hover:text-[#7360F2] transition"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-gray-800 hover:bg-purple-50 hover:text-[#7360F2] transition"
             >
-              <div className="w-8 h-8 rounded-full bg-[#7360F2] text-white flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[#7360F2] text-white flex items-center justify-center shadow-xs">
                 <ViberIcon size={16} color="white" />
               </div>
               <span>Viber</span>
@@ -53,9 +53,9 @@ const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
           {cleanPhone && (
             <a
               href={`tel:${cleanPhone}`}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-800 hover:bg-emerald-50 hover:text-emerald-600 transition"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-gray-800 hover:bg-emerald-50 hover:text-emerald-600 transition"
             >
-              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
                 <Phone size={16} />
               </div>
               <span>Зателефонувати</span>

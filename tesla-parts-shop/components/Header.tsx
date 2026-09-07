@@ -8,6 +8,7 @@ import {
   Send,
   ChevronDown,
   User,
+  Phone,
 } from 'lucide-react';
 import { Category, Currency, Page } from '../types';
 import TeslaPartsCenterLogo from './ShopLogo';
@@ -118,9 +119,61 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       {/* Top Row: Utilities & Info */}
-      <div className="bg-tesla-dark text-gray-300 text-xs py-2 px-4 border-b border-gray-800">
-        <div className="container mx-auto flex flex-row w-full justify-between items-center gap-2">
-          <nav className="hidden md:flex flex-wrap gap-4 md:gap-6 justify-center md:justify-start">
+      <div className="bg-tesla-dark text-gray-300 text-xs py-1.5 px-3 sm:px-4 border-b border-gray-800">
+        <div className="container mx-auto flex items-center justify-between gap-2">
+          {/* Left on Mobile / Left on Desktop: Phone & Messengers */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {phoneNumber && (
+              <a
+                href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
+                className="flex items-center gap-1.5 font-medium text-white hover:text-tesla-red transition text-[11px] sm:text-xs whitespace-nowrap"
+                title="Зателефонувати нам"
+              >
+                <Phone size={12} className="text-emerald-400 fill-emerald-400/20 flex-shrink-0" />
+                <span className="tracking-tight">{phoneNumber}</span>
+              </a>
+            )}
+
+            {/* Messengers */}
+            <div className="flex items-center gap-1.5 border-l border-gray-700/80 pl-2">
+              {socialLinks.telegram && (
+                <a
+                  href={socialLinks.telegram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-[#229ED9] transition p-0.5"
+                  aria-label="Telegram"
+                >
+                  <Send size={13} />
+                </a>
+              )}
+              {socialLinks.viber && (
+                <a
+                  href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-[#7360F2] transition p-0.5"
+                  aria-label="Viber"
+                >
+                  <ViberIcon size={13} color="currentColor" />
+                </a>
+              )}
+              {socialLinks.instagram && (
+                <a
+                  href={socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-tesla-red transition p-0.5"
+                  aria-label="Instagram"
+                >
+                  <Instagram size={13} />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Center: Navigation Pages */}
+          <nav className="hidden md:flex flex-wrap gap-4 md:gap-6 justify-center items-center">
             <Link to="/reviews" className="hover:text-white transition">
               Відгуки
             </Link>
@@ -137,86 +190,53 @@ const Header: React.FC<HeaderProps> = ({
               ))}
           </nav>
 
-          <div className="relative md:hidden" ref={pagesDropdownRef}>
-            <button
-              onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
-              className="flex items-center gap-1 hover:text-white transition"
-            >
-              Навігація
-              <ChevronDown size={16} />
-            </button>
-            {isPagesDropdownOpen && (
-              <div className="absolute left-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md overflow-hidden z-20">
-                <Link
-                  to="/reviews"
-                  onClick={() => setIsPagesDropdownOpen(false)}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-b border-gray-100"
-                >
-                  Відгуки
-                </Link>
-                {headerPages
-                  .filter((page) => page.is_published)
-                  .map((page) => (
-                    <Link
-                      key={page.slug}
-                      to={`/info/${page.slug}`}
-                      onClick={() => setIsPagesDropdownOpen(false)}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      {page.title}
-                    </Link>
-                  ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4">
-            {phoneNumber && (
-              <a
-                href={`tel:${phoneNumber}`}
-                className="hover:text-white transition"
+          {/* Right: Info Dropdown (Mobile) + Currency Switcher */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Mobile Navigation Dropdown */}
+            <div className="relative md:hidden" ref={pagesDropdownRef}>
+              <button
+                onClick={() => setIsPagesDropdownOpen(!isPagesDropdownOpen)}
+                className="flex items-center gap-1 text-[11px] text-gray-300 hover:text-white transition py-0.5 px-2 rounded bg-gray-800/80 hover:bg-gray-800 border border-gray-700/80 whitespace-nowrap"
               >
-                {phoneNumber}
-              </a>
-            )}
-            <div className="flex items-center gap-2">
-              {socialLinks.instagram && (
-                <a
-                  href={socialLinks.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-tesla-red transition"
-                >
-                  <Instagram size={16} />
-                </a>
-              )}
-              {socialLinks.telegram && (
-                <a
-                  href={socialLinks.telegram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-tesla-red transition"
-                >
-                  <Send size={16} />
-                </a>
-              )}
-              {socialLinks.viber && (
-                <a
-                  href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-tesla-red transition"
-                >
-                  <ViberIcon size={16} color="currentColor" />
-                </a>
+                <span>Інформація</span>
+                <ChevronDown size={12} className="text-gray-400" />
+              </button>
+              {isPagesDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white shadow-xl rounded-xl overflow-hidden z-50 border border-gray-100 text-gray-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <Link
+                    to="/reviews"
+                    onClick={() => setIsPagesDropdownOpen(false)}
+                    className="block w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-100 font-medium"
+                  >
+                    ⭐ Відгуки
+                  </Link>
+                  {headerPages
+                    .filter((page) => page.is_published)
+                    .map((page) => (
+                      <Link
+                        key={page.slug}
+                        to={`/info/${page.slug}`}
+                        onClick={() => setIsPagesDropdownOpen(false)}
+                        className="block w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-50 last:border-0 font-medium"
+                      >
+                        {page.title}
+                      </Link>
+                    ))}
+                </div>
               )}
             </div>
-            <div className="border-l border-gray-700 pl-4 flex gap-2">
+
+            {/* Currency Selector (Clean Segmented Control) */}
+            <div className="flex items-center bg-gray-800/90 rounded-md p-0.5 border border-gray-700/80">
               {Object.values(Currency).map((cur) => (
                 <button
                   key={cur}
                   onClick={() => setCurrency(cur)}
-                  className={`font-semibold ${currency === cur ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                  className={`px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded transition ${
+                    currency === cur
+                      ? 'bg-tesla-red text-white shadow-xs'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
                 >
                   {cur}
                 </button>
@@ -233,7 +253,7 @@ const Header: React.FC<HeaderProps> = ({
           <TeslaPartsCenterLogo />
 
           {/* === НАВІГАЦІЯ КАТЕГОРІЙ === */}
-          <div className="flex-1 max-w-2xl px-2 sm:px-4 md:px-8">
+          <div className="flex-1 max-w-2xl px-1 sm:px-4 md:px-8">
             {/* 1. ВАРІАНТ ДЛЯ ВЕЛИКИХ ДЕСКТОПІВ (XL+) - Повний список */}
             <div className="hidden xl:flex items-center gap-6 font-medium text-tesla-dark whitespace-nowrap">
               {sortedCategories.slice(0, 4).map((cat) => (
@@ -273,18 +293,20 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            {/* 2. ВАРІАНТ ДЛЯ МОБІЛЬНИХ/ПЛАНШЕТІВ (< XL) - Тільки кнопка "Усі категорії" */}
+            {/* 2. ВАРІАНТ ДЛЯ МОБІЛЬНИХ/ПЛАНШЕТІВ (< XL) - Кнопка "Каталог" */}
             <div className="xl:hidden relative" ref={mobileCategoryRef}>
               <button
                 onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                className="flex items-center font-medium text-xs sm:text-sm text-tesla-dark hover:text-tesla-red transition whitespace-nowrap bg-gray-50 hover:bg-gray-100 py-1.5 px-2.5 rounded-lg border border-gray-200"
+                className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-lg border border-gray-200 shadow-xs"
               >
-                <span>Категорії</span> <ChevronDown size={14} className="ml-1 text-gray-500" />
+                <Menu size={14} className="text-gray-600" />
+                <span>Каталог</span>
+                <ChevronDown size={13} className="text-gray-500" />
               </button>
 
               {/* Випадаюче меню для мобілок */}
               <div
-                className={`absolute left-0 top-full mt-2 w-56 bg-white shadow-xl rounded-lg overflow-hidden border border-gray-100 z-30 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
+                className={`absolute left-0 top-full mt-2 w-56 bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100 z-30 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
               >
                 {sortedCategories.map((cat) => (
                   <Link

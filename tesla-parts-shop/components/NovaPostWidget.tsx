@@ -57,18 +57,24 @@ const NovaPostWidget: React.FC<NovaPostWidgetProps> = ({ onSelect }) => {
       if (typeof data === 'object' && data.id) {
         // 1. Parse the incoming data
         const shortName = data.shortName || 'Відділення';
-        const address = `${data.addressParts?.city || ''} вул. ${data.addressParts?.street || ''}, ${data.addressParts?.building || ''}`;
+        const street = data.addressParts?.street ? `вул. ${data.addressParts.street}` : '';
+        const building = data.addressParts?.building ? `, ${data.addressParts.building}` : '';
+        const streetAddress = `${street}${building}`.trim();
+        const city = data.addressParts?.city || '';
+        const fullAddress = city
+          ? `${city}${streetAddress ? `, ${streetAddress}` : ''}`
+          : streetAddress;
         const ref = data.id;
 
         // 2. Update local state (UI)
-        setSelectedBranch({ shortName, address, id: ref });
+        setSelectedBranch({ shortName, address: fullAddress, id: ref });
 
         // 3. Pass data up to Checkout component
         onSelect({
           ref: ref,
           description: shortName,
-          city: data.addressParts?.city || '',
-          address: address,
+          city: city,
+          address: streetAddress || fullAddress,
         });
 
         // 4. Close modal

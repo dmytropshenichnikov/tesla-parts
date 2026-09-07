@@ -108,27 +108,27 @@ const ProductList: React.FC<ProductListProps> = ({
             <Link
               key={product.id}
               to={`/product/${product.id}`}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
+              className="bg-white rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               {/* Product Photo & Stock Badge */}
-              <div className="relative w-full pb-[95%] bg-gray-50 overflow-hidden">
+              <div className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50">
                 <img
                   src={product.image}
                   alt={product.name}
                   loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
                 
                 {/* Stock status badge on photo */}
                 <div className="absolute top-2 left-2 z-10">
                   {product.inStock ? (
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                    <span className="inline-flex items-center gap-1 bg-emerald-600/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                       В наявності
                     </span>
                   ) : (
-                    <span className="inline-flex items-center bg-gray-800/90 backdrop-blur-sm text-gray-200 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
+                    <span className="inline-flex items-center bg-gray-700/90 backdrop-blur-xs text-gray-200 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-xs">
                       Під замовлення
                     </span>
                   )}
@@ -138,54 +138,50 @@ const ProductList: React.FC<ProductListProps> = ({
               {/* Product Information */}
               <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  {/* Car Models Tags */}
-                  {models.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1.5">
-                      {models.slice(0, 2).map((model, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-gray-100 text-gray-700 text-[10px] font-medium px-1.5 py-0.5 rounded"
-                        >
-                          {model}
-                        </span>
-                      ))}
-                      {models.length > 2 && (
-                        <span className="bg-gray-50 text-gray-500 text-[10px] font-medium px-1 py-0.5 rounded">
-                          +{models.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Part Numbers Block */}
-                  <div className="text-[11px] font-mono text-gray-500 mb-1 flex flex-wrap items-center gap-x-2">
-                    {product.detail_number && (
-                      <span className="bg-red-50 text-tesla-red font-semibold px-1 rounded">
-                        #{product.detail_number}
+                  {/* Meta Row: Model tag + Part number */}
+                  <div className="flex items-center justify-between gap-1.5 mb-1.5 text-[11px]">
+                    {models.length > 0 ? (
+                      <span className="font-semibold text-gray-600 truncate max-w-[65%]" title={models.join(', ')}>
+                        {models.slice(0, 2).join(', ')}{models.length > 2 ? ` +${models.length - 2}` : ''}
                       </span>
+                    ) : (
+                      <span className="font-semibold text-gray-400">Tesla</span>
                     )}
-                    {crossNumbers.length > 0 && (
-                      <span className="text-gray-400 truncate max-w-[120px] sm:max-w-none" title={`Аналоги: ${crossNumbers.join(', ')}`}>
-                        Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
+                    {product.detail_number && (
+                      <span
+                        className="font-mono text-[10px] font-bold text-tesla-red bg-red-50 border border-red-100/80 px-1.5 py-0.5 rounded flex-shrink-0"
+                        title={`Артикул: ${product.detail_number}`}
+                      >
+                        #{product.detail_number}
                       </span>
                     )}
                   </div>
 
+                  {/* Cross numbers (if any) */}
+                  {crossNumbers.length > 0 && (
+                    <div className="text-[10px] font-mono text-gray-400 truncate mb-1" title={`Аналоги: ${crossNumbers.join(', ')}`}>
+                      Cross: {crossNumbers[0]}{crossNumbers.length > 1 ? ` (+${crossNumbers.length - 1})` : ''}
+                    </div>
+                  )}
+
                   {/* Clean Title */}
-                  <h3 className="font-medium text-xs sm:text-sm text-gray-900 leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-tesla-red transition-colors">
+                  <h3
+                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug line-clamp-2 h-[2.5rem] sm:h-[2.75rem] overflow-hidden group-hover:text-tesla-red transition-colors"
+                    title={cleanName}
+                  >
                     {cleanName}
                   </h3>
                 </div>
 
-                {/* Price & Action Button (Aligned to bottom) */}
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <div className="flex flex-col">
+                {/* Price & Action Button */}
+                <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <div className="flex flex-col min-w-0">
                     {original > final && (
-                      <span className="text-[11px] sm:text-xs line-through text-gray-400">
+                      <span className="text-[11px] line-through text-gray-400 font-normal">
                         {formatCurrency(original, currency)}
                       </span>
                     )}
-                    <span className="text-base sm:text-lg font-bold text-tesla-dark tracking-tight">
+                    <span className="text-base sm:text-lg font-bold text-tesla-dark tracking-tight whitespace-nowrap">
                       {formatCurrency(final, currency)}
                     </span>
                   </div>
@@ -197,15 +193,15 @@ const ProductList: React.FC<ProductListProps> = ({
                       onAddToCart(product);
                     }}
                     disabled={!product.inStock}
-                    className={`p-2 sm:p-2.5 rounded-xl transition-all shadow-sm ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${
                       product.inStock
-                        ? 'bg-tesla-red text-white hover:bg-red-700 active:scale-95'
+                        ? 'bg-tesla-red text-white hover:bg-red-700 active:scale-95 shadow-red-600/20'
                         : 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     }`}
                     aria-label="Додати в кошик"
                     title={product.inStock ? "Додати в кошик" : "Немає в наявності"}
                   >
-                    <ShoppingBag size={18} />
+                    <ShoppingBag size={17} />
                   </button>
                 </div>
               </div>
