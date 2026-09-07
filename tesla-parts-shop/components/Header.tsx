@@ -10,6 +10,7 @@ import {
   User,
   Phone,
   ChevronRight,
+  Star,
 } from 'lucide-react';
 import { Category, Currency, Page } from '../types';
 import TeslaPartsCenterLogo from './ShopLogo';
@@ -463,10 +464,10 @@ const Header: React.FC<HeaderProps> = ({
                 <Link
                   to="/reviews"
                   onClick={handleCloseDrawer}
-                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-red-50/50 rounded-xl transition group mb-1"
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-amber-50/50 rounded-xl transition group mb-1"
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-amber-500">⭐</span>
+                  <span className="flex items-center gap-2.5">
+                    <Star size={16} className="text-amber-500 fill-amber-400 flex-shrink-0" />
                     <span>Відгуки про магазин</span>
                   </span>
                   <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
