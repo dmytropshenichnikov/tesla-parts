@@ -149,10 +149,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
             navigate(backUrl);
           }
         }}
-        className="flex items-center text-gray-600 hover:text-tesla-dark mb-6 transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 hover:text-tesla-dark mb-6 text-sm font-medium shadow-xs transition-all duration-200 hover:-translate-x-0.5 active:scale-95 group cursor-pointer"
+        title="Повернутися назад"
       >
-        <ArrowLeft size={20} className="mr-2" />
-        Назад
+        <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1 text-gray-400 group-hover:text-tesla-dark" />
+        <span>Назад</span>
       </button>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

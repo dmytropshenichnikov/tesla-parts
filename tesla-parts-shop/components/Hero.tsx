@@ -32,23 +32,22 @@ const Hero: React.FC<HeroProps> = () => {
           <Link
             key={category.id}
             to={`/category/${slugify(category.name)}`}
-            className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-lg"
+            className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98]"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 group-hover:via-black/25 transition-all duration-300 z-10" />
             <img
               src={category.image || 'https://via.placeholder.com/800'}
               alt={category.name}
-              className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+              className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
             />
             <div className="absolute bottom-0 left-0 p-6 z-20 text-white w-full">
-              <h3 className="text-xl md:text-2xl font-bold mb-1">
+              <h3 className="text-xl md:text-2xl font-bold mb-1 group-hover:translate-x-0.5 transition-transform duration-200">
                 {category.name}
               </h3>
-              {/* <p className="text-gray-200 text-sm mb-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0"> */}
-              {/* {category.subcategories?.length || 0} підкатегорій */}
-              {/* </p> */}
-              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
-                Переглянути каталог <ArrowRight size={16} />
+              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-200 group-hover:text-white transition-colors">
+                <span>Переглянути каталог</span>
+                <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1.5" />
               </div>
             </div>
           </Link>

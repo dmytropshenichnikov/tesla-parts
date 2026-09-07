@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import SeoHead from './SeoHead';
 import { StaticSeoRecord } from '../types';
 import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 interface StaticPageProps {
   slug: string;
@@ -92,9 +93,10 @@ const StaticPage: React.FC<StaticPageProps> = ({ slug, seo }) => {
 
       <Link
         to="/"
-        className="mt-8 text-tesla-red font-medium hover:underline inline-block"
+        className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 hover:text-tesla-dark text-sm font-medium shadow-xs transition-all duration-200 hover:-translate-x-0.5 active:scale-95 group"
       >
-        ← Повернутись на головну
+        <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1 text-gray-400 group-hover:text-tesla-dark" />
+        <span>Повернутись на головну</span>
       </Link>
     </div>
   );

@@ -35,7 +35,7 @@ import {
   Page,
 } from './types';
 import { api } from './services/api';
-import { CheckCircle, Instagram, Send } from 'lucide-react';
+import { CheckCircle, Instagram, Send, ArrowLeft } from 'lucide-react';
 import TeslaPartsCenterLogo from './components/ShopLogo';
 import ViberIcon from './components/ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
@@ -490,77 +490,79 @@ const App: React.FC = () => {
       />
 
       <main className="flex-grow container mx-auto px-4 py-8">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HomeView
-                currency={currency}
-                uahPerUsd={uahPerUsd}
-                addToCart={addToCart}
-                showHero={!searchQuery}
-                seoRecord={staticSeo['home']}
-              />
-            }
-          />
-          <Route
-            path="/search"
-            element={
-              <SearchView
-                currency={currency}
-                uahPerUsd={uahPerUsd}
-                addToCart={addToCart}
-                searchQuery={searchQuery}
-                seoRecord={staticSeo['search']}
-              />
-            }
-          />
-          <Route path="/category/:slug" element={categoryRouteElement} />
-          <Route
-            path="/category/:slug/sub/:subId"
-            element={categoryRouteElement}
-          />
-          <Route
-            path="/product/:productId"
-            element={
-              <ProductDetailRoute
-                currency={currency}
-                uahPerUsd={uahPerUsd}
-                onAddToCart={addToCart}
-                categories={categories}
-                previousPath={previousPathRef.current}
-              />
-            }
-          />
-          <Route
-            path="/checkout"
-            element={
-              <Checkout
-                cartItems={cart}
-                currency={currency}
-                uahPerUsd={uahPerUsd}
-                totalUSD={cartTotalUSD}
-                onSuccess={() => {
-                  clearCart();
-                  navigate('/success');
-                }}
-              />
-            }
-          />
-          <Route path="/success" element={<SuccessView />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route
-            path="/info/:slug"
-            element={<StaticPageRoute seoRecords={staticSeo} />}
-          />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify" element={<Verify />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <div key={location.pathname} className="page-transition">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <HomeView
+                  currency={currency}
+                  uahPerUsd={uahPerUsd}
+                  addToCart={addToCart}
+                  showHero={!searchQuery}
+                  seoRecord={staticSeo['home']}
+                />
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <SearchView
+                  currency={currency}
+                  uahPerUsd={uahPerUsd}
+                  addToCart={addToCart}
+                  searchQuery={searchQuery}
+                  seoRecord={staticSeo['search']}
+                />
+              }
+            />
+            <Route path="/category/:slug" element={categoryRouteElement} />
+            <Route
+              path="/category/:slug/sub/:subId"
+              element={categoryRouteElement}
+            />
+            <Route
+              path="/product/:productId"
+              element={
+                <ProductDetailRoute
+                  currency={currency}
+                  uahPerUsd={uahPerUsd}
+                  onAddToCart={addToCart}
+                  categories={categories}
+                  previousPath={previousPathRef.current}
+                />
+              }
+            />
+            <Route
+              path="/checkout"
+              element={
+                <Checkout
+                  cartItems={cart}
+                  currency={currency}
+                  uahPerUsd={uahPerUsd}
+                  totalUSD={cartTotalUSD}
+                  onSuccess={() => {
+                    clearCart();
+                    navigate('/success');
+                  }}
+                />
+              }
+            />
+            <Route path="/success" element={<SuccessView />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route
+              path="/info/:slug"
+              element={<StaticPageRoute seoRecords={staticSeo} />}
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </main>
 
       {/* ОНОВЛЕНИЙ ФУТЕР З ПОСИЛАННЯМИ (LINKS) ДЛЯ SEO */}
@@ -1048,10 +1050,14 @@ const CategoryView: React.FC<CategoryViewProps> = ({
         fallbackTitle={fallbackTitle}
         fallbackDescription={fallbackDescription}
       />
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
-        {/* ЗАМІНЕНО: button onClick -> Link */}
-        <Link to="/" className="text-gray-500 hover:text-tesla-red transition">
-          ← Назад до головної
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 hover:text-tesla-dark text-sm font-medium shadow-xs transition-all duration-200 hover:-translate-x-0.5 active:scale-95 group"
+          title="На головну"
+        >
+          <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1 text-gray-400 group-hover:text-tesla-dark" />
+          <span>Головна</span>
         </Link>
         {selectedSubcategory && (
           <button
@@ -1062,12 +1068,14 @@ const CategoryView: React.FC<CategoryViewProps> = ({
                 navigate(backLink);
               }
             }}
-            className="text-gray-500 hover:text-tesla-red transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 hover:text-tesla-dark text-sm font-medium shadow-xs transition-all duration-200 hover:-translate-x-0.5 active:scale-95 group cursor-pointer"
+            title="Назад"
           >
-            ← Назад
+            <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1 text-gray-400 group-hover:text-tesla-dark" />
+            <span>Назад</span>
           </button>
         )}
-        <h1 className="text-3xl font-bold">{pageHeading}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-tesla-dark ml-1">{pageHeading}</h1>
       </div>
 
       {subcategoriesToShow.length > 0 && (

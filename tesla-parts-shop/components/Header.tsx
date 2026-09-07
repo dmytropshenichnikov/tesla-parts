@@ -304,7 +304,7 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук..."
-                  className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-tesla-red focus:bg-white transition outline-none text-sm"
+                  className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-tesla-red focus:bg-white transition outline-none text-[16px] sm:text-sm"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                 />
@@ -378,7 +378,7 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
-          <div className="md:hidden absolute top-0 left-0 w-full h-full bg-white z-20 flex items-center px-4">
+          <div className="md:hidden absolute top-0 left-0 w-full h-full bg-white z-20 flex items-center px-4 page-transition shadow-sm">
             <form
               onSubmit={(e) => {
                 handleSearchSubmit(e);
@@ -390,20 +390,20 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук запчастин..."
-                  className="w-full bg-gray-100 rounded-lg py-3 px-4 pl-10 text-sm"
+                  className="w-full bg-gray-100 rounded-lg py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-tesla-red/30 transition-all"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus
                 />
                 <Search
-                  className="absolute left-3 top-3.5 text-gray-400"
+                  className="absolute left-3 top-3 text-gray-400"
                   size={18}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="text-tesla-dark p-2"
+                className="text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition active:scale-90"
               >
                 <X size={22} />
               </button>

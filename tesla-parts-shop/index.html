@@ -2,7 +2,7 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
 
     <!-- Google Tag Manager -->
     <!-- Must stay a classic (non-module) script above the importmap below:
@@ -81,9 +81,35 @@
         font-weight: normal;
         font-style: normal;
       }
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         background-color: #f8fafc;
         color: #171a20;
+      }
+      /* Prevent iOS Safari auto-zoom on input focus while allowing manual pinch-zoom */
+      @media screen and (max-width: 768px) {
+        input,
+        select,
+        textarea {
+          font-size: 16px !important;
+        }
+      }
+      /* Smooth fluid entrance for route and content transitions */
+      @keyframes pageFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .page-transition {
+        animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: opacity, transform;
       }
     </style>
     <script type="importmap">
@@ -96,7 +122,6 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="/index.css" />
   </head>
 
   <body>
