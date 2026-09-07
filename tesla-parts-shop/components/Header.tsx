@@ -300,16 +300,16 @@ const Header: React.FC<HeaderProps> = ({
               onSubmit={handleSearchSubmit}
               className="hidden md:flex items-center gap-2"
             >
-              <div className="relative flex-grow w-32 lg:w-auto">
+              <div className="relative flex-grow w-32 lg:w-44 focus-within:w-60 transition-all duration-300 ease-out group">
                 <input
                   type="text"
                   placeholder="Пошук..."
-                  className="w-full bg-gray-100 border-none rounded-full py-2 px-4 pl-10 focus:ring-2 focus:ring-tesla-red focus:bg-white transition outline-none text-[16px] sm:text-sm"
+                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                 />
                 <Search
-                  className="absolute left-3 top-2.5 text-gray-400"
+                  className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-tesla-red transition-colors duration-200"
                   size={18}
                 />
               </div>
@@ -317,17 +317,17 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Search Toggle */}
             <button
-              className="md:hidden text-tesla-dark p-1.5 rounded-full hover:bg-gray-100 transition"
+              className="md:hidden text-tesla-dark p-2 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
               onClick={() => setIsMobileSearchOpen(true)}
               aria-label="Пошук"
             >
-              <Search size={20} />
+              <Search size={20} className="transition-transform duration-200 group-hover:rotate-12" />
             </button>
 
             {/* Profile (Desktop) */}
             <Link
               to="/profile"
-              className="hidden sm:flex text-tesla-dark hover:text-tesla-red p-1.5 rounded-full hover:bg-gray-100 transition"
+              className="hidden sm:flex text-tesla-dark hover:text-tesla-red p-2 rounded-full hover:bg-gray-100 active:scale-90 transition-all duration-200"
               title="Особистий кабінет"
             >
               <User size={20} />
@@ -336,22 +336,22 @@ const Header: React.FC<HeaderProps> = ({
             {/* Cart */}
             <div
               onClick={onCartClick}
-              className="flex items-center gap-2 cursor-pointer group p-1 sm:p-0"
+              className="flex items-center gap-2 cursor-pointer group p-1.5 sm:p-1 rounded-xl hover:bg-gray-50 active:scale-90 transition-all duration-200 select-none"
             >
-              <div className="relative">
+              <div className="relative flex items-center justify-center">
                 <ShoppingCart
-                  className="text-tesla-dark group-hover:text-tesla-red transition"
+                  className="text-tesla-dark group-hover:text-tesla-red transition-all duration-200 group-hover:-rotate-12 group-hover:scale-110"
                   size={20}
                 />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-tesla-red text-white text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full">
+                  <span className="absolute -top-2 -right-2 bg-tesla-red text-white text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full ring-2 ring-white animate-in zoom-in-50 duration-200">
                     {cartCount}
                   </span>
                 )}
               </div>
               <div className="hidden lg:block text-sm text-right leading-tight">
                 <div className="text-gray-500 text-xs">Кошик</div>
-                <div className="font-bold text-tesla-dark">
+                <div className="font-bold text-tesla-dark group-hover:text-tesla-red transition-colors">
                   {formatPrice(displayCartTotal)}
                 </div>
               </div>
@@ -360,16 +360,16 @@ const Header: React.FC<HeaderProps> = ({
             {/* Mobile Menu Drawer Button (Hamburger) */}
             <button
               onClick={handleOpenDrawer}
-              className="md:hidden p-1.5 text-gray-800 hover:text-tesla-red rounded-lg hover:bg-gray-100 transition"
+              className="md:hidden p-2 text-gray-800 hover:text-tesla-red rounded-xl hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
               aria-label="Відкрити меню"
             >
-              <Menu size={22} />
+              <Menu size={22} className="transition-transform duration-200 group-hover:scale-110" />
             </button>
 
             {/* Checkout (Desktop) */}
             <Link
               to="/checkout"
-              className="hidden sm:block bg-tesla-red hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition text-sm shadow-sm whitespace-nowrap"
+              className="hidden sm:block bg-tesla-red hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-md font-medium transition-all duration-200 text-sm shadow-sm whitespace-nowrap"
             >
               Оформити
             </Link>
@@ -378,7 +378,7 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
-          <div className="md:hidden absolute top-0 left-0 w-full h-full bg-white z-20 flex items-center px-4 page-transition shadow-sm">
+          <div className="md:hidden absolute top-0 left-0 w-full h-full bg-white/95 backdrop-blur-md z-30 flex items-center px-4 animate-search-reveal shadow-md border-b border-gray-100">
             <form
               onSubmit={(e) => {
                 handleSearchSubmit(e);
@@ -390,20 +390,21 @@ const Header: React.FC<HeaderProps> = ({
                 <input
                   type="text"
                   placeholder="Пошук запчастин..."
-                  className="w-full bg-gray-100 rounded-lg py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-tesla-red/30 transition-all"
+                  className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-3 focus:ring-tesla-red/15 transition-all"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus
                 />
                 <Search
-                  className="absolute left-3 top-3 text-gray-400"
+                  className="absolute left-3 top-3 text-tesla-red"
                   size={18}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition active:scale-90"
+                className="text-gray-500 hover:text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition-all duration-200 active:scale-85 hover:rotate-90 cursor-pointer"
+                aria-label="Закрити пошук"
               >
                 <X size={22} />
               </button>
@@ -417,12 +418,12 @@ const Header: React.FC<HeaderProps> = ({
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-backdrop-fade cursor-pointer"
             onClick={handleCloseDrawer}
           />
 
           {/* Drawer Content */}
-          <div className="relative w-full max-w-[310px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-right duration-200">
+          <div className="relative w-full max-w-[320px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-drawer-slide">
             <div>
               {/* Header inside drawer: Logo + Currency pill + Close */}
               <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
@@ -447,7 +448,7 @@ const Header: React.FC<HeaderProps> = ({
 
                   <button
                     onClick={handleCloseDrawer}
-                    className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition"
+                    className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 hover:rotate-90 cursor-pointer"
                     aria-label="Закрити меню"
                   >
                     <X size={20} />

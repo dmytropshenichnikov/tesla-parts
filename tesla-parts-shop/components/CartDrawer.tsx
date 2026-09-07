@@ -59,29 +59,31 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-backdrop-fade cursor-pointer"
         onClick={onClose}
       />
 
       <div className="absolute inset-y-0 right-0 max-w-md w-full flex">
-        <div className="flex-1 flex flex-col bg-white shadow-xl animate-slide-in">
+        <div className="flex-1 flex flex-col bg-white shadow-2xl animate-drawer-slide">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-6 border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition"
+              className="p-1.5 px-3 hover:bg-gray-100 active:scale-95 rounded-full transition-all duration-200 cursor-pointer group flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-tesla-dark"
             >
-              <div className="flex items-center justify-between">
-                <ArrowLeft size={24} className="text-gray-500" /> Повернутись до
-                покупок
-              </div>
+              <ArrowLeft size={18} className="text-gray-500 group-hover:text-tesla-dark transition-transform duration-200 group-hover:-translate-x-1" />
+              <span>Назад</span>
             </button>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">
               Кошик ({items.length})
             </h2>
-            {/* <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
-              <X size={24} className="text-gray-500" />
-            </button> */}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 hover:rotate-90 cursor-pointer"
+              aria-label="Закрити кошик"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           {/* Items */}
@@ -110,20 +112,20 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                       </p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center border rounded-md">
+                      <div className="flex items-center border rounded-lg overflow-hidden">
                         <button
                           onClick={() => onUpdateQuantity(item.id, -1)}
-                          className="p-1 hover:bg-gray-100 text-gray-600 disabled:opacity-50"
+                          className="p-1.5 hover:bg-gray-100 text-gray-600 disabled:opacity-40 active:scale-90 transition-transform"
                           disabled={item.quantity <= 1}
                         >
                           <Minus size={14} />
                         </button>
-                        <span className="px-2 text-sm font-medium w-8 text-center">
+                        <span className="px-2 text-sm font-semibold w-8 text-center select-none">
                           {item.quantity}
                         </span>
                         <button
                           onClick={() => onUpdateQuantity(item.id, 1)}
-                          className="p-1 hover:bg-gray-100 text-gray-600"
+                          className="p-1.5 hover:bg-gray-100 text-gray-600 active:scale-90 transition-transform"
                         >
                           <Plus size={14} />
                         </button>
@@ -135,7 +137,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                   </div>
                   <button
                     onClick={() => onRemoveItem(item.id)}
-                    className="text-gray-400 hover:text-red-500 self-start p-1"
+                    className="text-gray-400 hover:text-red-500 hover:scale-110 active:scale-90 self-start p-1.5 transition-all duration-200 cursor-pointer"
+                    title="Видалити"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -146,10 +149,10 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
 
           {/* Footer */}
           {items.length > 0 && (
-            <div className="border-t border-gray-100 px-4 py-6 bg-gray-50">
+            <div className="border-t border-gray-100 px-4 py-6 bg-gray-50/80">
               <div className="flex justify-between items-center mb-4 text-lg font-bold text-gray-900">
                 <span>Всього</span>
-                <span>{formatAmount(totalDisplay)}</span>
+                <span className="text-xl text-tesla-dark font-extrabold">{formatAmount(totalDisplay)}</span>
               </div>
               <p className="text-xs text-gray-500 mb-4 text-center">
                 Вартість доставки розраховується за тарифами перевізника
@@ -159,7 +162,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                   onClose();
                   onCheckout();
                 }}
-                className="w-full bg-tesla-red text-white py-3 rounded-md font-bold hover:bg-red-700 transition shadow-md"
+                className="w-full bg-tesla-red text-white py-3.5 rounded-xl font-bold hover:bg-red-700 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer"
               >
                 Оформити замовлення
               </button>

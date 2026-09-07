@@ -111,6 +111,59 @@
         animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         will-change: opacity, transform;
       }
+      /* Smooth slide-in for right-side drawers (Cart & Menu) */
+      @keyframes drawerSlideIn {
+        from {
+          transform: translateX(100%);
+        }
+        to {
+          transform: translateX(0);
+        }
+      }
+      .animate-drawer-slide {
+        animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform;
+      }
+      /* Smooth fade for backdrops */
+      @keyframes backdropFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .animate-backdrop-fade {
+        animation: backdropFadeIn 0.22s ease-out forwards;
+      }
+      /* Smooth reveal for mobile search overlay */
+      @keyframes searchDrop {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-search-reveal {
+        animation: searchDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      /* Ambient breathing glow for FAB */
+      @keyframes pulseAura {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        50% {
+          transform: scale(1.15);
+          opacity: 0.25;
+        }
+      }
+      .animate-aura {
+        animation: pulseAura 3s ease-in-out infinite;
+      }
     </style>
     <script type="importmap">
       {
