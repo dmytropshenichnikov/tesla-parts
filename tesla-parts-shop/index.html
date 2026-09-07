@@ -164,6 +164,75 @@
       .animate-aura {
         animation: pulseAura 3s ease-in-out infinite;
       }
+      /* Smooth slide-out for right-side drawers (Cart & Menu) */
+      @keyframes drawerSlideOut {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(100%);
+        }
+      }
+      .animate-drawer-slide-out {
+        animation: drawerSlideOut 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: transform;
+      }
+      /* Smooth fade-out for backdrops */
+      @keyframes backdropFadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      .animate-backdrop-fade-out {
+        animation: backdropFadeOut 0.24s ease-out forwards;
+      }
+      /* Smooth input expand / fold animation */
+      @keyframes inputExpandHorizontal {
+        from {
+          opacity: 0;
+          transform: scaleX(0.4);
+        }
+        to {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+      .animate-input-expand {
+        animation: inputExpandHorizontal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transform-origin: right center;
+      }
+      @keyframes inputCollapseHorizontal {
+        from {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+        to {
+          opacity: 0;
+          transform: scaleX(0.4);
+        }
+      }
+      .animate-input-collapse {
+        animation: inputCollapseHorizontal 0.2s ease-in forwards;
+        transform-origin: right center;
+      }
+      /* Staggered cascading item entrance */
+      @keyframes cascadeFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-cascade-item {
+        animation: cascadeFadeIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        will-change: opacity, transform;
+      }
     </style>
     <script type="importmap">
       {

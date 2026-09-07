@@ -128,7 +128,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in">
+    <div className="max-w-6xl mx-auto page-transition">
       <SeoHead
         title={product.meta_title || product.name}
         description={product.meta_description}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CartItem, Currency } from '../types';
 import { X, ArrowLeft, Trash2, Plus, Minus } from 'lucide-react';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
@@ -54,21 +54,52 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
   const totalDisplay =
     currency === Currency.USD ? totalUSD : totalUSD * effectiveRate;
 
-  if (!isOpen) return null;
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+    } else if (isRendered) {
+      setIsClosing(true);
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, 260);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
+
+  const handleAnimatedClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 260);
+  };
+
+  if (!isRendered && !isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] overflow-hidden">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-backdrop-fade cursor-pointer"
-        onClick={onClose}
+        className={`absolute inset-0 bg-black/60 backdrop-blur-xs cursor-pointer ${
+          isClosing ? 'animate-backdrop-fade-out' : 'animate-backdrop-fade'
+        }`}
+        onClick={handleAnimatedClose}
       />
 
       <div className="absolute inset-y-0 right-0 max-w-md w-full flex">
-        <div className="flex-1 flex flex-col bg-white shadow-2xl animate-drawer-slide">
+        <div
+          className={`flex-1 flex flex-col bg-white shadow-2xl ${
+            isClosing ? 'animate-drawer-slide-out' : 'animate-drawer-slide'
+          }`}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-5 border-b border-gray-100">
             <button
-              onClick={onClose}
+              onClick={handleAnimatedClose}
               className="p-1.5 px-3 hover:bg-gray-100 active:scale-95 rounded-full transition-all duration-200 cursor-pointer group flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-tesla-dark"
             >
               <ArrowLeft size={18} className="text-gray-500 group-hover:text-tesla-dark transition-transform duration-200 group-hover:-translate-x-1" />
@@ -78,7 +109,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
               Кошик ({items.length})
             </h2>
             <button
-              onClick={onClose}
+              onClick={handleAnimatedClose}
               className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 hover:rotate-90 cursor-pointer"
               aria-label="Закрити кошик"
             >
@@ -159,8 +190,10 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
               </p>
               <button
                 onClick={() => {
-                  onClose();
-                  onCheckout();
+                  handleAnimatedClose();
+                  setTimeout(() => {
+                    onCheckout();
+                  }, 150);
                 }}
                 className="w-full bg-tesla-red text-white py-3.5 rounded-xl font-bold hover:bg-red-700 active:scale-[0.98] transition-all duration-200 shadow-md hover:shadow-xl cursor-pointer"
               >

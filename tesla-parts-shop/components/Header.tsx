@@ -61,11 +61,52 @@ const Header: React.FC<HeaderProps> = ({
   onCloseDrawer,
 }) => {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
+
+  const handleOpenMobileSearch = () => {
+    setIsMobileSearchClosing(false);
+    setIsMobileSearchOpen(true);
+  };
+
+  const handleCloseMobileSearch = () => {
+    if (isMobileSearchClosing) return;
+    setIsMobileSearchClosing(true);
+    setTimeout(() => {
+      setIsMobileSearchOpen(false);
+      setIsMobileSearchClosing(false);
+    }, 220);
+  };
 
   const [localDrawerOpen, setLocalDrawerOpen] = useState(false);
   const isDrawerOpen = propIsDrawerOpen !== undefined ? propIsDrawerOpen : localDrawerOpen;
   const handleOpenDrawer = onOpenDrawer || (() => setLocalDrawerOpen(true));
   const handleCloseDrawer = onCloseDrawer || (() => setLocalDrawerOpen(false));
+
+  const [isDrawerRendered, setIsDrawerRendered] = useState(isDrawerOpen);
+  const [isDrawerClosing, setIsDrawerClosing] = useState(false);
+
+  useEffect(() => {
+    if (isDrawerOpen) {
+      setIsDrawerRendered(true);
+      setIsDrawerClosing(false);
+    } else if (isDrawerRendered) {
+      setIsDrawerClosing(true);
+      const timer = setTimeout(() => {
+        setIsDrawerRendered(false);
+        setIsDrawerClosing(false);
+      }, 260);
+      return () => clearTimeout(timer);
+    }
+  }, [isDrawerOpen, isDrawerRendered]);
+
+  const handleAnimatedCloseDrawer = (afterClose?: () => void) => {
+    if (isDrawerClosing) return;
+    setIsDrawerClosing(true);
+    setTimeout(() => {
+      handleCloseDrawer();
+      if (afterClose) afterClose();
+    }, 260);
+  };
 
   // Дропдаун для десктопа (коли категорій > 4)
   const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
@@ -236,75 +277,88 @@ const Header: React.FC<HeaderProps> = ({
             {sortedCategories.length > 4 && (
               <div className="relative" ref={desktopDropdownRef}>
                 <button
-                  onClick={() =>
-                    setIsDesktopDropdownOpen(!isDesktopDropdownOpen)
-                  }
-                  className="flex items-center hover:text-tesla-red transition"
+                  onClick={() => setIsDesktopDropdownOpen(!isDesktopDropdownOpen)}
+                  className={`flex items-center hover:text-tesla-red transition cursor-pointer ${
+                    isDesktopDropdownOpen ? 'text-tesla-red' : ''
+                  }`}
                 >
-                  Усі категорії <ChevronDown size={16} className="ml-1" />
+                  Усі категорії{' '}
+                  <ChevronDown
+                    size={16}
+                    className={`ml-1 transition-transform duration-300 ${
+                      isDesktopDropdownOpen ? 'rotate-180' : 'rotate-0'
+                    }`}
+                  />
                 </button>
-                <div
-                  className={`absolute left-0 top-full mt-2 w-48 bg-white shadow-lg rounded-md overflow-hidden z-10 ${isDesktopDropdownOpen ? 'block' : 'hidden'}`}
-                >
-                  {sortedCategories.slice(4).map((cat) => (
-                    <Link
-                      key={cat.id}
-                      to={`/category/${slugify(cat.name)}`}
-                      onClick={() => setIsDesktopDropdownOpen(false)}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
-                </div>
+                {isDesktopDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-52 bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {sortedCategories.slice(4).map((cat, idx) => (
+                      <Link
+                        key={cat.id}
+                        to={`/category/${slugify(cat.name)}`}
+                        onClick={() => setIsDesktopDropdownOpen(false)}
+                        style={{ animationDelay: `${idx * 40}ms` }}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition-all hover:translate-x-1 duration-150 animate-cascade-item"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Right Actions Group: Catalog (Mobile), Search, Cart, Profile, Menu Drawer */}
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Catalog Button for Mobile / Tablet (Placed to the RIGHT, as requested) */}
             <div className="xl:hidden relative" ref={mobileCategoryRef}>
               <button
                 onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                className="flex items-center gap-1 font-bold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-xl border border-gray-200/80 shadow-xs"
+                className={`flex items-center gap-1.5 font-bold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
+                  isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
+                }`}
               >
                 <span>Каталог</span>
-                <ChevronDown size={13} className="text-gray-500" />
+                <ChevronDown
+                  size={13}
+                  className={`text-gray-500 transition-transform duration-300 ${
+                    isMobileCategoryOpen ? 'rotate-180 text-tesla-red' : 'rotate-0'
+                  }`}
+                />
               </button>
 
-              {/* Mobile Categories Dropdown */}
-              <div
-                className={`absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-150 ${isMobileCategoryOpen ? 'block' : 'hidden'}`}
-              >
-                <div className="py-1 max-h-80 overflow-y-auto">
-                  <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
-                    Категорії запчастин
+              {isMobileCategoryOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="py-1 max-h-80 overflow-y-auto">
+                    <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
+                      Категорії запчастин
+                    </div>
+                    {sortedCategories.map((cat, idx) => (
+                      <Link
+                        key={cat.id}
+                        to={`/category/${slugify(cat.name)}`}
+                        onClick={() => setIsMobileCategoryOpen(false)}
+                        style={{
+                          animationDelay: `${idx * 45}ms`,
+                        }}
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1.5 duration-150 animate-cascade-item"
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
                   </div>
-                  {sortedCategories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      to={`/category/${slugify(cat.name)}`}
-                      onClick={() => setIsMobileCategoryOpen(false)}
-                      className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-colors"
-                    >
-                      {cat.name}
-                    </Link>
-                  ))}
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Desktop Search Bar */}
             <form
               onSubmit={handleSearchSubmit}
               className="hidden md:flex items-center gap-2"
             >
-              <div className="relative flex-grow w-32 lg:w-44 focus-within:w-60 transition-all duration-300 ease-out group">
+              <div className="relative flex-grow w-36 lg:w-48 focus-within:w-72 transition-all duration-300 ease-out group origin-right">
                 <input
                   type="text"
-                  placeholder="Пошук..."
-                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400"
+                  placeholder="Пошук деталей..."
+                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                 />
@@ -315,16 +369,14 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </form>
 
-            {/* Mobile Search Toggle */}
             <button
               className="md:hidden text-tesla-dark p-2 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
-              onClick={() => setIsMobileSearchOpen(true)}
+              onClick={handleOpenMobileSearch}
               aria-label="Пошук"
             >
               <Search size={20} className="transition-transform duration-200 group-hover:rotate-12" />
             </button>
 
-            {/* Profile (Desktop) */}
             <Link
               to="/profile"
               className="hidden sm:flex text-tesla-dark hover:text-tesla-red p-2 rounded-full hover:bg-gray-100 active:scale-90 transition-all duration-200"
@@ -333,7 +385,6 @@ const Header: React.FC<HeaderProps> = ({
               <User size={20} />
             </Link>
 
-            {/* Cart */}
             <div
               onClick={onCartClick}
               className="flex items-center gap-2 cursor-pointer group p-1.5 sm:p-1 rounded-xl hover:bg-gray-50 active:scale-90 transition-all duration-200 select-none"
@@ -357,7 +408,6 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
 
-            {/* Mobile Menu Drawer Button (Hamburger) */}
             <button
               onClick={handleOpenDrawer}
               className="md:hidden p-2 text-gray-800 hover:text-tesla-red rounded-xl hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
@@ -366,7 +416,6 @@ const Header: React.FC<HeaderProps> = ({
               <Menu size={22} className="transition-transform duration-200 group-hover:scale-110" />
             </button>
 
-            {/* Checkout (Desktop) */}
             <Link
               to="/checkout"
               className="hidden sm:block bg-tesla-red hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-md font-medium transition-all duration-200 text-sm shadow-sm whitespace-nowrap"
@@ -376,21 +425,26 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Mobile Search Overlay */}
         {isMobileSearchOpen && (
-          <div className="md:hidden absolute top-0 left-0 w-full h-full bg-white/95 backdrop-blur-md z-30 flex items-center px-4 animate-search-reveal shadow-md border-b border-gray-100">
+          <div
+            className={`md:hidden absolute top-0 left-0 w-full h-full bg-white/95 backdrop-blur-md z-30 flex items-center px-4 shadow-md border-b border-gray-100 ${
+              isMobileSearchClosing ? 'animate-backdrop-fade-out' : 'animate-search-reveal'
+            }`}
+          >
             <form
               onSubmit={(e) => {
                 handleSearchSubmit(e);
-                setIsMobileSearchOpen(false);
+                handleCloseMobileSearch();
               }}
               className="flex items-center gap-2 w-full"
             >
-              <div className="relative flex-grow">
+              <div className="relative flex-grow overflow-hidden">
                 <input
                   type="text"
                   placeholder="Пошук запчастин..."
-                  className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-3 focus:ring-tesla-red/15 transition-all"
+                  className={`w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-3 focus:ring-tesla-red/15 transition-all ${
+                    isMobileSearchClosing ? 'animate-input-collapse' : 'animate-input-expand'
+                  }`}
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   autoFocus
@@ -402,7 +456,7 @@ const Header: React.FC<HeaderProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsMobileSearchOpen(false)}
+                onClick={handleCloseMobileSearch}
                 className="text-gray-500 hover:text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition-all duration-200 active:scale-85 hover:rotate-90 cursor-pointer"
                 aria-label="Закрити пошук"
               >
@@ -413,23 +467,24 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Slide-over Mobile & Quick Menu Drawer */}
-      {isDrawerOpen && (
+      {(isDrawerRendered || isDrawerOpen) && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-backdrop-fade cursor-pointer"
-            onClick={handleCloseDrawer}
+            className={`fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer ${
+              isDrawerClosing ? 'animate-backdrop-fade-out' : 'animate-backdrop-fade'
+            }`}
+            onClick={() => handleAnimatedCloseDrawer()}
           />
 
-          {/* Drawer Content */}
-          <div className="relative w-full max-w-[320px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto animate-drawer-slide">
+          <div
+            className={`relative w-full max-w-[320px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto ${
+              isDrawerClosing ? 'animate-drawer-slide-out' : 'animate-drawer-slide'
+            }`}
+          >
             <div>
-              {/* Header inside drawer: Logo + Currency pill + Close */}
               <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
                 <TeslaPartsCenterLogo />
                 <div className="flex items-center gap-2">
-                  {/* Compact Currency Switcher */}
                   <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200/60">
                     {Object.values(Currency).map((cur) => (
                       <button
@@ -447,7 +502,7 @@ const Header: React.FC<HeaderProps> = ({
                   </div>
 
                   <button
-                    onClick={handleCloseDrawer}
+                    onClick={() => handleAnimatedCloseDrawer()}
                     className="p-1.5 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 hover:rotate-90 cursor-pointer"
                     aria-label="Закрити меню"
                   >
@@ -456,7 +511,6 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              {/* Navigation Links */}
               <div className="mt-4 flex flex-col">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
                   Меню
@@ -464,27 +518,28 @@ const Header: React.FC<HeaderProps> = ({
 
                 <Link
                   to="/reviews"
-                  onClick={handleCloseDrawer}
-                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-amber-50/50 rounded-xl transition group mb-1"
+                  onClick={() => handleAnimatedCloseDrawer()}
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-amber-50/50 rounded-xl transition-all hover:translate-x-1 group mb-1 active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2.5">
                     <Star size={16} className="text-amber-500 fill-amber-400 flex-shrink-0" />
                     <span>Відгуки про магазин</span>
                   </span>
-                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
                 </Link>
 
                 {headerPages
                   .filter((page) => page.is_published)
-                  .map((page) => (
+                  .map((page, idx) => (
                     <Link
                       key={page.slug}
                       to={`/info/${page.slug}`}
-                      onClick={handleCloseDrawer}
-                      className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-950 hover:bg-gray-50 rounded-xl transition group"
+                      onClick={() => handleAnimatedCloseDrawer()}
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                      className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-950 hover:bg-gray-50 rounded-xl transition-all hover:translate-x-1 group active:scale-[0.98]"
                     >
                       <span>{page.title}</span>
-                      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
                     </Link>
                   ))}
 
@@ -492,19 +547,18 @@ const Header: React.FC<HeaderProps> = ({
 
                 <Link
                   to="/profile"
-                  onClick={handleCloseDrawer}
-                  className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition group"
+                  onClick={() => handleAnimatedCloseDrawer()}
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 rounded-xl transition-all hover:translate-x-1 group active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2.5">
                     <User size={16} className="text-gray-500" />
                     <span>Особистий кабінет</span>
                   </span>
-                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
                 </Link>
               </div>
             </div>
 
-            {/* Bottom: Contacts & Support Card */}
             <div className="pt-4 border-t border-gray-100 mt-6">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 px-1">
                 Контакти та консультація

@@ -79,7 +79,7 @@ const ProductList: React.FC<ProductListProps> = ({
         </h2>
       )}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
-        {products.map((product) => {
+        {products.map((product, index) => {
           const { original, final } = getDiscountedPriceInfo(product);
 
           // Clean title: remove part number prefix if it is already displayed
@@ -108,8 +108,11 @@ const ProductList: React.FC<ProductListProps> = ({
             <Link
               key={product.id}
               to={`/product/${product.id}`}
-              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
+              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden animate-cascade-item"
+              style={{
+                WebkitTapHighlightColor: 'transparent',
+                animationDelay: `${Math.min(index * 35, 450)}ms`,
+              }}
             >
               {/* Product Photo & Stock Badge */}
               <div className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50">

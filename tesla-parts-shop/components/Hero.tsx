@@ -28,12 +28,15 @@ const Hero: React.FC<HeroProps> = () => {
         Оберіть модель вашого Tesla
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {categories.map((category) => (
+        {categories.map((category, idx) => (
           <Link
             key={category.id}
             to={`/category/${slugify(category.name)}`}
-            className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98]"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
+            className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98] animate-cascade-item"
+            style={{
+              WebkitTapHighlightColor: 'transparent',
+              animationDelay: `${idx * 80}ms`,
+            }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 group-hover:via-black/25 transition-all duration-300 z-10" />
             <img

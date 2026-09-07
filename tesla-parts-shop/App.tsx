@@ -1043,7 +1043,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
   const loading = loadingProducts || loadingCategory;
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 page-transition" key={`${categorySlug}-${selectedSubcategory || 'root'}`}>
       <SeoHead
         title={category.meta_title}
         description={category.meta_description}
@@ -1080,12 +1080,17 @@ const CategoryView: React.FC<CategoryViewProps> = ({
 
       {subcategoriesToShow.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
-          {subcategoriesToShow.map((sub) => (
-            <SubcategoryCard
+          {subcategoriesToShow.map((sub, idx) => (
+            <div
               key={sub.id}
-              subcategory={sub}
-              to={`/category/${categorySlug}/sub/${sub.id}`}
-            />
+              className="animate-cascade-item"
+              style={{ animationDelay: `${Math.min(idx * 40, 480)}ms` }}
+            >
+              <SubcategoryCard
+                subcategory={sub}
+                to={`/category/${categorySlug}/sub/${sub.id}`}
+              />
+            </div>
           ))}
         </div>
       )}
