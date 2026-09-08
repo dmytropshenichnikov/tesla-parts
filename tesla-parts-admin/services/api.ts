@@ -236,6 +236,9 @@ export const ApiService = {
     if (product.is_popular !== undefined) {
       formData.append('is_popular', product.is_popular.toString());
     }
+    if (product.part_type !== undefined) {
+      formData.append('part_type', product.part_type || '');
+    }
 
     const res = await _authenticatedFetch(`${API_URL}/products/`, {
       method: 'POST',
@@ -283,6 +286,9 @@ export const ApiService = {
     }
     if (product.is_popular !== undefined) {
       formData.append('is_popular', product.is_popular.toString());
+    }
+    if (product.part_type !== undefined) {
+      formData.append('part_type', product.part_type || '');
     }
 
     if (product.kept_images !== undefined) {

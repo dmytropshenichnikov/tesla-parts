@@ -18,6 +18,7 @@ import {
   Clock,
   Sparkles,
   CheckCircle2,
+  Layers,
 } from 'lucide-react';
 import ViberIcon from './ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
@@ -27,6 +28,8 @@ import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
 import { trackViewItem } from '../utils/analytics';
+import { getProductPartType } from '../utils/partType';
+import { PartTypeBadge } from './PartTypeBadge';
 
 interface ProductPageProps {
   product: Product;
@@ -198,6 +201,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
       ? `≈ ${formatCurrency(priceUSD, Currency.USD)}`
       : `≈ ${formatCurrency(priceUSD * effectiveRate, Currency.UAH)}`;
 
+  const partType = useMemo(() => getProductPartType(product), [product]);
+
   // Prefilled message for messenger consultation
   const productUrl =
     typeof window !== 'undefined' && window.location?.origin
@@ -303,6 +308,13 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                 />
 
+                {/* Part Type Floating Badge */}
+                {partType && (
+                  <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                    <PartTypeBadge type={partType} variant="floating" size="md" />
+                  </div>
+                )}
+
                 {/* Tap to zoom hint */}
                 <div className="absolute bottom-2.5 right-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none transition-opacity opacity-80 group-hover:opacity-100">
                   <ZoomIn size={13} />
@@ -381,6 +393,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   <span className="inline-flex items-center bg-gray-100 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium">
                     Під замовлення
                   </span>
+                )}
+
+                {partType && (
+                  <PartTypeBadge type={partType} variant="pill" size="md" />
                 )}
 
                 {/* Mobile models tags */}
@@ -598,6 +614,29 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 <span className="text-gray-500 font-medium">Сумісність з Tesla:</span>
                 <span className="font-semibold text-gray-900">
                   {models.join(', ')}
+                </span>
+              </div>
+            )}
+
+            {partType && (
+              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <span className="text-gray-500 font-medium">Тип запчастини:</span>
+                <span
+                  className={`font-semibold inline-flex items-center gap-1.5 ${
+                    partType === 'original' ? 'text-blue-700' : 'text-amber-800'
+                  }`}
+                >
+                  {partType === 'original' ? (
+                    <>
+                      <ShieldCheck size={15} className="text-blue-600" />
+                      Оригінал Tesla (OEM)
+                    </>
+                  ) : (
+                    <>
+                      <Layers size={15} className="text-amber-600" />
+                      Якісний аналог
+                    </>
+                  )}
                 </span>
               </div>
             )}

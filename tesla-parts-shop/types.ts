@@ -41,6 +41,7 @@ export interface Product {
   cross_number?: string;
   search_keywords?: string;
   is_popular?: boolean;
+  part_type?: 'original' | 'analog' | null;
   meta_title?: string | null;
   meta_description?: string | null;
 }

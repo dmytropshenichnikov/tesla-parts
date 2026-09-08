@@ -100,6 +100,7 @@ export const ProductForm: React.FC = () => {
     search_keywords: '',
     meta_title: '',
     meta_description: '',
+    part_type: '' as '' | 'original' | 'analog',
   });
 
   const [exchangeRate, setExchangeRate] = useState<number>(40); // Default fallback
@@ -144,6 +145,7 @@ export const ProductForm: React.FC = () => {
         search_keywords: product.search_keywords || '',
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
+        part_type: (product.part_type as '' | 'original' | 'analog') || '',
       });
 
       if (product.images && product.images.length > 0) {
@@ -816,6 +818,29 @@ export const ProductForm: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Тип запчастини (плашка)
+            </label>
+            <select
+              value={formData.part_type || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  part_type: e.target.value as '' | 'original' | 'analog',
+                })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm"
+            >
+              <option value="">Автовизначення за назвою та описом</option>
+              <option value="original">🛡️ Оригінал Tesla (OEM)</option>
+              <option value="analog">⚡ Якісний аналог</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Якщо вибрано «Автовизначення», бейдж визначиться автоматично на основі слів у назві/описі товару.
+            </p>
           </div>
 
           <div className="flex items-center">

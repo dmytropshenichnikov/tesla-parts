@@ -18,6 +18,7 @@ class ProductBase(BaseModel):
     meta_title: str | None = None
     meta_description: str | None = None
     is_popular: bool = False
+    part_type: str | None = None
     created_at: datetime | None = None
 
 

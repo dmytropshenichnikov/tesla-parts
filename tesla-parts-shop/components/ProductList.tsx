@@ -5,6 +5,8 @@ import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AppContext';
 import { Link } from 'react-router-dom';
+import { getProductPartType } from '../utils/partType';
+import { PartTypeBadge } from './PartTypeBadge';
 
 interface ProductListProps {
   products: Product[];
@@ -81,6 +83,7 @@ const ProductList: React.FC<ProductListProps> = ({
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
         {products.map((product, index) => {
           const { original, final } = getDiscountedPriceInfo(product);
+          const partType = getProductPartType(product);
 
           // Clean title: remove part number prefix if it is already displayed
           let cleanName = product.name;
@@ -135,6 +138,13 @@ const ProductList: React.FC<ProductListProps> = ({
                     </span>
                   )}
                 </div>
+
+                {/* Part type badge on photo (Original / Analog) */}
+                {partType && (
+                  <div className="absolute top-2 right-2 z-10 pointer-events-none">
+                    <PartTypeBadge type={partType} variant="floating" size="sm" />
+                  </div>
+                )}
               </div>
 
               {/* Product Information */}

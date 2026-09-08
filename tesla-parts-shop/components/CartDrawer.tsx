@@ -3,6 +3,8 @@ import { CartItem, Currency } from '../types';
 import { X, ArrowLeft, Trash2, Plus, Minus } from 'lucide-react';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
 import { formatCurrency } from '../utils/currency';
+import { getProductPartType } from '../utils/partType';
+import { PartTypeBadge } from './PartTypeBadge';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -138,9 +140,16 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                       <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
                         {item.name}
                       </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {item.category}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {item.category && (
+                          <span className="text-xs text-gray-500">
+                            {item.category}
+                          </span>
+                        )}
+                        {getProductPartType(item) && (
+                          <PartTypeBadge type={getProductPartType(item)} variant="subtle" />
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border rounded-lg overflow-hidden">

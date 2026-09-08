@@ -46,6 +46,20 @@ def _collect_subcategory_ids(product: Product) -> List[int]:
     return ids
 
 
+def _detect_part_type(name: str, description: Optional[str]) -> Optional[str]:
+    name_l = (name or "").lower()
+    desc_l = (description or "").lower()
+    if re.search(r"аналог", name_l):
+        return "analog"
+    if re.search(r"ориг[іи]нал|original", name_l):
+        return "original"
+    if re.search(r"аналог", desc_l):
+        return "analog"
+    if re.search(r"ориг[іи]нал|original", desc_l):
+        return "original"
+    return None
+
+
 def _build_product_response(product: Product, rate: float) -> ProductRead:
     price_usd, price_uah = compute_price_fields(product, rate)
     p_data = product.model_dump()
@@ -53,6 +67,7 @@ def _build_product_response(product: Product, rate: float) -> ProductRead:
     p_data["priceUAH"] = price_uah
     p_data["images"] = [img.url for img in product.images]
     p_data["subcategory_ids"] = _collect_subcategory_ids(product)
+    p_data["part_type"] = product.part_type or _detect_part_type(product.name, product.description)
     # Ensure created_at is handled as ISO format string for frontend if needed, 
     # but Pydantic's datetime field handles this naturally.
     if product.created_at:
@@ -225,6 +240,7 @@ async def create_product(
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
+    part_type: Optional[str] = Form(None),
     image: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     session: Session = Depends(get_session)
@@ -288,6 +304,7 @@ async def create_product(
         meta_title=meta_title,
         meta_description=meta_description,
         is_popular=is_popular,
+        part_type=part_type if part_type != "" else None,
         image=main_image
     )
     if priceUSD:
@@ -335,6 +352,7 @@ async def update_product(
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
+    part_type: Optional[str] = Form(None),
     image: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     kept_images: List[str] = Form(None),
@@ -358,6 +376,8 @@ async def update_product(
     product.meta_title = meta_title
     product.meta_description = meta_description
     product.is_popular = is_popular
+    if part_type is not None:
+        product.part_type = part_type if part_type != "" else None
     
     # Update main image if provided
     if image:

@@ -40,6 +40,7 @@ export interface Product {
   meta_title?: string;
   meta_description?: string;
   is_popular: boolean;
+  part_type?: 'original' | 'analog' | null;
   created_at?: string;
 }
 

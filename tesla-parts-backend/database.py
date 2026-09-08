@@ -32,6 +32,7 @@ def create_db_and_tables():
     _ensure_product_subcategory_id_column()
     _ensure_product_created_at_column()
     _ensure_product_is_popular_column()
+    _ensure_product_part_type_column()
     _ensure_order_note_column()
     
     with Session(engine) as session:
@@ -150,3 +151,13 @@ def _ensure_order_note_column():
             # Use double quotes for the table name "order"
             conn.execute(text('ALTER TABLE "order" ADD COLUMN note VARCHAR'))
             conn.commit()
+
+def _ensure_product_part_type_column():
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("product")]
+    if "part_type" not in columns:
+        print("Adding 'part_type' column to 'product' table...")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE product ADD COLUMN part_type VARCHAR"))
+            conn.commit()
+
