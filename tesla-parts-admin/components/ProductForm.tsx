@@ -775,6 +775,47 @@ export const ProductForm: React.FC = () => {
             />
           </div>
 
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Тип запчастини (плашка)
+            </label>
+            <select
+              value={formData.part_type || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  part_type: e.target.value as '' | 'original' | 'analog',
+                })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm"
+            >
+              <option value="">Автовизначення за назвою та описом</option>
+              <option value="original">🛡️ Оригінал Tesla (OEM)</option>
+              <option value="analog">⚡ Якісний аналог</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Якщо вибрано «Автовизначення», бейдж визначиться автоматично на основі слів у назві/описі товару.
+            </p>
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="inStock"
+              checked={formData.inStock}
+              onChange={(e) =>
+                setFormData({ ...formData, inStock: e.target.checked })
+              }
+              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+            />
+            <label
+              htmlFor="inStock"
+              className="ml-2 block text-sm text-gray-900"
+            >
+              В наявності
+            </label>
+          </div>
+
           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               SEO Налаштування
@@ -818,47 +859,6 @@ export const ProductForm: React.FC = () => {
                 </p>
               </div>
             </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Тип запчастини (плашка)
-            </label>
-            <select
-              value={formData.part_type || ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  part_type: e.target.value as '' | 'original' | 'analog',
-                })
-              }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm"
-            >
-              <option value="">Автовизначення за назвою та описом</option>
-              <option value="original">🛡️ Оригінал Tesla (OEM)</option>
-              <option value="analog">⚡ Якісний аналог</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-1.5">
-              Якщо вибрано «Автовизначення», бейдж визначиться автоматично на основі слів у назві/описі товару.
-            </p>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="inStock"
-              checked={formData.inStock}
-              onChange={(e) =>
-                setFormData({ ...formData, inStock: e.target.checked })
-              }
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-            />
-            <label
-              htmlFor="inStock"
-              className="ml-2 block text-sm text-gray-900"
-            >
-              В наявності
-            </label>
           </div>
 
           <div className="pt-4">
