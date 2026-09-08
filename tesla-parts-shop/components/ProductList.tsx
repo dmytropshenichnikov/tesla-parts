@@ -125,8 +125,8 @@ const ProductList: React.FC<ProductListProps> = ({
                   className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
                 
-                {/* Stock status badge on photo */}
-                <div className="absolute top-2 left-2 z-10">
+                {/* Badges on photo: Stock status & Part type together in one corner */}
+                <div className="absolute top-2 left-2 right-2 z-10 pointer-events-none flex flex-wrap items-center gap-1">
                   {product.inStock ? (
                     <span className="inline-flex items-center gap-1 bg-emerald-600/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-xs">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
@@ -137,14 +137,11 @@ const ProductList: React.FC<ProductListProps> = ({
                       Під замовлення
                     </span>
                   )}
-                </div>
 
-                {/* Part type badge on photo (Original / Analog) */}
-                {partType && (
-                  <div className="absolute top-2 right-2 z-10 pointer-events-none">
+                  {partType && (
                     <PartTypeBadge type={partType} variant="floating" size="sm" />
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Product Information */}

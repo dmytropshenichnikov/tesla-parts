@@ -308,12 +308,22 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                 />
 
-                {/* Part Type Floating Badge */}
-                {partType && (
-                  <div className="absolute top-3 left-3 z-10 pointer-events-none">
+                {/* Badges on photo: Stock & Part Type together in top-left */}
+                <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-wrap items-center gap-1.5">
+                  {product.inStock ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-0.5 rounded-full shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                      В наявності
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center bg-gray-700/90 backdrop-blur-xs text-gray-200 text-xs font-medium px-2.5 py-0.5 rounded-full shadow-xs">
+                      Під замовлення
+                    </span>
+                  )}
+                  {partType && (
                     <PartTypeBadge type={partType} variant="floating" size="md" />
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Tap to zoom hint */}
                 <div className="absolute bottom-2.5 right-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none transition-opacity opacity-80 group-hover:opacity-100">
