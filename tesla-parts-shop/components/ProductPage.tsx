@@ -199,17 +199,42 @@ const ProductPage: React.FC<ProductPageProps> = ({
       : `≈ ${formatCurrency(priceUSD * effectiveRate, Currency.UAH)}`;
 
   // Prefilled message for messenger consultation
-  const prefilledText = encodeURIComponent(
-    `Доброго дня! Мене цікавить запчастина: ${cleanTitle} (Артикул: ${product.detail_number || product.id}). Чи є в наявності?`
-  );
+  const productUrl =
+    typeof window !== 'undefined' && window.location?.origin
+      ? `${window.location.origin}/product/${product.id}`
+      : `https://teslapartscenter.com.ua/product/${product.id}`;
 
-  const telegramLink = socialLinks?.telegram
-    ? `${socialLinks.telegram.replace(/\/+$/, '')}?text=${prefilledText}`
-    : null;
+  const messageLines = [
+    `Доброго дня! Мене цікавить запчастина:`,
+    `🚗 ${cleanTitle}`,
+    product.detail_number ? `🔢 Артикул: ${product.detail_number}` : null,
+    `💰 Ціна: ${displayMainPrice}`,
+    `🔗 ${productUrl}`,
+    ``,
+    `Підкажіть, будь ласка, чи є в наявності та коли можлива відправка?`,
+  ].filter((line) => line !== null) as string[];
 
-  const viberLink = socialLinks?.viber
-    ? `viber://chat?number=${encodeURIComponent(socialLinks.viber)}`
-    : null;
+  const rawPrefilledText = messageLines.join('\n');
+  const prefilledText = encodeURIComponent(rawPrefilledText);
+
+  const telegramLink = React.useMemo(() => {
+    if (!socialLinks?.telegram) return null;
+    const cleanTg = socialLinks.telegram.trim();
+    const username = cleanTg
+      .replace(/^https?:\/\/t\.me\//i, '')
+      .replace(/^@/, '')
+      .replace(/\/.*$/, '');
+    return `https://t.me/${username}?text=${prefilledText}`;
+  }, [socialLinks?.telegram, prefilledText]);
+
+  const viberLink = React.useMemo(() => {
+    if (!socialLinks?.viber) return null;
+    let cleanDigits = socialLinks.viber.replace(/\D/g, '');
+    if (cleanDigits.startsWith('0')) {
+      cleanDigits = `38${cleanDigits}`;
+    }
+    return `viber://chat?number=${cleanDigits}&draft=${prefilledText}`;
+  }, [socialLinks?.viber, prefilledText]);
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
