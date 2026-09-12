@@ -981,4 +981,26 @@ export const ApiService = {
     }
     return res.json();
   },
+
+  getSearchQueriesReport: async (limit: number = 100): Promise<{
+    total_searches: number;
+    zero_results_count: number;
+    zero_results: { query: string; count: number; last_searched: string }[];
+    popular: { query: string; count: number; results_count: number; last_searched: string }[];
+    recent: { id: number; query: string; results_count: number; created_at: string }[];
+  }> => {
+    const res = await _authenticatedFetch(`${API_URL}/analytics/search-queries?limit=${limit}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch search queries report');
+    return res.json();
+  },
+
+  clearSearchQueries: async (): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/analytics/search-queries`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to clear search queries');
+  },
 };

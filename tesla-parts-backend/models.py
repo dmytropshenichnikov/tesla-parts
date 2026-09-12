@@ -193,3 +193,10 @@ class PromoCode(SQLModel, table=True):
         back_populates="promocodes", link_model=CustomerPromoCodeLink
     )
 
+
+class SearchQueryLog(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    query: str = Field(index=True)
+    results_count: int = Field(default=0, index=True)
+    created_at: datetime = Field(default_factory=get_kyiv_time, index=True)
+

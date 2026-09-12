@@ -19,6 +19,7 @@ import {
   Ticket,
   FolderTree,
   Star,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
@@ -91,6 +92,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         return 'Промокоди';
       case '/email-campaigns':
         return 'Розсилки';
+      case '/search-analytics':
+        return 'Пошукова аналітика';
       default:
         return 'Адмін Панель';
     }
@@ -193,6 +196,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             icon={Mail}
             label="Розсилки"
             active={location.pathname === '/email-campaigns'}
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            to="/search-analytics"
+            icon={Search}
+            label="Пошукові запити"
+            active={location.pathname === '/search-analytics'}
             collapsed={collapsed}
           />
         </nav>

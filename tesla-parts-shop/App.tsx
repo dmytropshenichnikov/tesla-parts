@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useLayoutEffect, useRef } from 'react';
 import {
   Routes,
   Route,
@@ -824,6 +824,7 @@ const SearchView: React.FC<SearchViewProps> = ({
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const lastLoggedQueryRef = useRef<string>('');
 
   const handleClearAndReturn = () => {
     if (onClearSearch) {
@@ -853,6 +854,21 @@ const SearchView: React.FC<SearchViewProps> = ({
     const timer = setTimeout(fetchResults, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Log search query with 1500ms debounce once user stops typing and results are loaded
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 3 || loading) return;
+
+    const timer = setTimeout(() => {
+      if (lastLoggedQueryRef.current.toLowerCase() !== q.toLowerCase()) {
+        lastLoggedQueryRef.current = q;
+        api.logSearchQuery(q, products.length);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, products.length, loading]);
 
   const normalizedQuery = searchQuery || 'запчастини';
   const fallbackTitle = `Пошук: ${normalizedQuery} | Tesla Parts Center`;

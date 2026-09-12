@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Product, Currency } from '../types';
-import { ShoppingBag, AlertCircle } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Copy, Check } from 'lucide-react';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AppContext';
@@ -57,6 +57,46 @@ const ProductList: React.FC<ProductListProps> = ({
     return { original: originalAmount, final: finalAmount };
   };
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedType, setCopiedType] = useState<'part' | 'full' | null>(null);
+
+  const handleCopyPartNumber = (
+    e: React.MouseEvent,
+    partNum: string,
+    productId: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(partNum);
+    setCopiedId(productId);
+    setCopiedType('part');
+    setTimeout(() => {
+      setCopiedId(null);
+      setCopiedType(null);
+    }, 1800);
+  };
+
+  const handleCopyProductInfo = (
+    e: React.MouseEvent,
+    product: Product,
+    cleanName: string,
+    finalPrice: number
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const formattedPrice = formatCurrency(finalPrice, currency);
+    const partInfo = product.detail_number ? ` (#${product.detail_number})` : '';
+    const url = `${window.location.origin}/product/${product.id}`;
+    const text = `${cleanName}${partInfo} — ${formattedPrice}\n${url}`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(product.id);
+    setCopiedType('full');
+    setTimeout(() => {
+      setCopiedId(null);
+      setCopiedType(null);
+    }, 1800);
+  };
+
   if (products.length === 0) {
     return (
       <div className="text-center py-20 bg-white rounded-lg shadow-sm">
@@ -111,7 +151,13 @@ const ProductList: React.FC<ProductListProps> = ({
             <Link
               key={product.id}
               to={`/product/${product.id}`}
-              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group select-none overflow-hidden"
+              onClick={(e) => {
+                const selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                  e.preventDefault();
+                }
+              }}
+              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group overflow-hidden"
               style={{
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -145,7 +191,7 @@ const ProductList: React.FC<ProductListProps> = ({
               </div>
 
               {/* Product Information */}
-              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between select-text cursor-default">
                 <div>
                   {/* Car Models Tags */}
                   {models.length > 0 && (
@@ -161,23 +207,40 @@ const ProductList: React.FC<ProductListProps> = ({
                     </div>
                   )}
 
-                  {/* Full Product Title (No truncation, no horizontal cutting) */}
+                  {/* Full Product Title (Selectable & clickable) */}
                   <h3
-                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors mb-2"
+                    className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors mb-2 select-text"
                   >
                     {cleanName}
                   </h3>
 
-                  {/* Part Numbers & Cross Block (Placed under title with subtle neutral styling) */}
+                  {/* Part Numbers & Cross Block */}
                   {(product.detail_number || crossNumbers.length > 0) && (
                     <div className="flex flex-wrap items-center gap-1.5 mb-1 text-[11px]">
                       {product.detail_number && (
-                        <span
-                          className="font-mono text-[10px] sm:text-[11px] font-medium text-gray-700 bg-gray-100 border border-gray-200/80 px-1.5 py-0.5 rounded flex-shrink-0"
-                          title={`Оригінальний номер: ${product.detail_number}`}
+                        <button
+                          type="button"
+                          onClick={(e) =>
+                            handleCopyPartNumber(
+                              e,
+                              product.detail_number!,
+                              product.id
+                            )
+                          }
+                          className={`font-mono text-[10px] sm:text-[11px] font-medium border px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1 transition-all cursor-pointer ${
+                            copiedId === product.id && copiedType === 'part'
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                              : 'text-gray-700 bg-gray-100 hover:bg-gray-200/80 border-gray-200/80 active:scale-95'
+                          }`}
+                          title="Натисніть, щоб скопіювати номер деталі"
                         >
-                          #{product.detail_number}
-                        </span>
+                          <span>#{product.detail_number}</span>
+                          {copiedId === product.id && copiedType === 'part' ? (
+                            <Check size={11} className="text-emerald-600" />
+                          ) : (
+                            <Copy size={10} className="text-gray-400 group-hover:text-gray-600" />
+                          )}
+                        </button>
                       )}
                       {crossNumbers.length > 0 && (
                         <span
@@ -191,7 +254,7 @@ const ProductList: React.FC<ProductListProps> = ({
                   )}
                 </div>
 
-                {/* Price & Action Button */}
+                {/* Price & Action Buttons */}
                 <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2">
                   <div className="flex flex-col min-w-0">
                     {original > final && (
@@ -204,29 +267,70 @@ const ProductList: React.FC<ProductListProps> = ({
                     </span>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onAddToCart(product);
-                    }}
-                    disabled={!product.inStock}
-                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${
-                      product.inStock
-                        ? 'bg-tesla-red text-white hover:bg-red-700 active:scale-95 shadow-red-600/20'
-                        : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                    }`}
-                    aria-label="Додати в кошик"
-                    title={product.inStock ? "Додати в кошик" : "Немає в наявності"}
-                  >
-                    <ShoppingBag size={17} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* 1-click Copy for client (Title + Part # + Price + Link) */}
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        handleCopyProductInfo(e, product, cleanName, final)
+                      }
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all border cursor-pointer ${
+                        copiedId === product.id && copiedType === 'full'
+                          ? 'bg-emerald-50 border-emerald-300 text-emerald-600 scale-105 shadow-xs'
+                          : 'bg-gray-50 border-gray-200/80 text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:scale-95'
+                      }`}
+                      title={
+                        copiedId === product.id && copiedType === 'full'
+                          ? 'Скопійовано!'
+                          : 'Скопіювати назву, артикул і ціну для клієнта'
+                      }
+                      aria-label="Скопіювати інформацію для клієнта"
+                    >
+                      {copiedId === product.id && copiedType === 'full' ? (
+                        <Check size={16} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={16} />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onAddToCart(product);
+                      }}
+                      disabled={!product.inStock}
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${
+                        product.inStock
+                          ? 'bg-tesla-red text-white hover:bg-red-700 active:scale-95 shadow-red-600/20'
+                          : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                      }`}
+                      aria-label="Додати в кошик"
+                      title={product.inStock ? "Додати в кошик" : "Немає в наявності"}
+                    >
+                      <ShoppingBag size={17} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </Link>
           );
         })}
       </div>
+
+      {/* Floating Copied Toast Notification */}
+      {copiedId && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-medium pointer-events-none transition-all">
+          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+            <Check size={12} className="text-white" />
+          </div>
+          <span>
+            {copiedType === 'part'
+              ? 'Номер деталі скопійовано в буфер!'
+              : 'Інформацію про товар скопійовано для клієнта!'}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

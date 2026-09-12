@@ -20,6 +20,7 @@ import { CustomerList } from './components/CustomerList';
 import { CustomerProfile } from './components/CustomerProfile';
 import { PromoCodeList } from './components/PromoCodeList';
 import { EmailCampaigns } from './components/EmailCampaigns';
+import { SearchAnalytics } from './components/SearchAnalytics';
 import { ResetPasswordPage } from './pages/ResetPassword';
 import { useAuth } from './AuthContext'; // Import useAuth
 
@@ -76,6 +77,10 @@ const App: React.FC = () => {
                   <Route path="/customers/:id" element={<CustomerProfile />} />
                   <Route path="/promocodes" element={<PromoCodeList />} />
                   <Route path="/email-campaigns" element={<EmailCampaigns />} />
+                  <Route
+                    path="/search-analytics"
+                    element={<SearchAnalytics />}
+                  />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Layout>

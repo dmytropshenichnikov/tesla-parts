@@ -273,4 +273,19 @@ export const api = {
     }
     return res.json();
   },
+
+  logSearchQuery: async (query: string, resultsCount: number = 0) => {
+    try {
+      const q = query.trim();
+      if (q.length < 2) return;
+      await fetch(`${API_URL}/analytics/search-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, results_count: resultsCount }),
+      });
+    } catch (e) {
+      // Silently catch logging errors so user experience is uninterrupted
+      console.warn('Failed to log search query', e);
+    }
+  },
 };

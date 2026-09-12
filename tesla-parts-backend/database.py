@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, create_engine, Session, select
 from sqlalchemy import text, inspect
 import os
-from models import Settings, User # Import Settings and User model
+from models import Settings, User, SearchQueryLog # Import models
 from auth import get_password_hash # Import password hashing utility
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
