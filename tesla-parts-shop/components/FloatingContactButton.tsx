@@ -40,19 +40,6 @@ export const FloatingContactButton: React.FC<FloatingContactButtonProps> = ({
   return (
     <div className="fixed bottom-5 right-5 z-40 flex items-center pointer-events-auto select-none">
       <div className="relative flex items-center group">
-        {/* Sleek Tooltip Pill (Desktop) */}
-        {!isOpen && (
-          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-950/85 hover:bg-neutral-900 text-white text-xs font-medium border border-neutral-700/60 shadow-xl backdrop-blur-md mr-3 transition-all duration-300 opacity-90 group-hover:opacity-100 group-hover:scale-105 pointer-events-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-tesla-red animate-pulse" />
-            <span
-              key={currentItem.id}
-              className="animate-in fade-in slide-in-from-right-1 duration-200 whitespace-nowrap tracking-wide"
-            >
-              {currentItem.label}
-            </span>
-          </div>
-        )}
-
         {/* Ambient Breathing Radial Aura */}
         {!isOpen && (
           <div className="absolute -inset-1.5 rounded-full bg-tesla-red/35 blur-md animate-aura pointer-events-none" />

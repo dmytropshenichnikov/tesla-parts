@@ -227,16 +227,16 @@ const ProductList: React.FC<ProductListProps> = ({
                               product.id
                             )
                           }
-                          className={`font-mono text-[10px] sm:text-[11px] font-medium border px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1 transition-all cursor-pointer ${
+                          className={`font-mono text-[10px] sm:text-[11px] font-medium border px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1 transition-all duration-200 cursor-pointer ${
                             copiedId === product.id && copiedType === 'part'
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs scale-105'
                               : 'text-gray-700 bg-gray-100 hover:bg-gray-200/80 border-gray-200/80 active:scale-95'
                           }`}
                           title="Натисніть, щоб скопіювати номер деталі"
                         >
                           <span>#{product.detail_number}</span>
                           {copiedId === product.id && copiedType === 'part' ? (
-                            <Check size={11} className="text-emerald-600" />
+                            <Check size={11} className="text-white stroke-[2.5] animate-in zoom-in-75 duration-200" />
                           ) : (
                             <Copy size={10} className="text-gray-400 group-hover:text-gray-600" />
                           )}
@@ -274,9 +274,9 @@ const ProductList: React.FC<ProductListProps> = ({
                       onClick={(e) =>
                         handleCopyProductInfo(e, product, cleanName, final)
                       }
-                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all border cursor-pointer ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 border cursor-pointer ${
                         copiedId === product.id && copiedType === 'full'
-                          ? 'bg-emerald-50 border-emerald-300 text-emerald-600 scale-105 shadow-xs'
+                          ? 'bg-emerald-500 border-emerald-500 text-white scale-105 shadow-sm shadow-emerald-500/30'
                           : 'bg-gray-50 border-gray-200/80 text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:scale-95'
                       }`}
                       title={
@@ -287,7 +287,7 @@ const ProductList: React.FC<ProductListProps> = ({
                       aria-label="Скопіювати інформацію для клієнта"
                     >
                       {copiedId === product.id && copiedType === 'full' ? (
-                        <Check size={16} className="text-emerald-600" />
+                        <Check size={17} className="text-white stroke-[2.5] animate-in zoom-in-75 duration-200" />
                       ) : (
                         <Copy size={16} />
                       )}
@@ -317,20 +317,6 @@ const ProductList: React.FC<ProductListProps> = ({
           );
         })}
       </div>
-
-      {/* Floating Copied Toast Notification */}
-      {copiedId && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-medium pointer-events-none transition-all">
-          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-            <Check size={12} className="text-white" />
-          </div>
-          <span>
-            {copiedType === 'part'
-              ? 'Номер деталі скопійовано в буфер!'
-              : 'Інформацію про товар скопійовано для клієнта!'}
-          </span>
-        </div>
-      )}
     </div>
   );
 };
