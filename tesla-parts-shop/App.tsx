@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useLayoutEffect, useRef, useCallback } from 'react';
 import {
   Routes,
   Route,
@@ -825,8 +825,27 @@ const SearchView: React.FC<SearchViewProps> = ({
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const lastLoggedQueryRef = useRef<string>('');
+  const logTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingLogRef = useRef<{ query: string; count: number } | null>(null);
+
+  const flushPendingLog = useCallback(() => {
+    if (pendingLogRef.current) {
+      const { query, count } = pendingLogRef.current;
+      const q = query.trim();
+      if (
+        q.length >= 2 &&
+        lastLoggedQueryRef.current.toLowerCase() !== q.toLowerCase()
+      ) {
+        lastLoggedQueryRef.current = q;
+        api.logSearchQuery(q, count);
+      }
+      pendingLogRef.current = null;
+    }
+  }, []);
 
   const handleClearAndReturn = () => {
+    if (logTimerRef.current) clearTimeout(logTimerRef.current);
+    pendingLogRef.current = null;
     if (onClearSearch) {
       onClearSearch();
     }
@@ -834,15 +853,26 @@ const SearchView: React.FC<SearchViewProps> = ({
   };
 
   useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setProducts([]);
+      return;
+    }
+
     const fetchResults = async () => {
-      if (!searchQuery) {
-        setProducts([]);
-        return;
-      }
       setLoading(true);
       try {
-        const data = await api.getProducts({ search: searchQuery });
+        const data = await api.getProducts({ search: q });
         setProducts(data);
+
+        // Queue search log if query is at least 2 chars
+        if (q.length >= 2) {
+          pendingLogRef.current = { query: q, count: data.length };
+          if (logTimerRef.current) clearTimeout(logTimerRef.current);
+          logTimerRef.current = setTimeout(() => {
+            flushPendingLog();
+          }, 800);
+        }
       } catch (e) {
         console.error('Search failed', e);
       } finally {
@@ -850,25 +880,17 @@ const SearchView: React.FC<SearchViewProps> = ({
       }
     };
 
-    // Debounce could be added here, but simple fetch for now
-    const timer = setTimeout(fetchResults, 300);
+    const timer = setTimeout(fetchResults, 250);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, flushPendingLog]);
 
-  // Log search query with 1500ms debounce once user stops typing and results are loaded
+  // Flush any pending search log on unmount (e.g. clicking a product in search results or navigating)
   useEffect(() => {
-    const q = searchQuery.trim();
-    if (q.length < 3 || loading) return;
-
-    const timer = setTimeout(() => {
-      if (lastLoggedQueryRef.current.toLowerCase() !== q.toLowerCase()) {
-        lastLoggedQueryRef.current = q;
-        api.logSearchQuery(q, products.length);
-      }
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, products.length, loading]);
+    return () => {
+      if (logTimerRef.current) clearTimeout(logTimerRef.current);
+      flushPendingLog();
+    };
+  }, [flushPendingLog]);
 
   const normalizedQuery = searchQuery || 'запчастини';
   const fallbackTitle = `Пошук: ${normalizedQuery} | Tesla Parts Center`;

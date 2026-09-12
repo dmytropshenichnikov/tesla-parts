@@ -77,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
     setTimeout(() => {
       setIsMobileSearchOpen(false);
       setIsMobileSearchClosing(false);
-      if (shouldClearQuery || location.pathname === '/search') {
+      if (shouldClearQuery) {
         onSearchQueryChange('');
         if (location.pathname === '/search') {
           navigate('/');
@@ -356,7 +356,11 @@ const Header: React.FC<HeaderProps> = ({
             </div>
 
             <form
-              onSubmit={handleSearchSubmit}
+              onSubmit={(e) => {
+                e.preventDefault();
+                (document.activeElement as HTMLElement)?.blur();
+                handleSearchSubmit(e);
+              }}
               className="hidden md:flex items-center gap-2"
             >
               <div className="relative flex-grow w-36 lg:w-48 focus-within:w-72 transition-all duration-300 ease-out group origin-right">
@@ -454,8 +458,9 @@ const Header: React.FC<HeaderProps> = ({
           >
             <form
               onSubmit={(e) => {
+                e.preventDefault();
+                (document.activeElement as HTMLElement)?.blur();
                 handleSearchSubmit(e);
-                handleCloseMobileSearch(false);
               }}
               className="flex items-center gap-2 w-full"
             >
