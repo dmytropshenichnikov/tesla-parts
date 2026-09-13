@@ -233,6 +233,9 @@ export const ApiService = {
     if (product.detail_number) {
       formData.append('detail_number', product.detail_number);
     }
+    if (product.search_keywords !== undefined && product.search_keywords !== null) {
+      formData.append('search_keywords', product.search_keywords);
+    }
     if (product.is_popular !== undefined) {
       formData.append('is_popular', product.is_popular.toString());
     }
@@ -283,6 +286,9 @@ export const ApiService = {
 
     if (product.detail_number) {
       formData.append('detail_number', product.detail_number);
+    }
+    if (product.search_keywords !== undefined && product.search_keywords !== null) {
+      formData.append('search_keywords', product.search_keywords);
     }
     if (product.is_popular !== undefined) {
       formData.append('is_popular', product.is_popular.toString());

@@ -840,7 +840,7 @@ const SearchView: React.FC<SearchViewProps> = ({
       const { query, count } = pendingLogRef.current;
       const q = query.trim();
       if (
-        q.length >= 2 &&
+        q.length >= 3 &&
         lastLoggedQueryRef.current.toLowerCase() !== q.toLowerCase()
       ) {
         lastLoggedQueryRef.current = q;
@@ -872,13 +872,13 @@ const SearchView: React.FC<SearchViewProps> = ({
         const data = await api.getProducts({ search: q });
         setProducts(data);
 
-        // Queue search log if query is at least 2 chars
-        if (q.length >= 2) {
+        // Queue search log if query is at least 3 chars with a 1500ms idle debounce
+        if (q.length >= 3) {
           pendingLogRef.current = { query: q, count: data.length };
           if (logTimerRef.current) clearTimeout(logTimerRef.current);
           logTimerRef.current = setTimeout(() => {
             flushPendingLog();
-          }, 250);
+          }, 1500);
         }
       } catch (e) {
         console.error('Search failed', e);

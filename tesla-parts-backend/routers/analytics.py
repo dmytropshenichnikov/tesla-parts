@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func, delete
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-
+from datetime import datetime, timedelta
 from database import get_session
-from models import SearchQueryLog
+from models import SearchQueryLog, get_kyiv_time
 from dependencies import get_current_admin
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -19,12 +18,45 @@ class SearchLogPayload(BaseModel):
 @router.post("/search-log")
 def log_search_query(payload: SearchLogPayload, session: Session = Depends(get_session)):
     q = (payload.query or "").strip()
-    if len(q) < 2 or len(q) > 200:
+    if len(q) < 3 or len(q) > 200:
         return {"status": "ignored"}
+
+    now = get_kyiv_time()
+    results_count = max(0, payload.results_count)
+
+    # Check for recent queries in the last 45 seconds to merge continuous typing
+    cutoff_time = now - timedelta(seconds=45)
+    recent_entry = session.exec(
+        select(SearchQueryLog)
+        .where(SearchQueryLog.created_at >= cutoff_time)
+        .order_by(SearchQueryLog.created_at.desc())
+    ).first()
+
+    if recent_entry:
+        recent_q = (recent_entry.query or "").strip().lower()
+        new_q = q.lower()
+
+        # If identical, just update timestamp & results count
+        if recent_q == new_q:
+            recent_entry.results_count = results_count
+            recent_entry.created_at = now
+            session.add(recent_entry)
+            session.commit()
+            return {"status": "updated", "id": recent_entry.id}
+
+        # If one is a prefix of the other (user typing more characters or deleting typos)
+        if new_q.startswith(recent_q) or recent_q.startswith(new_q):
+            recent_entry.query = q
+            recent_entry.results_count = results_count
+            recent_entry.created_at = now
+            session.add(recent_entry)
+            session.commit()
+            return {"status": "updated", "id": recent_entry.id}
 
     log_entry = SearchQueryLog(
         query=q,
-        results_count=max(0, payload.results_count)
+        results_count=results_count,
+        created_at=now
     )
     session.add(log_entry)
     session.commit()
