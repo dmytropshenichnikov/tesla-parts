@@ -443,8 +443,15 @@ const App: React.FC = () => {
   }, [location.pathname, location.search]);
 
   const handleSearch = (query: string) => {
-    window.scrollTo(0, 0);
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    const q = query.trim();
+    if (!q) return;
+    const targetSearch = `?q=${encodeURIComponent(q)}`;
+    if (location.pathname !== '/search' || location.search !== targetSearch) {
+      if (location.pathname !== '/search') {
+        window.scrollTo(0, 0);
+      }
+      navigate(`/search${targetSearch}`);
+    }
   };
 
   const sortedCategories = useMemo(
@@ -871,7 +878,7 @@ const SearchView: React.FC<SearchViewProps> = ({
           if (logTimerRef.current) clearTimeout(logTimerRef.current);
           logTimerRef.current = setTimeout(() => {
             flushPendingLog();
-          }, 800);
+          }, 250);
         }
       } catch (e) {
         console.error('Search failed', e);

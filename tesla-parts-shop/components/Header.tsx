@@ -79,9 +79,6 @@ const Header: React.FC<HeaderProps> = ({
       setIsMobileSearchClosing(false);
       if (shouldClearQuery) {
         onSearchQueryChange('');
-        if (location.pathname === '/search') {
-          navigate('/');
-        }
       }
     }, 280);
   };
@@ -358,6 +355,7 @@ const Header: React.FC<HeaderProps> = ({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 (document.activeElement as HTMLElement)?.blur();
                 handleSearchSubmit(e);
               }}
@@ -370,9 +368,17 @@ const Header: React.FC<HeaderProps> = ({
                   className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 pr-8 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      (e.target as HTMLElement).blur();
+                      handleSearchSubmit(e);
+                    }
+                  }}
                 />
                 <Search
-                  className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-tesla-red transition-colors duration-200"
+                  className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-tesla-red transition-colors duration-200 pointer-events-none"
                   size={18}
                 />
                 {searchQuery && (
@@ -459,6 +465,7 @@ const Header: React.FC<HeaderProps> = ({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 (document.activeElement as HTMLElement)?.blur();
                 handleSearchSubmit(e);
               }}
@@ -471,10 +478,18 @@ const Header: React.FC<HeaderProps> = ({
                   className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 pr-9 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-2 focus:ring-tesla-red/20 transition-colors shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      (e.target as HTMLElement).blur();
+                      handleSearchSubmit(e);
+                    }
+                  }}
                   autoFocus
                 />
                 <Search
-                  className="absolute left-3 top-3 text-tesla-red"
+                  className="absolute left-3 top-3 text-tesla-red pointer-events-none"
                   size={18}
                 />
                 {searchQuery && (
@@ -482,9 +497,6 @@ const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => {
                       handleSearchChange('');
-                      if (location.pathname === '/search') {
-                        navigate('/');
-                      }
                     }}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 bg-gray-200/80 hover:bg-gray-300 rounded-full transition-all duration-150 cursor-pointer active:scale-90"
                     title="Очистити поле"
@@ -496,7 +508,7 @@ const Header: React.FC<HeaderProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => handleCloseMobileSearch(true)}
+                onClick={() => handleCloseMobileSearch(false)}
                 className="text-gray-500 hover:text-tesla-dark p-2 hover:bg-gray-100 rounded-full transition-all duration-200 active:scale-85 hover:rotate-90 cursor-pointer"
                 aria-label="Закрити пошук"
               >

@@ -14,7 +14,7 @@ interface SearchReport {
 export const SearchAnalytics: React.FC = () => {
   const [report, setReport] = useState<SearchReport | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'zero' | 'popular' | 'recent'>('zero');
+  const [activeTab, setActiveTab] = useState<'recent' | 'zero' | 'popular'>('recent');
 
   const loadReport = async () => {
     setLoading(true);
@@ -137,8 +137,20 @@ export const SearchAnalytics: React.FC = () => {
       <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
         <div className="flex border-b border-gray-200 px-6 pt-4 gap-6 bg-gray-50/50">
           <button
+            onClick={() => setActiveTab('recent')}
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition cursor-pointer ${
+              activeTab === 'recent'
+                ? 'border-red-600 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Clock size={16} className={activeTab === 'recent' ? 'text-red-600' : 'text-gray-400'} />
+            Стрічка пошуків ({report?.recent?.length ?? 0})
+          </button>
+
+          <button
             onClick={() => setActiveTab('zero')}
-            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition ${
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition cursor-pointer ${
               activeTab === 'zero'
                 ? 'border-red-600 text-red-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -150,7 +162,7 @@ export const SearchAnalytics: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('popular')}
-            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition ${
+            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition cursor-pointer ${
               activeTab === 'popular'
                 ? 'border-red-600 text-red-600'
                 : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -158,18 +170,6 @@ export const SearchAnalytics: React.FC = () => {
           >
             <TrendingUp size={16} className={activeTab === 'popular' ? 'text-red-600' : 'text-gray-400'} />
             Популярні запити ({report?.popular?.length ?? 0})
-          </button>
-
-          <button
-            onClick={() => setActiveTab('recent')}
-            className={`pb-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition ${
-              activeTab === 'recent'
-                ? 'border-red-600 text-red-600'
-                : 'border-transparent text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <Clock size={16} className={activeTab === 'recent' ? 'text-red-600' : 'text-gray-400'} />
-            Стрічка пошуків ({report?.recent?.length ?? 0})
           </button>
         </div>
 
