@@ -375,7 +375,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
 
               {isMobileCategoryOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200 divide-y divide-gray-100">
+                <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-24px)] bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200 divide-y divide-gray-100">
                   {/* Schemes & VIN at top of mobile Catalog */}
                   <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
                     <Link
