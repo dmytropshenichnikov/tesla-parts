@@ -53,6 +53,18 @@
 5. **No Double Promo Discount (`tesla-parts-backend/routers/orders.py`):**
    - The frontend in `Checkout.tsx` calculates `totalUSD` with promo discount applied. The backend must validate the promo code, but MUST NOT apply the discount percentage/amount a second time if `totalUSD > 0`.
 
+6. **Schematics Models/Generations Come From Categories (`category` table) — DO NOT HARDCODE:**
+   - `GET /schematics/model-options` builds the model/generation lists from the `category` table. Both
+     `tesla-parts-admin/components/SchematicManager.tsx` and
+     `tesla-parts-shop/components/SchemesCatalog.tsx` consume it.
+   - Never reintroduce constant arrays like `TESLA_MODELS` / `GENERATIONS_BY_MODEL` in the frontends.
+   - A category that is a strict prefix of another («Model 3» → «Model 3 Highland») is treated as the base
+     model; the remainder is the generation. `list_schematics` resolves such compound names generically.
+   - A schematic row stores the **base** model in `schematic.model` (e.g. `Model 3`) plus the generation
+     (e.g. `Highland (2024-...)`); storing the category name itself would break filtering.
+   - Category names containing «аксесуар» are accessory categories: they get the universal generation and
+     are listed last in the admin/shop pickers.
+
 ## Core Workflows
 - **Migrations:** Use provided migration scripts (`migrate_*.py`) for DB schema updates.
 - **Testing:** Run backend tests with `.venv/bin/pytest` and frontend typechecks with `npx tsc --noEmit`.
