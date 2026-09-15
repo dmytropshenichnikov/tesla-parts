@@ -49,17 +49,22 @@ def decode_tesla_vin(vin: str) -> Optional[Dict[str, Any]]:
     plant_char = clean_vin[10]
     plant = PLANT_CODES.get(plant_char, 'Fremont, USA')
     
-    # 7th digit: Motor / Drive
-    motor_char = clean_vin[6]
+    # 8th digit (index 7): Motor / Drive Unit
+    motor_char = clean_vin[7]
     drive = "Dual Motor AWD"
-    if motor_char in ['1', 'A', 'D']:
+    trim = ""
+    if motor_char in ['A', 'D', 'J', 'R', 'S', '1']:
         drive = "Rear-Wheel Drive (RWD)"
+        trim = "Standard Range / 60 kWh"
     elif motor_char in ['3', '4', 'C', 'F']:
         drive = "Performance AWD"
-    elif motor_char in ['K', 'P']:
+        trim = "Performance"
+    elif motor_char in ['P', 'K', '5']:
         drive = "Tri-Motor AWD (Plaid / Cyberbeast)"
-    elif motor_char in ['2', 'B', 'E', 'J']:
+        trim = "Plaid"
+    elif motor_char in ['2', 'B', 'E', 'M', 'N']:
         drive = "Dual Motor AWD"
+        trim = "Long Range AWD"
 
     # Generation deduction
     generation = "Classic"
@@ -94,7 +99,10 @@ def decode_tesla_vin(vin: str) -> Optional[Dict[str, Any]]:
     elif model == "Cybertruck":
         body_type = "Pickup Truck"
 
-    description = f"Tesla {model} {generation.split(' (')[0]} {year} {drive}"
+    desc_parts = [f"Tesla {model}", generation.split(' (')[0], str(year), drive]
+    if trim and "60 kWh" in trim:
+        desc_parts.append("(60 kWh)")
+    description = " ".join(desc_parts)
 
     return {
         "vin": clean_vin,
@@ -105,6 +113,7 @@ def decode_tesla_vin(vin: str) -> Optional[Dict[str, Any]]:
         "year": year,
         "plant": plant,
         "drive": drive,
+        "trim": trim,
         "body_type": body_type,
         "description": description
     }

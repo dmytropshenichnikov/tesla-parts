@@ -375,7 +375,43 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
 
               {isMobileCategoryOpen && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200">
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200 divide-y divide-gray-100">
+                  {/* Schemes & VIN at top of mobile Catalog */}
+                  <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
+                    <Link
+                      to="/schemes"
+                      onClick={() => setIsMobileCategoryOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-50 text-gray-900 hover:text-tesla-red transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-red-50 text-tesla-red border border-red-100 flex items-center justify-center shrink-0">
+                        <Layers size={16} />
+                      </div>
+                      <div>
+                        <div className="font-montserrat font-bold text-xs">Схеми запчастин</div>
+                        <div className="text-[11px] text-gray-400 font-manrope">Інтерактивні вибух-схеми EPC</div>
+                      </div>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileCategoryOpen(false);
+                        setIsGarageOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 text-gray-900 transition-all text-left cursor-pointer"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 flex items-center justify-center shrink-0">
+                        <Car size={16} className="text-tesla-red" />
+                      </div>
+                      <div>
+                        <div className="font-montserrat font-bold text-xs">
+                          {activeCar ? `Гараж: ${activeCar.model}` : 'Підбір за VIN / Гараж'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 font-manrope">За VIN-кодом або моделлю</div>
+                      </div>
+                    </button>
+                  </div>
+
                   <div className="py-1 max-h-80 overflow-y-auto">
                     <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
                       Категорії запчастин
@@ -394,25 +430,6 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
-
-            <Link
-              to="/schemes"
-              className="lg:hidden flex items-center gap-1 font-bold text-xs text-tesla-red bg-red-50 hover:bg-red-100 py-1.5 px-2 rounded-xl border border-red-200/70 shadow-2xs active:scale-95 transition whitespace-nowrap"
-              title="Схеми запчастин"
-            >
-              <Layers size={13} className="text-tesla-red" />
-              <span>Схеми</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setIsGarageOpen(true)}
-              className="lg:hidden flex items-center gap-1 font-bold text-xs text-gray-700 hover:text-tesla-red bg-gray-100 hover:bg-gray-200 py-1.5 px-2 rounded-xl border border-gray-200/80 shadow-2xs active:scale-95 transition whitespace-nowrap cursor-pointer"
-              title="Пошук за VIN / Гараж"
-            >
-              <Car size={13} className="text-tesla-red" />
-              <span>{activeCar ? activeCar.model.replace('Model ', 'M') : 'VIN'}</span>
-            </button>
           </div>
 
           <form

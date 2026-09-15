@@ -244,18 +244,27 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       </div>
 
       {/* Two-column layout: Left = Diagram, Right = Parts list */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         {/* LEFT: Schematic diagram with hotspots */}
-        <div className="lg:col-span-6 xl:col-span-7 bg-white p-4 sm:p-6 rounded-3xl border border-gray-100 shadow-sm sticky top-24">
-          <div className="relative w-full border border-gray-100 rounded-2xl overflow-hidden bg-[#fafafa] flex items-center justify-center select-none min-h-[320px] sm:min-h-[440px]">
+        <div className="lg:col-span-6 xl:col-span-7 bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm lg:sticky lg:top-24">
+          <div className="flex items-center justify-between mb-2 lg:hidden">
+            <span className="font-montserrat font-bold text-xs text-gray-800">
+              Схема вузла ({schematic.hotspots.length} деталей)
+            </span>
+            <span className="text-[11px] text-gray-400 font-manrope">
+              Клікніть номер для вибору
+            </span>
+          </div>
+
+          <div className="relative w-full border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden bg-[#fafafa] flex items-center justify-center select-none min-h-[220px] sm:min-h-[400px]">
             {schematic.image_url ? (
               <img
                 src={getFullImageUrl(schematic.image_url)}
                 alt={schematic.title}
-                className="w-full h-auto object-contain pointer-events-none"
+                className="w-full h-auto object-contain pointer-events-none max-h-[340px] sm:max-h-[500px]"
               />
             ) : (
-              <div className="text-gray-400 text-sm font-manrope p-12">Зображення схеми відсутнє</div>
+              <div className="text-gray-400 text-sm font-manrope p-8">Зображення схеми відсутнє</div>
             )}
 
             {/* Red Hotspot Pins */}
@@ -271,10 +280,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                   }}
                   onClick={() => handleSelectHotspot(h)}
                   title={`#${h.number}: ${h.name}`}
-                  className={`absolute w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[11px] sm:text-xs transition-all duration-200 cursor-pointer shadow-md ${
+                  className={`absolute w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[9px] sm:text-xs transition-all duration-200 cursor-pointer shadow-sm ${
                     isActive
-                      ? 'bg-tesla-red text-white ring-4 ring-red-300 ring-offset-1 scale-125 z-20 shadow-red-500/40 animate-pulse'
-                      : 'bg-tesla-red text-white hover:scale-115 z-10 hover:shadow-lg'
+                      ? 'bg-tesla-red text-white ring-3 ring-red-300 ring-offset-1 scale-120 z-20 shadow-red-500/40'
+                      : 'bg-tesla-red text-white hover:scale-110 z-10 hover:shadow'
                   }`}
                 >
                   {h.number}
@@ -283,9 +292,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             })}
           </div>
 
-          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
+          <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
             <span>Клікніть на червоний номер, щоб підсвітити деталь у списку</span>
-            <span className="font-semibold text-gray-600">{schematic.hotspots.length} деталей на схемі</span>
+            <span className="font-semibold text-gray-600 hidden sm:inline">{schematic.hotspots.length} деталей на схемі</span>
           </div>
         </div>
 

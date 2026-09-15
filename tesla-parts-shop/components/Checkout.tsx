@@ -231,16 +231,28 @@ const Checkout: React.FC<CheckoutProps> = ({
     setDiscountValue(customerProfile?.discount_value || null);
   };
 
-  const formatItemPrice = (item: CartItem) => {
+  const getItemBaseAmount = (item: CartItem) => {
     const priceUSD =
       item.priceUSD && item.priceUSD > 0
         ? item.priceUSD
         : item.priceUAH && item.priceUAH > 0 && effectiveRate > 0
           ? item.priceUAH / effectiveRate
           : 0;
-    const amount =
-      currency === Currency.USD ? priceUSD : priceUSD * effectiveRate;
-    return formatAmount(amount);
+    return currency === Currency.USD ? priceUSD : priceUSD * effectiveRate;
+  };
+
+  const getItemDiscountedAmount = (item: CartItem) => {
+    const base = getItemBaseAmount(item);
+    if (!discountType || !discountValue) return base;
+    if (discountType === 'percent') {
+      return Math.round(base * (1 - discountValue / 100));
+    }
+    const ratio = baseDisplayAmount > 0 ? (finalDisplayAmount / baseDisplayAmount) : 1;
+    return Math.round(base * ratio);
+  };
+
+  const formatItemPrice = (item: CartItem) => {
+    return formatAmount(getItemBaseAmount(item));
   };
   const totalUAH = totalUSD * effectiveRate;
   const baseDisplayAmount = currency === Currency.UAH ? totalUAH : totalUSD;
@@ -464,11 +476,28 @@ const Checkout: React.FC<CheckoutProps> = ({
                       alt={item.name}
                     />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium line-clamp-2">{item.name}</div>
-                    <div className="text-gray-500">
-                      {item.quantity} x {formatItemPrice(item)}
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium line-clamp-2 text-gray-900">{item.name}</div>
+                    {discountType && discountValue ? (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span className="text-gray-500 text-xs">{item.quantity} ×</span>
+                        <span className="font-bold text-gray-900 text-xs sm:text-sm">
+                          {formatAmount(getItemDiscountedAmount(item))}
+                        </span>
+                        <span className="text-xs text-gray-400 line-through">
+                          {formatAmount(getItemBaseAmount(item))}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-1 py-0.5 rounded">
+                          {discountType === 'percent'
+                            ? `-${discountValue}%`
+                            : `-${formatAmount(getItemBaseAmount(item) - getItemDiscountedAmount(item))}`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-xs sm:text-sm mt-0.5">
+                        {item.quantity} × {formatItemPrice(item)}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
