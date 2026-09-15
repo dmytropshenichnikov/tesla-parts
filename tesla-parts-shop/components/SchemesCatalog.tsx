@@ -13,28 +13,40 @@ import {
   Check
 } from 'lucide-react';
 import { api } from '../services/api';
-import { SchematicSummary, SavedCar } from '../types';
+import { SchematicSummary, SavedCar, SchematicModelOption } from '../types';
 import { GarageModal } from './GarageModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-const TESLA_MODELS = [
-  { id: 'all', name: 'Всі моделі' },
-  { id: 'Model 3', name: 'Model 3', baseModel: 'Model 3' },
-  { id: 'Model 3 Highland', name: 'Model 3 Highland', baseModel: 'Model 3', defaultGen: 'Highland (2024-...)' },
-  { id: 'Model Y', name: 'Model Y', baseModel: 'Model Y' },
-  { id: 'Model Y Juniper', name: 'Model Y Juniper', baseModel: 'Model Y', defaultGen: 'Juniper (2025-...)' },
-  { id: 'Model S', name: 'Model S', baseModel: 'Model S' },
-  { id: 'Model X', name: 'Model X', baseModel: 'Model X' },
-  { id: 'Cybertruck', name: 'Cybertruck', baseModel: 'Cybertruck' }
-];
+const ALL_MODELS = '__all__';
+const ALL_GENERATIONS = 'Всі покоління';
 
-const GENERATIONS_BY_MODEL: Record<string, string[]> = {
-  'Model 3': ['Всі покоління', 'Highland (2024-...)', 'Classic (2017-2023)'],
-  'Model Y': ['Всі покоління', 'Classic (2020-2024)', 'Juniper (2025-...)'],
-  'Model S': ['Всі покоління', 'Plaid / Refresh (2021-...)', 'Facelift (2016-2020)', 'Classic (2012-2016)'],
-  'Model X': ['Всі покоління', 'Plaid / Refresh (2021-...)', 'Classic (2015-2020)'],
-  'Cybertruck': ['Всі покоління', '1st Gen (2023-...)']
+/**
+ * Моделі та покоління більше не дублюються хардкодом — вони приходять
+ * з категорій каталогу (`/schematics/model-options`), тож фільтр схем
+ * завжди збігається з категоріями магазину.
+ */
+const resolveOption = (
+  options: SchematicModelOption[],
+  model?: string | null,
+  generation?: string | null
+): SchematicModelOption | null => {
+  if (!model || options.length === 0) return null;
+  const lowModel = model.toLowerCase();
+  const direct = options.find((o) => o.category.toLowerCase() === lowModel);
+  if (direct) return direct;
+  const byModel = options.filter((o) => o.model.toLowerCase() === lowModel);
+  if (byModel.length === 0) return null;
+  if (generation) {
+    const lowGen = generation.toLowerCase();
+    const variant = byModel.find(
+      (o) => o.category !== o.model && lowGen.includes(o.category.replace(o.model, '').trim().toLowerCase())
+    );
+    if (variant) return variant;
+    const matched = byModel.find((o) => o.generations.some((g) => g.toLowerCase() === lowGen));
+    if (matched) return matched;
+  }
+  return byModel.find((o) => o.category === o.model) || byModel[0];
 };
 
 export const SchemesCatalog: React.FC = () => {
@@ -45,8 +57,9 @@ export const SchemesCatalog: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [selectedModel, setSelectedModel] = useState<string>('Model 3');
-  const [selectedGen, setSelectedGen] = useState<string>('Всі покоління');
+  const [modelOptions, setModelOptions] = useState<SchematicModelOption[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedGen, setSelectedGen] = useState<string>(ALL_GENERATIONS);
   const [searchInput, setSearchInput] = useState<string>('');
   const [activeSearch, setActiveSearch] = useState<string>('');
   const [vinBanner, setVinBanner] = useState<string | null>(null);
@@ -55,50 +68,44 @@ export const SchemesCatalog: React.FC = () => {
   const [isGarageOpen, setIsGarageOpen] = useState(false);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
 
+  // Категорії каталогу — джерело моделей і поколінь для фільтрів
   useEffect(() => {
+    api.getSchematicModelOptions().then((options) => {
+      setModelOptions(options);
+      if (options.length === 0) return;
+      const hasUrlFilter = Boolean(searchParams.get('model') || searchParams.get('generation') || searchParams.get('vin'));
+      if (!hasUrlFilter) {
+        setSelectedModel((current) => current || options[0].category);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (modelOptions.length === 0) return;
+
     const vinParam = searchParams.get('vin');
     const modelParam = searchParams.get('model');
     const genParam = searchParams.get('generation');
 
-    if (modelParam) {
-      if (modelParam === 'Model 3 Highland' || (modelParam === 'Model 3' && genParam && genParam.includes('Highland'))) {
-        setSelectedModel('Model 3 Highland');
-        setSelectedGen('Highland (2024-...)');
-      } else if (modelParam === 'Model Y Juniper' || (modelParam === 'Model Y' && genParam && genParam.includes('Juniper'))) {
-        setSelectedModel('Model Y Juniper');
-        setSelectedGen('Juniper (2025-...)');
-      } else if (TESLA_MODELS.some(m => m.id === modelParam)) {
-        setSelectedModel(modelParam);
-        if (genParam) {
-          setSelectedGen(genParam);
-        }
-      }
-    } else if (genParam) {
-      if (genParam.includes('Highland')) {
-        setSelectedModel('Model 3 Highland');
-        setSelectedGen('Highland (2024-...)');
-      } else if (genParam.includes('Juniper')) {
-        setSelectedModel('Model Y Juniper');
-        setSelectedGen('Juniper (2025-...)');
-      } else {
-        setSelectedGen(genParam);
+    if (modelParam || genParam) {
+      const option = resolveOption(modelOptions, modelParam || genParam, genParam);
+      if (option) {
+        setSelectedModel(option.category);
+        setSelectedGen(
+          genParam && option.generations.some((g) => g.toLowerCase() === genParam.toLowerCase())
+            ? genParam
+            : ALL_GENERATIONS
+        );
       }
     }
 
     if (vinParam && vinParam.length === 17) {
       api.decodeVin(vinParam).then(res => {
         if (res.is_valid && res.model) {
-          if (res.generation && res.generation.includes('Highland')) {
-            setSelectedModel('Model 3 Highland');
-            setSelectedGen('Highland (2024-...)');
-          } else if (res.generation && res.generation.includes('Juniper')) {
-            setSelectedModel('Model Y Juniper');
-            setSelectedGen('Juniper (2025-...)');
-          } else {
-            setSelectedModel(res.model);
-            if (res.generation) {
-              setSelectedGen(res.generation);
-            }
+          const option = resolveOption(modelOptions, res.model, res.generation);
+          if (option) {
+            setSelectedModel(option.category);
+            setSelectedGen(ALL_GENERATIONS);
           }
           const newCar: SavedCar = {
             id: `car_${Date.now()}`,
@@ -117,16 +124,17 @@ export const SchemesCatalog: React.FC = () => {
         }
       }).catch(console.error);
     }
-  }, [searchParams]);
+  }, [searchParams, modelOptions]);
 
   useEffect(() => {
     loadActiveCar();
     const handleGarageUpdate = () => loadActiveCar();
     window.addEventListener('garage-car-changed', handleGarageUpdate);
     return () => window.removeEventListener('garage-car-changed', handleGarageUpdate);
-  }, []);
+  }, [modelOptions]);
 
   useEffect(() => {
+    if (!selectedModel) return;
     loadSchematics();
   }, [selectedModel, selectedGen, activeSearch]);
 
@@ -136,19 +144,12 @@ export const SchemesCatalog: React.FC = () => {
       if (saved) {
         const parsed: SavedCar = JSON.parse(saved);
         setActiveCar(parsed);
-        // Automatically select active car model if not manually chosen via URL query
-        if (!searchParams.get('model')) {
-          if (parsed.generation && parsed.generation.includes('Highland')) {
-            setSelectedModel('Model 3 Highland');
-            setSelectedGen('Highland (2024-...)');
-          } else if (parsed.generation && parsed.generation.includes('Juniper')) {
-            setSelectedModel('Model Y Juniper');
-            setSelectedGen('Juniper (2025-...)');
-          } else if (parsed.model) {
-            setSelectedModel(parsed.model);
-            if (parsed.generation && !parsed.generation.includes('Стандартн')) {
-              setSelectedGen(parsed.generation);
-            }
+        // Автоматично підставляємо авто з гаража, якщо модель не задана в URL
+        if (!searchParams.get('model') && !searchParams.get('generation') && modelOptions.length > 0) {
+          const option = resolveOption(modelOptions, parsed.model, parsed.generation);
+          if (option) {
+            setSelectedModel(option.category);
+            setSelectedGen(ALL_GENERATIONS);
           }
         }
       } else {
@@ -164,14 +165,17 @@ export const SchemesCatalog: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const activeModelObj = TESLA_MODELS.find(m => m.id === selectedModel);
-      const apiModel = activeModelObj && 'baseModel' in activeModelObj
-        ? activeModelObj.baseModel
-        : (selectedModel === 'all' ? undefined : selectedModel);
+      const option = selectedModel === ALL_MODELS
+        ? null
+        : modelOptions.find((o) => o.category === selectedModel);
 
-      const apiGen = selectedGen === 'Всі покоління'
-        ? (activeModelObj && 'defaultGen' in activeModelObj ? activeModelObj.defaultGen : undefined)
-        : selectedGen;
+      // Бекенд сам розуміє складені назви категорій («Model 3 Highland» →
+      // Model 3 + покоління Highland), тому передаємо саме категорію.
+      const apiModel = option
+        ? option.category
+        : (selectedModel === ALL_MODELS ? undefined : selectedModel || undefined);
+
+      const apiGen = selectedGen === ALL_GENERATIONS ? undefined : selectedGen;
 
       const data = await api.getSchematics({
         model: apiModel,
@@ -203,11 +207,13 @@ export const SchemesCatalog: React.FC = () => {
     return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
-  const activeModelObj = TESLA_MODELS.find(m => m.id === selectedModel);
-  const baseModelKey = activeModelObj && 'baseModel' in activeModelObj ? activeModelObj.baseModel : selectedModel;
-  const availableGenerations = baseModelKey && baseModelKey !== 'all'
-    ? GENERATIONS_BY_MODEL[baseModelKey] || ['Всі покоління']
-    : [];
+  const activeModelObj = modelOptions.find((o) => o.category === selectedModel) || null;
+
+  // Покоління показуємо лише тоді, коли категорія справді має кілька варіантів.
+  const availableGenerations =
+    activeModelObj && !activeModelObj.is_accessory && activeModelObj.generations.length > 1
+      ? [ALL_GENERATIONS, ...activeModelObj.generations]
+      : [];
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -305,14 +311,17 @@ export const SchemesCatalog: React.FC = () => {
           1. Оберіть модель Tesla
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
-          {TESLA_MODELS.map((m) => {
-            const isSelected = selectedModel === m.id;
+          {[
+            { category: ALL_MODELS, label: 'Всі моделі' },
+            ...modelOptions.map((o) => ({ category: o.category, label: o.category }))
+          ].map((m) => {
+            const isSelected = selectedModel === m.category;
             return (
               <button
-                key={m.id}
+                key={m.category}
                 onClick={() => {
-                  setSelectedModel(m.id);
-                  setSelectedGen('Всі покоління');
+                  setSelectedModel(m.category);
+                  setSelectedGen(ALL_GENERATIONS);
                 }}
                 className={`py-3 px-4 rounded-2xl font-montserrat font-bold text-xs sm:text-sm text-center transition-all cursor-pointer border ${
                   isSelected
@@ -320,7 +329,7 @@ export const SchemesCatalog: React.FC = () => {
                     : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                {m.name}
+                {m.label}
               </button>
             );
           })}

@@ -5,7 +5,7 @@ from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 
 from database import get_session
-from models import Schematic, SchematicHotspot, Product
+from models import Schematic, SchematicHotspot, Product, Category
 from schemas import (
     SchematicRead,
     SchematicSummary,
@@ -142,6 +142,133 @@ def get_schematic_filters(session: Session = Depends(get_session)):
         "sections": sections,
         "subsystems": subsystems
     }
+
+# --- Опції «Модель / Покоління» для схем -------------------------------------
+# Джерело істини — категорії каталогу (таблиця category). Жодних хардкод-списків
+# у фронтенді: і адмінка, і магазин беруть ці опції звідси.
+#
+# Категорія-варіант (напр. «Model 3 Highland») — це базова модель («Model 3»)
+# плюс уточнення покоління. Для таких категорій покоління визначається
+# автоматично, тому в редакторі схем воно підставляється й не «висить» окремо.
+
+# Покоління за замовчуванням для категорії, під якою ще немає жодної схеми.
+DEFAULT_GENERATION = "Стандартна"
+# Категорії-аксесуари не прив'язані до конкретного авто.
+ACCESSORY_GENERATION = "Універсальні"
+ACCESSORY_KEYWORDS = ("аксесуар", "аксессуар", "accessor")
+
+
+def _is_accessory_category(name: str) -> bool:
+    low = (name or "").strip().lower()
+    return any(keyword in low for keyword in ACCESSORY_KEYWORDS)
+
+
+def _base_category_name(name: str, all_names: List[str]) -> Optional[str]:
+    """Повертає базову категорію, якщо name є її варіантом.
+
+    «Model 3 Highland» → «Model 3»;  «Model 3» → None.
+    Беріться найдовший збіг, щоб «Model 3 Highland» не злипалося з «Model».
+    """
+    low = (name or "").strip().lower()
+    if not low:
+        return None
+    base: Optional[str] = None
+    for candidate in all_names:
+        cand = (candidate or "").strip()
+        if not cand or cand.lower() == low:
+            continue
+        if low.startswith(cand.lower() + " ") and (base is None or len(cand) > len(base)):
+            base = cand
+    return base
+
+
+@router.get("/model-options")
+def get_schematic_model_options(session: Session = Depends(get_session)):
+    """Опції моделей і поколінь для редактора схем — побудовані з категорій."""
+    categories = session.exec(
+        select(Category).order_by(Category.sort_order, Category.id)
+    ).all()
+    names = [c.name for c in categories if c.name]
+
+    known_rows = session.exec(select(Schematic.model, Schematic.generation)).all()
+    generations_by_model: dict = {}
+    for model, generation in known_rows:
+        if not model or not generation:
+            continue
+        bucket = generations_by_model.setdefault(model.strip().lower(), [])
+        if generation not in bucket:
+            bucket.append(generation)
+
+    vehicles: List[dict] = []
+    accessories: List[dict] = []
+
+    for category in categories:
+        name = (category.name or "").strip()
+        if not name:
+            continue
+
+        base = _base_category_name(name, names)
+        existing = generations_by_model.get((base or name).lower(), [])
+
+        if base:
+            # Категорія-варіант: покоління визначається категорією.
+            variant = name[len(base):].strip()
+            generations = [g for g in existing if variant.lower() in g.lower()]
+            if not generations:
+                generations = [variant]
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "model": base,
+                "generation": generations[0],
+                "generations": generations,
+                "pinned_generation": True,
+                "is_accessory": False,
+            }
+            schematics_count = session.exec(
+                select(func.count(Schematic.id)).where(
+                    func.lower(Schematic.model) == base.lower(),
+                    func.lower(Schematic.generation).like(f"%{variant.lower()}%"),
+                )
+            ).first() or 0
+        elif _is_accessory_category(name):
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "model": name,
+                "generation": ACCESSORY_GENERATION,
+                "generations": [ACCESSORY_GENERATION],
+                "pinned_generation": True,
+                "is_accessory": True,
+            }
+            schematics_count = session.exec(
+                select(func.count(Schematic.id)).where(
+                    func.lower(Schematic.model) == name.lower()
+                )
+            ).first() or 0
+        else:
+            # Базова модель: покоління беремо з уже наявних схем цієї моделі.
+            generations = list(existing) or [DEFAULT_GENERATION]
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "model": name,
+                "generation": generations[0],
+                "generations": generations,
+                "pinned_generation": len(generations) == 1,
+                "is_accessory": False,
+            }
+            schematics_count = session.exec(
+                select(func.count(Schematic.id)).where(
+                    func.lower(Schematic.model) == name.lower()
+                )
+            ).first() or 0
+
+        option["schematics_count"] = schematics_count
+        (accessories if option["is_accessory"] else vehicles).append(option)
+
+    return {"options": vehicles + accessories}
+
 
 @router.get("/{schematic_id}", response_model=SchematicRead)
 def get_schematic(schematic_id: int, session: Session = Depends(get_session)):

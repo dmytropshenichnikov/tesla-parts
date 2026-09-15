@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, VinDecodeResult, PlateLookupResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, VinDecodeResult, PlateLookupResult } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -306,6 +306,19 @@ export const api = {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch schematics');
     return res.json();
+  },
+
+  /** Моделі/покоління для фільтрів схем — з категорій каталогу. */
+  getSchematicModelOptions: async (): Promise<SchematicModelOption[]> => {
+    try {
+      const res = await fetch(`${API_URL}/schematics/model-options`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.options || [];
+    } catch (e) {
+      console.warn('Failed to load schematic model options', e);
+      return [];
+    }
   },
 
   getSchematic: async (id: number): Promise<Schematic> => {

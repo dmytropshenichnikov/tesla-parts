@@ -1,4 +1,4 @@
-import { Product, Order, Category, Subcategory, Schematic, SchematicSummary } from '../types';
+import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -1027,6 +1027,19 @@ export const ApiService = {
     const res = await _authenticatedFetch(url, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to fetch schematics');
     return res.json();
+  },
+
+  /**
+   * Опції моделей і поколінь для редактора схем.
+   * Джерело — категорії каталогу (єдине місце, де задаються моделі).
+   */
+  getSchematicModelOptions: async (): Promise<SchematicModelOption[]> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/model-options`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch schematic model options');
+    const data = await res.json();
+    return data.options || [];
   },
 
   getSchematic: async (id: number): Promise<Schematic> => {

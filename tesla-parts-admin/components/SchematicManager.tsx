@@ -23,7 +23,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product } from '../types';
+import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -54,20 +54,39 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const TESLA_MODELS = [
-  'Model 3',
-  'Model Y',
-  'Model S',
-  'Model X',
-  'Cybertruck'
-];
+/**
+ * Моделі та покоління більше не дублюються тут хардкодом — вони приходять
+ * з категорій каталогу через `/schematics/model-options`. Так адмінка,
+ * магазин і каталог завжди показують один і той самий набір.
+ */
+const pickDefaultOption = (options: SchematicModelOption[]): SchematicModelOption | null => {
+  if (options.length === 0) return null;
+  return (
+    options.find((o) => o.category.toLowerCase() === 'model 3 highland') ||
+    options.find((o) => !o.is_accessory) ||
+    options[0]
+  );
+};
 
-const GENERATIONS_BY_MODEL: Record<string, string[]> = {
-  'Model 3': ['Highland (2024-...)', 'Classic (2017-2023)'],
-  'Model Y': ['Classic (2020-2024)', 'Juniper (2025-...)'],
-  'Model S': ['Plaid / Refresh (2021-...)', 'Facelift (2016-2020)', 'Classic (2012-2016)'],
-  'Model X': ['Plaid / Refresh (2021-...)', 'Classic (2015-2020)'],
-  'Cybertruck': ['1st Gen (2023-...)']
+/** Знаходить категорію, під якою збережено схему (модель + покоління). */
+const resolveOption = (
+  options: SchematicModelOption[],
+  model?: string,
+  generation?: string
+): SchematicModelOption | null => {
+  if (!model || options.length === 0) return null;
+  const sameModel = options.filter((o) => o.model.toLowerCase() === model.toLowerCase());
+  if (sameModel.length === 0) return null;
+  if (generation) {
+    // Спершу конкретна категорія-варіант (напр. «Model 3 Highland»)
+    const variant = sameModel.find(
+      (o) => o.category !== o.model && o.generations.includes(generation)
+    );
+    if (variant) return variant;
+    const byList = sameModel.find((o) => o.generations.includes(generation));
+    if (byList) return byList;
+  }
+  return sameModel.find((o) => o.category === o.model) || sameModel[0];
 };
 
 export const SchematicManager: React.FC = () => {
@@ -79,6 +98,12 @@ export const SchematicManager: React.FC = () => {
   // Filter state for list
   const [filterModel, setFilterModel] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Моделі/покоління — з категорій каталогу (єдине джерело істини)
+  const [modelOptions, setModelOptions] = useState<SchematicModelOption[]>([]);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+  // Категорія, обрана у формі (назва категорії, а не значення schematic.model)
+  const [formCategory, setFormCategory] = useState<string>('');
 
   // Editing state
   const [editingSchematic, setEditingSchematic] = useState<Schematic | null>(null);
@@ -110,9 +135,25 @@ export const SchematicManager: React.FC = () => {
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    loadModelOptions();
+  }, []);
+
+  useEffect(() => {
     loadSchematics();
     loadCatalogProducts();
   }, [filterModel, searchQuery]);
+
+  const loadModelOptions = async () => {
+    try {
+      const options = await api.getSchematicModelOptions();
+      setModelOptions(options);
+      setOptionsError(null);
+      return options;
+    } catch (err: any) {
+      setOptionsError(err.message || 'Не вдалося завантажити моделі з категорій');
+      return [];
+    }
+  };
 
   const loadSchematics = async () => {
     try {
@@ -138,13 +179,17 @@ export const SchematicManager: React.FC = () => {
     }
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = async () => {
+    // Модель/покоління беремо з категорій каталогу, а не з хардкоду.
+    const options = modelOptions.length > 0 ? modelOptions : await loadModelOptions();
+    const preset = pickDefaultOption(options);
     setIsNew(true);
+    setFormCategory(preset?.category || '');
     setEditingSchematic({
       id: 0,
       title: '',
-      model: 'Model 3',
-      generation: 'Highland (2024-...)',
+      model: preset?.model || '',
+      generation: preset?.generation || '',
       section: 'НАРУЖНЫЕ КРЕПЛЕНИЯ',
       subsystem: 'Защита днища и диффузор',
       image_url: '',
@@ -158,6 +203,9 @@ export const SchematicManager: React.FC = () => {
     try {
       setLoading(true);
       const data = await api.getSchematic(id);
+      const options = modelOptions.length > 0 ? modelOptions : await loadModelOptions();
+      const matched = resolveOption(options, data.model, data.generation);
+      setFormCategory(matched?.category || data.model);
       setEditingSchematic(data);
       setIsNew(false);
       setSelectedHotspotIdx(data.hotspots.length > 0 ? 0 : null);
@@ -487,6 +535,16 @@ export const SchematicManager: React.FC = () => {
             <button onClick={() => setSuccessMsg(null)} className="ml-auto text-xs underline">Закрити</button>
           </div>
         )}
+        {optionsError && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 text-sm font-manrope">
+            <AlertCircle size={20} className="shrink-0 text-amber-600" />
+            <span>
+              Не вдалося завантажити моделі з категорій: {optionsError}. Створення схеми
+              недоступне, поки каталог недоступний.
+            </span>
+            <button onClick={() => loadModelOptions()} className="ml-auto text-xs underline">Повторити</button>
+          </div>
+        )}
 
         {/* Filter bar */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
@@ -507,8 +565,10 @@ export const SchematicManager: React.FC = () => {
               className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               <option value="">Всі моделі Tesla</option>
-              {TESLA_MODELS.map((m) => (
-                <option key={m} value={m}>{m}</option>
+              {modelOptions.map((o) => (
+                <option key={`filter-${o.category}`} value={o.category}>
+                  {o.is_accessory ? o.category : `Tesla ${o.category}`}
+                </option>
               ))}
             </select>
           </div>
@@ -557,9 +617,9 @@ export const SchematicManager: React.FC = () => {
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 text-xs font-montserrat font-bold">
-                      {s.model}
+                      {resolveOption(modelOptions, s.model, s.generation)?.category || s.model}
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-manrope font-medium">
                       {s.generation}
@@ -663,40 +723,60 @@ export const SchematicManager: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            Модель Tesla
+          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+            <span>Категорія (модель) *</span>
+            <InfoTooltip text="Список береться з категорій каталогу — тих самих, що бачать покупці. Щоб додати нову модель (напр. Model 3 Highland), створіть її категорію в розділі «Категорії»." />
           </label>
           <select
-            value={editingSchematic.model}
+            value={formCategory}
             onChange={(e) => {
-              const newModel = e.target.value;
-              const gens = GENERATIONS_BY_MODEL[newModel] || [];
+              const option = modelOptions.find((o) => o.category === e.target.value);
+              if (!option) {
+                setFormCategory(e.target.value);
+                return;
+              }
+              setFormCategory(option.category);
               setEditingSchematic({
                 ...editingSchematic,
-                model: newModel,
-                generation: gens[0] || 'Highland (2024-...)'
+                model: option.model,
+                generation: option.generation
               });
             }}
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
           >
-            {TESLA_MODELS.map((m) => (
-              <option key={m} value={m}>{m}</option>
+            {formCategory && !modelOptions.some((o) => o.category === formCategory) && (
+              <option value={formCategory}>{formCategory} (немає в категоріях)</option>
+            )}
+            {modelOptions.map((o) => (
+              <option key={o.category} value={o.category}>
+                {o.is_accessory ? o.category : `Tesla ${o.category}`}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            Покоління
+          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+            <span>Покоління</span>
+            <InfoTooltip text="Підтягується з обраної категорії (напр. «Model 3 Highland» → покоління Highland). Для базової моделі пропонуються покоління, які вже використані у схемах цієї моделі." />
           </label>
           <select
             value={editingSchematic.generation}
             onChange={(e) => setEditingSchematic({ ...editingSchematic, generation: e.target.value })}
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
           >
-            {(GENERATIONS_BY_MODEL[editingSchematic.model] || []).map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
+            {(() => {
+              const option = modelOptions.find((o) => o.category === formCategory);
+              const list = option
+                ? Array.from(new Set([option.generation, ...option.generations])).filter(Boolean)
+                : [];
+              const withCurrent = editingSchematic.generation && !list.includes(editingSchematic.generation)
+                ? [editingSchematic.generation, ...list]
+                : list;
+              return withCurrent.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ));
+            })()}
           </select>
         </div>
 

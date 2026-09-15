@@ -103,6 +103,26 @@ export interface SchematicHotspot {
   sort_order?: number;
 }
 
+/**
+ * Опція «Модель / Покоління» для схем. Формується бекендом із категорій
+ * каталогу (`/schematics/model-options`), щоб не дублювати їх хардкодом.
+ */
+export interface SchematicModelOption {
+  /** Назва категорії каталогу — саме її бачить адміністратор у списку. */
+  category: string;
+  category_id: number;
+  /** Значення, яке зберігається у `schematic.model` (базова модель). */
+  model: string;
+  /** Покоління за замовчуванням для цієї категорії. */
+  generation: string;
+  /** Усі доступні покоління цієї категорії. */
+  generations: string[];
+  /** true — покоління жорстко визначене категорією і не потребує вибору. */
+  pinned_generation: boolean;
+  is_accessory: boolean;
+  schematics_count: number;
+}
+
 export interface SchematicSummary {
   id: number;
   title: string;
