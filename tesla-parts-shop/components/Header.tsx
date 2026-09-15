@@ -298,13 +298,13 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Row: Logo, Nav, Actions */}
-      <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-4 xl:px-6 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 xl:gap-4">
           {/* Logo (Clean & Roomy on Left) */}
           <TeslaPartsCenterLogo />
 
           {/* Desktop Navigation (LG+) */}
-          <div className="hidden lg:flex items-center gap-3.5 xl:gap-5 font-medium text-tesla-dark whitespace-nowrap text-sm">
+          <div className="hidden lg:flex items-center gap-2 xl:gap-4 font-medium text-tesla-dark whitespace-nowrap text-xs xl:text-sm">
             {sortedCategories.slice(0, 4).map((cat) => (
               <Link
                 key={cat.id}
@@ -317,27 +317,26 @@ const Header: React.FC<HeaderProps> = ({
             {sortedCategories.length > 4 && (
               <div className="relative" ref={desktopDropdownRef}>
                 <button
+                  type="button"
                   onClick={() => setIsDesktopDropdownOpen(!isDesktopDropdownOpen)}
-                  className={`flex items-center hover:text-tesla-red transition cursor-pointer ${
-                    isDesktopDropdownOpen ? 'text-tesla-red' : ''
-                  }`}
+                  className="flex items-center hover:text-tesla-red transition cursor-pointer font-medium"
                 >
                   Усі категорії{' '}
                   <ChevronDown
-                    size={15}
-                    className={`ml-1 transition-transform duration-300 ${
+                    size={14}
+                    className={`ml-0.5 transition-transform duration-300 ${
                       isDesktopDropdownOpen ? 'rotate-180' : 'rotate-0'
                     }`}
                   />
                 </button>
                 {isDesktopDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-52 bg-white shadow-xl rounded-xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white shadow-xl rounded-xl py-2 border border-gray-100 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                     {sortedCategories.slice(4).map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsDesktopDropdownOpen(false)}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition-all hover:translate-x-1 duration-150"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition"
                       >
                         {cat.name}
                       </Link>
@@ -348,9 +347,9 @@ const Header: React.FC<HeaderProps> = ({
             )}
             <Link
               to="/schemes"
-              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-xs tracking-wide"
+              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-[11px] xl:text-xs tracking-wide"
             >
-              <Layers size={15} className="text-tesla-red" />
+              <Layers size={14} className="text-tesla-red flex-shrink-0" />
               <span>Схеми</span>
             </Link>
           </div>
@@ -441,7 +440,7 @@ const Header: React.FC<HeaderProps> = ({
               }}
               className="hidden md:flex items-center gap-2"
             >
-              <div className="relative flex-grow w-36 lg:w-48 xl:w-56 focus-within:w-72 transition-all duration-300 ease-out group origin-right">
+              <div className="relative flex-grow w-32 lg:w-36 xl:w-52 focus-within:w-56 xl:focus-within:w-72 transition-all duration-300 ease-out group origin-right">
                 <input
                   type="text"
                   placeholder="Пошук деталей або VIN..."
