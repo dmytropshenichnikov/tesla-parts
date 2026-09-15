@@ -172,8 +172,8 @@ export const SchematicManager: React.FC = () => {
 
   const loadCatalogProducts = async () => {
     try {
-      const res = await api.getProducts({ page_size: 100 });
-      setCatalogProducts(res.products || []);
+      const products = await api.getProducts();
+      setCatalogProducts(products || []);
     } catch (err) {
       console.error('Failed to load products for link:', err);
     }
