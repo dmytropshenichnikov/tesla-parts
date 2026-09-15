@@ -14,6 +14,7 @@ interface SeoHeadProps {
   currency?: string; // Валюта (за замовчуванням UAH)
   availability?: boolean; // Чи є в наявності
   deliveryInfo?: string | null; // Інформація про доставку
+  canonicalUrl?: string; // Канонічний URL сторінки
 }
 
 const DEFAULT_TITLE = 'Tesla Parts Center';
@@ -32,6 +33,7 @@ const SeoHead: React.FC<SeoHeadProps> = ({
   currency = 'UAH',
   availability = true,
   deliveryInfo,
+  canonicalUrl,
 }) => {
   const safeTitle = title?.trim() || fallbackTitle?.trim() || DEFAULT_TITLE;
   let safeDescription =
@@ -54,7 +56,11 @@ const SeoHead: React.FC<SeoHeadProps> = ({
     }
   }
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const currentUrl =
+    canonicalUrl ||
+    (typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : URL);
 
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
@@ -94,6 +100,7 @@ const SeoHead: React.FC<SeoHeadProps> = ({
       {/* Основні теги */}
       <title>{safeTitle}</title>
       <meta name="description" content={safeDescription} />
+      <link rel="canonical" href={currentUrl} />
 
       {/* Open Graph (Facebook, Viber, Telegram) */}
       <meta property="og:title" content={safeTitle} />

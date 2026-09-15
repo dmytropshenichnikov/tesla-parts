@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /checkout
+Disallow: /profile
+Disallow: /order-confirmation
+Disallow: /login
 
+Sitemap: https://teslapartscenter.com.ua/sitemap.xml
 Sitemap: https://api.teslapartscenter.com.ua/sitemap.xml
