@@ -115,6 +115,7 @@ def _slugify(value: str) -> str:
     )
 
 @app.get("/sitemap.xml", response_class=Response)
+@app.head("/sitemap.xml", response_class=Response)
 def get_sitemap():
     base_url = "https://teslapartscenter.com.ua"
     with Session(engine) as session:
