@@ -12,12 +12,47 @@ import {
   AlertCircle,
   Search,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  Target,
+  Info,
+  X,
+  Check,
+  Link as LinkIcon,
+  Unlink,
+  Package,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
+const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1.5 align-middle">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={(e) => {
+          e.preventDefault();
+          setShow(!show);
+        }}
+        className="text-gray-400 hover:text-red-600 transition-colors p-0.5 rounded-full hover:bg-gray-100 cursor-pointer"
+        aria-label="Інформація"
+      >
+        <Info size={13} />
+      </button>
+      {show && (
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-gray-950 text-white text-[11px] font-manrope font-normal normal-case rounded-xl shadow-2xl z-50 pointer-events-none leading-relaxed border border-gray-800 animate-in fade-in zoom-in-95 duration-150">
+          <span className="relative z-10 block text-gray-200">{text}</span>
+          <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-5 border-x-transparent border-t-5 border-t-gray-950" />
+        </span>
+      )}
+    </span>
+  );
+};
 
 const TESLA_MODELS = [
   'Model 3',
@@ -54,9 +89,22 @@ export const SchematicManager: React.FC = () => {
   // Selected hotspot for editing
   const [selectedHotspotIdx, setSelectedHotspotIdx] = useState<number | null>(null);
 
+  // Reposition mode and Drag state for Hotspot Pins
+  const [isRepositioningMode, setIsRepositioningMode] = useState(false);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const hasDragged = useRef<boolean>(false);
+
   // Catalog products for linking
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [catalogSearch, setCatalogSearch] = useState<string>('');
+
+  // Add/Link Variant Modal state
+  const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [variantModalTarget, setVariantModalTarget] = useState<'new' | { hotspotIdx: number; varIdx: number }>('new');
+  const [variantModalStep, setVariantModalStep] = useState<'choice' | 'search'>('choice');
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [filterBySchematicModel, setFilterBySchematicModel] = useState(true);
 
   // Image canvas ref
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -150,23 +198,96 @@ export const SchematicManager: React.FC = () => {
     }
   };
 
-  // Canvas click to add a new pin
+  const handlePinMouseDown = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedHotspotIdx(idx);
+    setDraggingIdx(idx);
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    hasDragged.current = false;
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (draggingIdx === null || !imageContainerRef.current || !editingSchematic) return;
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const xPx = e.clientX - rect.left;
+      const yPx = e.clientY - rect.top;
+
+      if (dragStartPos.current && Math.hypot(e.clientX - dragStartPos.current.x, e.clientY - dragStartPos.current.y) > 3) {
+        hasDragged.current = true;
+      }
+
+      const xPercent = Math.max(0.5, Math.min(99.5, Math.round((xPx / rect.width) * 1000) / 10));
+      const yPercent = Math.max(0.5, Math.min(99.5, Math.round((yPx / rect.height) * 1000) / 10));
+
+      const updated = [...editingSchematic.hotspots];
+      updated[draggingIdx] = {
+        ...updated[draggingIdx],
+        x: xPercent,
+        y: yPercent
+      };
+      setEditingSchematic({
+        ...editingSchematic,
+        hotspots: updated
+      });
+    };
+
+    const handleMouseUp = () => {
+      if (draggingIdx !== null) {
+        setDraggingIdx(null);
+        dragStartPos.current = null;
+      }
+    };
+
+    if (draggingIdx !== null) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggingIdx, editingSchematic]);
+
+  // Canvas click to add a new pin or reposition selected pin
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageContainerRef.current || !editingSchematic) return;
+    if (hasDragged.current) {
+      hasDragged.current = false;
+      return;
+    }
 
     const rect = imageContainerRef.current.getBoundingClientRect();
     const xPx = e.clientX - rect.left;
     const yPx = e.clientY - rect.top;
 
-    const xPercent = Math.round((xPx / rect.width) * 1000) / 10;
-    const yPercent = Math.round((yPx / rect.height) * 1000) / 10;
+    const xPercent = Math.max(0.5, Math.min(99.5, Math.round((xPx / rect.width) * 1000) / 10));
+    const yPercent = Math.max(0.5, Math.min(99.5, Math.round((yPx / rect.height) * 1000) / 10));
+
+    // If reposition mode is active, move the selected hotspot!
+    if (isRepositioningMode && selectedHotspotIdx !== null) {
+      const updated = [...editingSchematic.hotspots];
+      const pinNum = updated[selectedHotspotIdx]?.number || selectedHotspotIdx + 1;
+      updated[selectedHotspotIdx] = {
+        ...updated[selectedHotspotIdx],
+        x: xPercent,
+        y: yPercent
+      };
+      setEditingSchematic({
+        ...editingSchematic,
+        hotspots: updated
+      });
+      setIsRepositioningMode(false);
+      setSuccessMsg(`Позицію точки #${pinNum} успішно змінено на [${xPercent}%, ${yPercent}%]!`);
+      return;
+    }
 
     // Check if clicked near an existing pin
     const clickedExistingIdx = editingSchematic.hotspots.findIndex(h => {
       const pinX = (h.x / 100) * rect.width;
       const pinY = (h.y / 100) * rect.height;
       const dist = Math.hypot(pinX - xPx, pinY - yPx);
-      return dist <= 18;
+      return dist <= 20;
     });
 
     if (clickedExistingIdx >= 0) {
@@ -528,8 +649,9 @@ export const SchematicManager: React.FC = () => {
       {/* Metadata Form */}
       <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            Назва схеми / вузла *
+          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+            <span>Назва схеми / вузла *</span>
+            <InfoTooltip text="Головна назва вузла на сайті. Відображається як H1 заголовок сторінки, у списках вибору, результатах пошуку та в хлібних крихтах (наприклад: «Передняя защита днища»)." />
           </label>
           <input
             type="text"
@@ -591,8 +713,9 @@ export const SchematicManager: React.FC = () => {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            Розділ (Section)
+          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+            <span>Розділ (Section)</span>
+            <InfoTooltip text="Основний розділ за стандартами каталогу Tesla EPC. За ним схеми групуються в каталозі та у бічному фільтрі розділів на сторінці схем (наприклад: «10 - BODY», «НАРУЖНЫЕ КРЕПЛЕНИЯ»)." />
           </label>
           <input
             type="text"
@@ -604,8 +727,9 @@ export const SchematicManager: React.FC = () => {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            Підсистема (Subsystem)
+          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+            <span>Підсистема (Subsystem)</span>
+            <InfoTooltip text="Підкатегорія або підсистема вузла всередині розділу. Допомагає клієнту швидко фільтрувати та знаходити суміжні схеми вузлів на сайті (наприклад: «Защита днища и диффузор»)." />
           </label>
           <input
             type="text"
@@ -640,17 +764,38 @@ export const SchematicManager: React.FC = () => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold font-montserrat uppercase text-gray-600 flex items-center gap-1.5">
               <MapPin size={16} className="text-red-600" />
-              Полотно схеми (клікніть щоб додати точку)
+              Полотно схеми (клікніть щоб додати точку або перетягніть існуючу)
             </span>
             <span className="text-xs text-gray-400 font-manrope">
               Всього точок: {editingSchematic.hotspots.length}
             </span>
           </div>
 
+          {/* Repositioning Banner Alert */}
+          {isRepositioningMode && selectedHotspot && (
+            <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs font-manrope text-amber-900 animate-in fade-in duration-150 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Target size={16} className="text-amber-600 shrink-0 animate-spin" />
+                <span>
+                  <strong>Режим переміщення:</strong> клікніть на зображенні схеми, щоб перемістити <strong>Точку #{selectedHotspot.number}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRepositioningMode(false)}
+                className="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-montserrat font-bold text-[11px] shrink-0 cursor-pointer"
+              >
+                Скасувати
+              </button>
+            </div>
+          )}
+
           <div
             ref={imageContainerRef}
             onClick={handleCanvasClick}
-            className="relative w-full border border-gray-200 rounded-xl overflow-hidden bg-gray-50 select-none cursor-crosshair min-h-[380px] flex items-center justify-center"
+            className={`relative w-full border border-gray-200 rounded-xl overflow-hidden bg-gray-50 select-none min-h-[380px] flex items-center justify-center ${
+              isRepositioningMode ? 'cursor-crosshair ring-2 ring-amber-400' : 'cursor-crosshair'
+            }`}
           >
             {editingSchematic.image_url ? (
               <img
@@ -665,32 +810,41 @@ export const SchematicManager: React.FC = () => {
               </div>
             )}
 
-            {/* Hotspot Pins */}
+            {/* Hotspot Pins (Draggable & Clickable) */}
             {editingSchematic.image_url && editingSchematic.hotspots.map((h, idx) => {
               const isSelected = selectedHotspotIdx === idx;
+              const isDragging = draggingIdx === idx;
               return (
                 <div
                   key={idx}
                   style={{
                     left: `${h.x}%`,
                     top: `${h.y}%`,
-                    transform: 'translate(-50%, -50%)'
+                    transform: 'translate(-50%, -50%)',
+                    touchAction: 'none'
                   }}
+                  onMouseDown={(e) => handlePinMouseDown(idx, e)}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedHotspotIdx(idx);
                   }}
-                  className={`absolute w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-black text-xs transition-all shadow-md cursor-pointer ${
-                    isSelected
-                      ? 'bg-red-600 text-white ring-4 ring-red-300 ring-offset-1 scale-125 z-20'
+                  className={`absolute w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-black text-xs transition-transform shadow-md cursor-grab active:cursor-grabbing select-none ${
+                    isDragging
+                      ? 'bg-red-700 text-white ring-4 ring-amber-400 scale-135 z-30 shadow-xl'
+                      : isSelected
+                      ? 'bg-red-600 text-white ring-4 ring-red-300 ring-offset-1 scale-125 z-20 shadow-red-500/40'
                       : 'bg-red-600 text-white hover:scale-110 z-10'
                   }`}
-                  title={`${h.number}: ${h.name}`}
+                  title={`Точка #${h.number}: ${h.name} (Затисніть для перетягування)`}
                 >
                   {h.number}
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope">
+            <span>💡 Перетягуйте точки мишкою по схемі або натисніть кнопку «Перемістити кліком» праворуч</span>
           </div>
         </div>
 
@@ -703,7 +857,7 @@ export const SchematicManager: React.FC = () => {
             {selectedHotspot && (
               <button
                 onClick={() => handleDeleteHotspot(selectedHotspotIdx!)}
-                className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-montserrat font-bold"
+                className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-montserrat font-bold cursor-pointer"
               >
                 <Trash2 size={14} /> Видалити точку
               </button>
@@ -751,101 +905,167 @@ export const SchematicManager: React.FC = () => {
                 />
               </div>
 
-              {/* Link to catalog product */}
-              <div>
-                <label className="block text-xs font-bold font-montserrat text-gray-700 mb-1">
-                  Прив'язати до товару з каталогу
-                </label>
-                <select
-                  value={selectedHotspot.product_id || ''}
-                  onChange={(e) => handleUpdateHotspot(selectedHotspotIdx, 'product_id', e.target.value || null)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope"
+              {/* Coordinates info & Move button */}
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200/80 space-y-2">
+                <div className="text-xs font-manrope text-gray-600 flex items-center justify-between">
+                  <span>Положення на схемі:</span>
+                  <span className="font-mono font-bold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
+                    X: {selectedHotspot.x}% • Y: {selectedHotspot.y}%
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRepositioningMode(!isRepositioningMode)}
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-montserrat font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    isRepositioningMode
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm ring-2 ring-amber-300'
+                      : 'bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 shadow-2xs'
+                  }`}
                 >
-                  <option value="">-- Без прямої прив'язки (використовувати варіанти нижче) --</option>
-                  {catalogProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.detail_number ? `[${p.detail_number}] ` : ''}{p.name} ({p.priceUAH} ₴)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Coordinates info */}
-              <div className="bg-gray-50 p-2.5 rounded-lg text-xs font-manrope text-gray-500 flex items-center justify-between">
-                <span>Координати на фото:</span>
-                <span className="font-mono font-bold text-gray-800">
-                  X: {selectedHotspot.x}% • Y: {selectedHotspot.y}%
-                </span>
+                  <Target size={14} className={isRepositioningMode ? 'animate-spin' : 'text-red-600'} />
+                  <span>
+                    {isRepositioningMode
+                      ? 'Клікніть на схемі для переміщення (або скасуйте)'
+                      : 'Перемістити точку кліком на фото'}
+                  </span>
+                </button>
               </div>
 
               {/* Variants Section */}
               <div className="pt-2">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-bold font-montserrat text-gray-700 uppercase">
                     Варіанти наявності та цін
                   </span>
                   <button
-                    onClick={() => handleAddVariant(selectedHotspotIdx)}
-                    className="text-xs text-red-600 hover:text-red-700 font-montserrat font-bold flex items-center gap-1"
+                    type="button"
+                    onClick={() => {
+                      setVariantModalTarget('new');
+                      setVariantModalStep('choice');
+                      setProductSearchQuery('');
+                      setFilterBySchematicModel(true);
+                      setIsVariantModalOpen(true);
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-montserrat font-bold flex items-center gap-1 cursor-pointer bg-red-50 hover:bg-red-100/80 px-2.5 py-1 rounded-lg transition-colors"
                   >
                     <Plus size={14} /> Додати варіант
                   </button>
                 </div>
 
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                  {(selectedHotspot.variants || []).map((v, varIdx) => (
-                    <div key={varIdx} className="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <input
-                          type="text"
-                          value={v.name}
-                          onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'name', e.target.value)}
-                          placeholder="напр. Оригинал б/у"
-                          className="font-montserrat font-bold bg-white px-2 py-1 border border-gray-200 rounded text-gray-800 text-xs w-2/3"
-                        />
-                        <button
-                          onClick={() => handleDeleteVariant(selectedHotspotIdx, varIdx)}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <span className="text-gray-400 block mb-0.5">Тип</span>
-                          <select
-                            value={v.type || 'original'}
-                            onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'type', e.target.value)}
-                            className="w-full bg-white p-1 border border-gray-200 rounded"
-                          >
-                            <option value="original">Оригінал</option>
-                            <option value="analog">Аналог</option>
-                          </select>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 block mb-0.5">Стан</span>
-                          <select
-                            value={v.condition || 'new'}
-                            onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'condition', e.target.value)}
-                            className="w-full bg-white p-1 border border-gray-200 rounded"
-                          >
-                            <option value="new">Новий</option>
-                            <option value="used">Б/В</option>
-                          </select>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 block mb-0.5">Ціна (₴)</span>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {(selectedHotspot.variants || []).map((v, varIdx) => {
+                    const linkedProd = v.product_id ? catalogProducts.find((p) => p.id === v.product_id) : null;
+                    return (
+                      <div key={varIdx} className="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2.5 text-xs">
+                        <div className="flex items-center justify-between gap-2">
                           <input
-                            type="number"
-                            value={v.priceUAH}
-                            onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'priceUAH', parseFloat(e.target.value) || 0)}
-                            className="w-full bg-white p-1 border border-gray-200 rounded font-bold"
+                            type="text"
+                            value={v.name}
+                            onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'name', e.target.value)}
+                            placeholder="напр. Оригинал б/у"
+                            className="font-montserrat font-bold bg-white px-2 py-1 border border-gray-200 rounded-md text-gray-800 text-xs flex-1"
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVariant(selectedHotspotIdx, varIdx)}
+                            className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
+                            title="Видалити варіант"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        {/* Linked Catalog Product status */}
+                        {v.product_id ? (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <div className="w-5 h-5 rounded bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                <Check size={12} />
+                              </div>
+                              <div className="truncate">
+                                <span className="font-montserrat font-bold text-emerald-950 text-[11px] block truncate">
+                                  {linkedProd ? linkedProd.name : v.name}
+                                </span>
+                                <span className="text-[10px] text-emerald-700 font-mono">
+                                  {linkedProd?.detail_number ? `Арт: ${linkedProd.detail_number} • ` : ''}ID: {v.product_id}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVariantModalTarget({ hotspotIdx: selectedHotspotIdx, varIdx });
+                                  setVariantModalStep('search');
+                                  setProductSearchQuery('');
+                                  setIsVariantModalOpen(true);
+                                }}
+                                className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-montserrat font-bold transition-colors cursor-pointer"
+                              >
+                                Змінити
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateVariant(selectedHotspotIdx, varIdx, 'product_id', null)}
+                                className="p-1 text-emerald-600 hover:text-red-600 transition-colors cursor-pointer"
+                                title="Відв'язати від каталогу"
+                              >
+                                <Unlink size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVariantModalTarget({ hotspotIdx: selectedHotspotIdx, varIdx });
+                              setVariantModalStep('search');
+                              setProductSearchQuery('');
+                              setIsVariantModalOpen(true);
+                            }}
+                            className="w-full py-1.5 px-2 bg-white hover:bg-red-50 text-gray-700 hover:text-red-700 border border-dashed border-gray-300 hover:border-red-300 rounded-lg text-[11px] font-montserrat font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <LinkIcon size={12} />
+                            <span>Прив'язати товар з каталогу</span>
+                          </button>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <span className="text-gray-400 block mb-0.5 font-medium">Тип</span>
+                            <select
+                              value={v.type || 'original'}
+                              onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'type', e.target.value)}
+                              className="w-full bg-white p-1 border border-gray-200 rounded text-xs"
+                            >
+                              <option value="original">Оригінал</option>
+                              <option value="analog">Аналог</option>
+                            </select>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block mb-0.5 font-medium">Стан</span>
+                            <select
+                              value={v.condition || 'new'}
+                              onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'condition', e.target.value)}
+                              className="w-full bg-white p-1 border border-gray-200 rounded text-xs"
+                            >
+                              <option value="new">Новий</option>
+                              <option value="used">Б/В</option>
+                            </select>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block mb-0.5 font-medium">Ціна (₴)</span>
+                            <input
+                              type="number"
+                              value={v.priceUAH}
+                              onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'priceUAH', parseFloat(e.target.value) || 0)}
+                              className="w-full bg-white p-1 border border-gray-200 rounded font-bold text-xs"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -884,6 +1104,275 @@ export const SchematicManager: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal: Add or Link Product to Variant */}
+      {isVariantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/70">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                  <Package size={16} />
+                </div>
+                <h3 className="font-montserrat font-bold text-sm text-gray-900">
+                  {variantModalStep === 'choice'
+                    ? 'Оберіть спосіб додавання варіанту'
+                    : 'Вибір товару з каталогу магазину'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVariantModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            {variantModalStep === 'choice' ? (
+              <div className="p-5 space-y-4">
+                <p className="text-xs text-gray-500 font-manrope">
+                  Ви можете підв'язати реальний товар із каталогу запчастин або створити довільний варіант вручну:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setVariantModalStep('search')}
+                    className="p-4 rounded-xl border-2 border-red-500/80 bg-red-50/40 hover:bg-red-50 text-left transition-all group cursor-pointer hover:shadow-md active:scale-98"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-red-600 text-white flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                      <Search size={18} />
+                    </div>
+                    <h4 className="font-montserrat font-bold text-sm text-gray-900 group-hover:text-red-600 transition-colors">
+                      З прив'язкою до товару
+                    </h4>
+                    <p className="text-xs text-gray-500 font-manrope mt-1 leading-relaxed">
+                      Пошук серед товарів для <strong>{editingSchematic.model}</strong>. Автоматично підтягне назву, ціну, залишок та ID.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsVariantModalOpen(false);
+                      if (selectedHotspotIdx !== null) {
+                        handleAddVariant(selectedHotspotIdx);
+                      }
+                    }}
+                    className="p-4 rounded-xl border border-gray-200 hover:border-gray-300 bg-gray-50/60 hover:bg-gray-100/70 text-left transition-all group cursor-pointer active:scale-98"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-gray-200 text-gray-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                      <Edit2 size={18} />
+                    </div>
+                    <h4 className="font-montserrat font-bold text-sm text-gray-900">
+                      Створити вручну
+                    </h4>
+                    <p className="text-xs text-gray-500 font-manrope mt-1 leading-relaxed">
+                      Без прив'язки до складської картки товару. Ручний ввід назви, типу (оригінал/аналог), стану та ціни.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-5 space-y-3.5">
+                {/* Search & Model filter */}
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      placeholder={`Пошук запчастини за назвою або артикулом...`}
+                      className="w-full pl-9 pr-8 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
+                      autoFocus
+                    />
+                    <Search size={15} className="absolute left-3 top-3 text-gray-400" />
+                    {productSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setProductSearchQuery('')}
+                        className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-manrope px-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-gray-700 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={filterBySchematicModel}
+                        onChange={(e) => setFilterBySchematicModel(e.target.checked)}
+                        className="rounded text-red-600 focus:ring-red-500"
+                      />
+                      <span>Фільтрувати тільки для <strong>{editingSchematic.model}</strong></span>
+                    </label>
+                    <span className="text-gray-400">
+                      Знайдено:{' '}
+                      {
+                        catalogProducts.filter((p) => {
+                          if (filterBySchematicModel) {
+                            const pText = `${p.category || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
+                            if (!pText.includes(editingSchematic.model.toLowerCase())) return false;
+                          }
+                          if (productSearchQuery.trim()) {
+                            const q = productSearchQuery.toLowerCase();
+                            const matchName = (p.name || '').toLowerCase().includes(q);
+                            const matchSku = (p.detail_number || p.id || '').toLowerCase().includes(q);
+                            return matchName || matchSku;
+                          }
+                          return true;
+                        }).length
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* Products List */}
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {catalogProducts
+                    .filter((p) => {
+                      if (filterBySchematicModel) {
+                        const pText = `${p.category || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
+                        if (!pText.includes(editingSchematic.model.toLowerCase())) return false;
+                      }
+                      if (productSearchQuery.trim()) {
+                        const q = productSearchQuery.toLowerCase();
+                        const matchName = (p.name || '').toLowerCase().includes(q);
+                        const matchSku = (p.detail_number || p.id || '').toLowerCase().includes(q);
+                        return matchName || matchSku;
+                      }
+                      return true;
+                    })
+                    .slice(0, 40)
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className="p-2.5 rounded-xl border border-gray-200 hover:border-red-300 hover:bg-red-50/30 transition-all flex items-center justify-between gap-3 group"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          {p.image ? (
+                            <img
+                              src={p.image}
+                              alt={p.name}
+                              className="w-10 h-10 object-contain rounded-lg border border-gray-200 bg-white shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 shrink-0">
+                              <Package size={16} />
+                            </div>
+                          )}
+                          <div className="truncate">
+                            <div className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-red-600 transition-colors truncate">
+                              {p.name}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-gray-400 font-manrope">
+                              {p.detail_number && (
+                                <span className="font-mono text-gray-700 bg-gray-100 px-1.5 py-0.2 rounded">
+                                  {p.detail_number}
+                                </span>
+                              )}
+                              <span>{p.inStock !== false ? '• В наявності' : '• Під замовлення'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <div className="font-montserrat font-bold text-xs text-gray-900">
+                              {p.priceUAH} ₴
+                            </div>
+                            {p.priceUSD ? (
+                              <div className="text-[10px] text-gray-400">${p.priceUSD}</div>
+                            ) : null}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedHotspotIdx === null) return;
+                              const isOriginal = Boolean(p.brand && /tesla/i.test(p.brand));
+                              const isUsed = Boolean(/вживан|б\/в|used/i.test(`${p.name} ${p.category || ''}`));
+
+                              if (variantModalTarget === 'new') {
+                                const currentVars = selectedHotspot.variants || [];
+                                const newVar: HotspotVariant = {
+                                  name: p.name,
+                                  product_id: p.id,
+                                  type: isOriginal ? 'original' : 'analog',
+                                  condition: isUsed ? 'used' : 'new',
+                                  priceUAH: p.priceUAH || 0,
+                                  priceUSD: p.priceUSD || Math.round((p.priceUAH || 0) / 41),
+                                  inStock: p.inStock !== false
+                                };
+                                handleUpdateHotspot(selectedHotspotIdx, 'variants', [...currentVars, newVar]);
+
+                                // Auto-fill part_number if empty
+                                if (!selectedHotspot.part_number && p.detail_number) {
+                                  handleUpdateHotspot(selectedHotspotIdx, 'part_number', p.detail_number);
+                                }
+                                // Auto-fill hotspot name if default
+                                if (selectedHotspot.name.startsWith('Деталь #')) {
+                                  handleUpdateHotspot(selectedHotspotIdx, 'name', p.name);
+                                }
+                              } else {
+                                const { varIdx } = variantModalTarget;
+                                const updatedVars = [...(selectedHotspot.variants || [])];
+                                updatedVars[varIdx] = {
+                                  ...updatedVars[varIdx],
+                                  product_id: p.id,
+                                  name: p.name,
+                                  priceUAH: p.priceUAH || updatedVars[varIdx].priceUAH,
+                                  priceUSD: p.priceUSD || updatedVars[varIdx].priceUSD,
+                                  inStock: p.inStock !== false
+                                };
+                                handleUpdateHotspot(selectedHotspotIdx, 'variants', updatedVars);
+                              }
+
+                              setIsVariantModalOpen(false);
+                              setSuccessMsg(`Товар "${p.name}" успішно прив'язано!`);
+                            }}
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-montserrat font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+                          >
+                            Обрати
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                  {catalogProducts.length === 0 && (
+                    <div className="text-center py-6 text-gray-400 text-xs font-manrope">
+                      Завантаження товарів каталогу...
+                    </div>
+                  )}
+                </div>
+
+                {/* Back to choice */}
+                <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={() => setVariantModalStep('choice')}
+                    className="text-xs text-gray-500 hover:text-gray-900 font-manrope cursor-pointer"
+                  >
+                    ← Назад до вибору варіанту
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsVariantModalOpen(false)}
+                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-montserrat font-bold text-gray-700 cursor-pointer"
+                  >
+                    Закрити
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

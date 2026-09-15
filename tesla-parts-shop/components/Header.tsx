@@ -298,13 +298,13 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Row: Logo, Nav, Actions */}
-      <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3">
+      <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-6 py-2 sm:py-2.5">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo (Clean & Roomy on Left) */}
           <TeslaPartsCenterLogo />
 
           {/* Desktop Navigation (LG+) */}
-          <div className="hidden lg:flex items-center gap-5 xl:gap-6 font-medium text-tesla-dark whitespace-nowrap">
+          <div className="hidden lg:flex items-center gap-3.5 xl:gap-5 font-medium text-tesla-dark whitespace-nowrap text-sm">
             {sortedCategories.slice(0, 4).map((cat) => (
               <Link
                 key={cat.id}
@@ -324,7 +324,7 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   Усі категорії{' '}
                   <ChevronDown
-                    size={16}
+                    size={15}
                     className={`ml-1 transition-transform duration-300 ${
                       isDesktopDropdownOpen ? 'rotate-180' : 'rotate-0'
                     }`}
@@ -348,14 +348,14 @@ const Header: React.FC<HeaderProps> = ({
             )}
             <Link
               to="/schemes"
-              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-xs tracking-wide"
+              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-xs tracking-wide"
             >
-              <Layers size={16} className="text-tesla-red" />
-              <span>Схеми запчастин</span>
+              <Layers size={15} className="text-tesla-red" />
+              <span>Схеми</span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2.5 xl:gap-3 flex-shrink-0">
             {/* Mobile / Tablet Quick Navigation */}
             <div className="lg:hidden flex items-center gap-1.5">
               <div className="relative" ref={mobileCategoryRef}>
@@ -375,7 +375,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
 
               {isMobileCategoryOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 max-w-[calc(100vw-24px)] bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200 divide-y divide-gray-100">
+                <div className="fixed inset-x-3 top-[58px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-gray-100 max-w-sm sm:max-w-none ml-auto">
                   {/* Schemes & VIN at top of mobile Catalog */}
                   <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
                     <Link
@@ -540,7 +540,7 @@ const Header: React.FC<HeaderProps> = ({
 
             <Link
               to="/checkout"
-              className="hidden sm:block bg-tesla-red hover:bg-red-700 active:scale-95 text-white px-4 py-2 rounded-md font-medium transition-all duration-200 text-sm shadow-sm whitespace-nowrap"
+              className="hidden sm:inline-flex items-center justify-center bg-tesla-red hover:bg-red-700 active:scale-95 text-white px-3.5 py-2 rounded-xl font-montserrat font-bold transition-all duration-200 text-xs sm:text-sm shadow-sm whitespace-nowrap flex-shrink-0"
             >
               Оформити
             </Link>
