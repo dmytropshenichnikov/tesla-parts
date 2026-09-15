@@ -20,11 +20,13 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const TESLA_MODELS = [
   { id: 'all', name: 'Всі моделі' },
-  { id: 'Model 3', name: 'Model 3' },
-  { id: 'Model Y', name: 'Model Y' },
-  { id: 'Model S', name: 'Model S' },
-  { id: 'Model X', name: 'Model X' },
-  { id: 'Cybertruck', name: 'Cybertruck' }
+  { id: 'Model 3', name: 'Model 3', baseModel: 'Model 3' },
+  { id: 'Model 3 Highland', name: 'Model 3 Highland', baseModel: 'Model 3', defaultGen: 'Highland (2024-...)' },
+  { id: 'Model Y', name: 'Model Y', baseModel: 'Model Y' },
+  { id: 'Model Y Juniper', name: 'Model Y Juniper', baseModel: 'Model Y', defaultGen: 'Juniper (2025-...)' },
+  { id: 'Model S', name: 'Model S', baseModel: 'Model S' },
+  { id: 'Model X', name: 'Model X', baseModel: 'Model X' },
+  { id: 'Cybertruck', name: 'Cybertruck', baseModel: 'Cybertruck' }
 ];
 
 const GENERATIONS_BY_MODEL: Record<string, string[]> = {
@@ -56,15 +58,47 @@ export const SchemesCatalog: React.FC = () => {
   useEffect(() => {
     const vinParam = searchParams.get('vin');
     const modelParam = searchParams.get('model');
-    if (modelParam && TESLA_MODELS.some(m => m.id === modelParam)) {
-      setSelectedModel(modelParam);
+    const genParam = searchParams.get('generation');
+
+    if (modelParam) {
+      if (modelParam === 'Model 3 Highland' || (modelParam === 'Model 3' && genParam && genParam.includes('Highland'))) {
+        setSelectedModel('Model 3 Highland');
+        setSelectedGen('Highland (2024-...)');
+      } else if (modelParam === 'Model Y Juniper' || (modelParam === 'Model Y' && genParam && genParam.includes('Juniper'))) {
+        setSelectedModel('Model Y Juniper');
+        setSelectedGen('Juniper (2025-...)');
+      } else if (TESLA_MODELS.some(m => m.id === modelParam)) {
+        setSelectedModel(modelParam);
+        if (genParam) {
+          setSelectedGen(genParam);
+        }
+      }
+    } else if (genParam) {
+      if (genParam.includes('Highland')) {
+        setSelectedModel('Model 3 Highland');
+        setSelectedGen('Highland (2024-...)');
+      } else if (genParam.includes('Juniper')) {
+        setSelectedModel('Model Y Juniper');
+        setSelectedGen('Juniper (2025-...)');
+      } else {
+        setSelectedGen(genParam);
+      }
     }
+
     if (vinParam && vinParam.length === 17) {
       api.decodeVin(vinParam).then(res => {
         if (res.is_valid && res.model) {
-          setSelectedModel(res.model);
-          if (res.generation) {
-            setSelectedGen(res.generation);
+          if (res.generation && res.generation.includes('Highland')) {
+            setSelectedModel('Model 3 Highland');
+            setSelectedGen('Highland (2024-...)');
+          } else if (res.generation && res.generation.includes('Juniper')) {
+            setSelectedModel('Model Y Juniper');
+            setSelectedGen('Juniper (2025-...)');
+          } else {
+            setSelectedModel(res.model);
+            if (res.generation) {
+              setSelectedGen(res.generation);
+            }
           }
           const newCar: SavedCar = {
             id: `car_${Date.now()}`,
@@ -102,9 +136,20 @@ export const SchemesCatalog: React.FC = () => {
       if (saved) {
         const parsed: SavedCar = JSON.parse(saved);
         setActiveCar(parsed);
-        // Automatically select active car model if not manually chosen
-        if (parsed.model) {
-          setSelectedModel(parsed.model);
+        // Automatically select active car model if not manually chosen via URL query
+        if (!searchParams.get('model')) {
+          if (parsed.generation && parsed.generation.includes('Highland')) {
+            setSelectedModel('Model 3 Highland');
+            setSelectedGen('Highland (2024-...)');
+          } else if (parsed.generation && parsed.generation.includes('Juniper')) {
+            setSelectedModel('Model Y Juniper');
+            setSelectedGen('Juniper (2025-...)');
+          } else if (parsed.model) {
+            setSelectedModel(parsed.model);
+            if (parsed.generation && !parsed.generation.includes('Стандартн')) {
+              setSelectedGen(parsed.generation);
+            }
+          }
         }
       } else {
         setActiveCar(null);
@@ -119,12 +164,18 @@ export const SchemesCatalog: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const modelParam = selectedModel === 'all' ? undefined : selectedModel;
-      const genParam = selectedGen === 'Всі покоління' ? undefined : selectedGen;
+      const activeModelObj = TESLA_MODELS.find(m => m.id === selectedModel);
+      const apiModel = activeModelObj && 'baseModel' in activeModelObj
+        ? activeModelObj.baseModel
+        : (selectedModel === 'all' ? undefined : selectedModel);
+
+      const apiGen = selectedGen === 'Всі покоління'
+        ? (activeModelObj && 'defaultGen' in activeModelObj ? activeModelObj.defaultGen : undefined)
+        : selectedGen;
 
       const data = await api.getSchematics({
-        model: modelParam,
-        generation: genParam,
+        model: apiModel,
+        generation: apiGen,
         q: activeSearch || undefined
       });
       setSchematics(data);
@@ -152,8 +203,10 @@ export const SchemesCatalog: React.FC = () => {
     return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
-  const availableGenerations = selectedModel && selectedModel !== 'all'
-    ? GENERATIONS_BY_MODEL[selectedModel] || ['Всі покоління']
+  const activeModelObj = TESLA_MODELS.find(m => m.id === selectedModel);
+  const baseModelKey = activeModelObj && 'baseModel' in activeModelObj ? activeModelObj.baseModel : selectedModel;
+  const availableGenerations = baseModelKey && baseModelKey !== 'all'
+    ? GENERATIONS_BY_MODEL[baseModelKey] || ['Всі покоління']
     : [];
 
   return (

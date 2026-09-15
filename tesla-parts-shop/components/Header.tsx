@@ -20,6 +20,7 @@ import TeslaPartsCenterLogo from './ShopLogo';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/currency';
 import { slugify } from '../utils/slugify';
+import { getCarTargetInfo } from './GaragePage';
 import ViberIcon from './ViberIcon';
 
 interface HeaderProps {
@@ -233,7 +234,7 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* Mega-Menu Dropdown Panel */}
               {isDesktopDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2.5 w-[640px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 mt-2.5 w-[760px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex items-center justify-between mb-3 px-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 font-montserrat">
                       Моделі Tesla
@@ -248,14 +249,14 @@ const Header: React.FC<HeaderProps> = ({
                     </Link>
                   </div>
 
-                  {/* Model Cards Grid */}
-                  <div className="grid grid-cols-5 gap-2.5 mb-4">
-                    {sortedCategories.slice(0, 5).map((cat) => (
+                  {/* Model Cards Grid (All 6 models including Highland & Juniper) */}
+                  <div className="grid grid-cols-6 gap-2 mb-4">
+                    {sortedCategories.filter(c => c.name !== 'Аксесуари').map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsDesktopDropdownOpen(false)}
-                        className="group flex flex-col items-center text-center p-2.5 rounded-2xl bg-gray-50/80 hover:bg-red-50/60 border border-gray-100 hover:border-red-200 transition-all active:scale-95"
+                        className="group flex flex-col items-center text-center p-2 rounded-2xl bg-gray-50/80 hover:bg-red-50/60 border border-gray-100 hover:border-red-200 transition-all active:scale-95"
                       >
                         <div className="w-12 h-12 rounded-xl overflow-hidden mb-2 bg-gray-200/50 flex items-center justify-center">
                           {cat.image ? (
@@ -268,26 +269,26 @@ const Header: React.FC<HeaderProps> = ({
                             <Car size={24} className="text-gray-400 group-hover:text-tesla-red transition-colors" />
                           )}
                         </div>
-                        <span className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-tesla-red transition-colors leading-tight">
+                        <span className="font-montserrat font-bold text-[11px] text-gray-900 group-hover:text-tesla-red transition-colors leading-tight">
                           {cat.name}
                         </span>
                       </Link>
                     ))}
                   </div>
 
-                  {/* Subcategories & All Categories */}
-                  {sortedCategories.length > 5 && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2 px-1 font-montserrat">
-                        Усі категорії
-                      </div>
-                      <div className="grid grid-cols-3 gap-1 text-xs">
-                        {sortedCategories.slice(5).map((cat) => (
+                  {/* Other categories (e.g. Accessories) */}
+                  {sortedCategories.some(c => c.name === 'Аксесуари') && (
+                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between px-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                        Додатково
+                      </span>
+                      <div className="flex gap-2">
+                        {sortedCategories.filter(c => c.name === 'Аксесуари').map((cat) => (
                           <Link
                             key={cat.id}
                             to={`/category/${slugify(cat.name)}`}
                             onClick={() => setIsDesktopDropdownOpen(false)}
-                            className="px-2.5 py-1.5 rounded-lg text-gray-700 hover:text-tesla-red hover:bg-red-50/50 font-medium transition-colors truncate"
+                            className="px-3 py-1.5 rounded-xl text-xs text-gray-700 hover:text-tesla-red hover:bg-red-50/60 font-montserrat font-bold transition-colors border border-gray-100"
                           >
                             {cat.name}
                           </Link>
@@ -319,12 +320,15 @@ const Header: React.FC<HeaderProps> = ({
               title={activeCar ? `Ваша Tesla: ${activeCar.model}` : 'Перейти в Мій Гараж'}
             >
               <Car size={15} className="text-tesla-red flex-shrink-0" />
-              {activeCar ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="text-gray-500 font-normal">Гараж:</span>
-                  <span className="text-gray-950 font-black tracking-tight">{activeCar.plate || activeCar.model}</span>
-                </span>
-              ) : (
+              {activeCar ? (() => {
+                const target = getCarTargetInfo(activeCar);
+                return (
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-gray-500 font-normal">Гараж:</span>
+                    <span className="text-gray-950 font-black tracking-tight">{activeCar.plate || target.displayName}</span>
+                  </span>
+                );
+              })() : (
                 <span>Мій Гараж</span>
               )}
             </Link>

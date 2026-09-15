@@ -72,10 +72,30 @@ def list_schematics(
     session: Session = Depends(get_session)
 ):
     query = select(Schematic)
-    if model:
-        query = query.where(Schematic.model == model)
-    if generation:
-        query = query.where(Schematic.generation == generation)
+    if model and model != "all" and model != "Всі моделі":
+        clean_model = model.strip()
+        # Handle compound names like "Model 3 Highland" or "Model Y Juniper"
+        if "highland" in clean_model.lower():
+            clean_model = "Model 3"
+            if not generation or generation == "Всі покоління":
+                generation = "Highland"
+        elif "juniper" in clean_model.lower():
+            clean_model = "Model Y"
+            if not generation or generation == "Всі покоління":
+                generation = "Juniper"
+
+        query = query.where(func.lower(Schematic.model) == clean_model.lower())
+
+    if generation and generation != "Всі покоління":
+        gen_clean = generation.strip().lower()
+        if "highland" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%highland%"))
+        elif "juniper" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%juniper%"))
+        elif "classic" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%classic%"))
+        else:
+            query = query.where(func.lower(Schematic.generation).like(f"%{gen_clean}%"))
     if section:
         query = query.where(Schematic.section == section)
     if q:

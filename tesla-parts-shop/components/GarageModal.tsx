@@ -13,6 +13,7 @@ import {
 import { api } from '../services/api';
 import { VinDecodeResult, SavedCar, PlateLookupResult } from '../types';
 import { Link } from 'react-router-dom';
+import { getCarTargetInfo } from './GaragePage';
 
 interface GarageModalProps {
   isOpen: boolean;
@@ -247,34 +248,57 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         </div>
 
         {/* Current Car Banner (if exists) */}
-        {currentCar && (
-          <div className="mx-6 mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-200/80 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-tesla-red font-bold shrink-0">
-                <ShieldCheck size={22} />
+        {currentCar && (() => {
+          const target = getCarTargetInfo(currentCar);
+          return (
+            <div className="mx-6 mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-tesla-red font-bold shrink-0">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-green-600 font-montserrat flex items-center gap-1">
+                      <CheckCircle2 size={12} /> Активне авто в гаражі
+                    </div>
+                    <div className="font-montserrat font-bold text-gray-900 text-sm">
+                      {target.fullTitle} • {currentCar.year}
+                    </div>
+                    <div className="text-xs text-gray-500 font-manrope">
+                      {currentCar.generation} {currentCar.drive ? `• ${currentCar.drive}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleRemoveCar}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                  title="Видалити авто з гаража"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-green-600 font-montserrat flex items-center gap-1">
-                  <CheckCircle2 size={12} /> Активне авто в гаражі
-                </div>
-                <div className="font-montserrat font-bold text-gray-900 text-sm">
-                  Tesla {currentCar.model} • {currentCar.year}
-                </div>
-                <div className="text-xs text-gray-500 font-manrope">
-                  {currentCar.generation} {currentCar.drive ? `• ${currentCar.drive}` : ''}
-                </div>
+
+              <div className="flex gap-2 pt-1 border-t border-gray-200/60">
+                <Link
+                  to={`/category/${target.categorySlug}`}
+                  onClick={onClose}
+                  className="flex-1 py-2 px-3 bg-tesla-red hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>Деталі {target.displayName}</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <Link
+                  to={target.schemesUrl}
+                  onClick={onClose}
+                  className="flex-1 py-2 px-3 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-montserrat font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>Схеми {target.displayName}</span>
+                </Link>
               </div>
             </div>
-
-            <button
-              onClick={handleRemoveCar}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-              title="Видалити авто з гаража"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Tabs */}
         <div className="p-6 pt-5">
