@@ -74,15 +74,18 @@ def list_schematics(
     query = select(Schematic)
     if model and model != "all" and model != "Всі моделі":
         clean_model = model.strip()
-        # Handle compound names like "Model 3 Highland" or "Model Y Juniper"
-        if "highland" in clean_model.lower():
-            clean_model = "Model 3"
+        # Модель може бути назвою категорії-варіанта («Model 3 Highland»,
+        # «Model Y Juniper», «Model 3 Classic»...). Тоді базову модель і
+        # покоління визначаємо за категоріями каталогу, а не хардкодом.
+        category_names = [
+            c.name for c in session.exec(select(Category)).all() if c.name
+        ]
+        base_category = _base_category_name(clean_model, category_names)
+        if base_category:
+            variant = clean_model[len(base_category):].strip()
+            clean_model = base_category
             if not generation or generation == "Всі покоління":
-                generation = "Highland"
-        elif "juniper" in clean_model.lower():
-            clean_model = "Model Y"
-            if not generation or generation == "Всі покоління":
-                generation = "Juniper"
+                generation = variant
 
         query = query.where(func.lower(Schematic.model) == clean_model.lower())
 
