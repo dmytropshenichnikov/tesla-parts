@@ -75,7 +75,10 @@ export const SchemesCatalog: React.FC = () => {
       if (options.length === 0) return;
       const hasUrlFilter = Boolean(searchParams.get('model') || searchParams.get('generation') || searchParams.get('vin'));
       if (!hasUrlFilter) {
-        setSelectedModel((current) => current || options[0].category);
+        // Дефолт: категорія, під якою вже є схеми (щоб не відкривати порожній список)
+        const fallback =
+          options.find((o) => o.schematics_count > 0) || options[0];
+        setSelectedModel((current) => current || fallback.category);
       }
     });
   }, []);
