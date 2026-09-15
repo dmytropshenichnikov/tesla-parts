@@ -87,24 +87,29 @@ def lookup_by_plate(plate: str = Query(..., min_length=2, max_length=15, descrip
     year = int(car_data.get("prodYear") or 0)
     formatted_plate = format_plate_display(normalized)
 
-    is_tesla = "TESLA" in mark.upper() or vin.startswith(("5YJ", "7SA", "LRW"))
-    tesla_specs = None
-    message = None
+    is_tesla = (
+        "TESLA" in mark.upper()
+        or "TESLA" in model.upper()
+        or vin.startswith(("5YJ", "7SA", "LRW", "XP7", "7G2"))
+    )
 
-    if is_tesla:
-        tesla_specs = decode_tesla_vin(vin)
-    else:
-        message = f"Знайдено автомобіль {mark} {model} ({year}), проте наш магазин спеціалізується виключно на запчастинах для Tesla."
+    if not is_tesla:
+        raise HTTPException(
+            status_code=400,
+            detail="Автомобіль за цим номером не є Tesla. Пошук за номером підтримує виключно автомобілі Tesla."
+        )
+
+    tesla_specs = decode_tesla_vin(vin)
 
     return PlateLookupResult(
         plate=formatted_plate,
         vin=vin,
-        mark=mark,
-        model=model,
+        mark="TESLA",
+        model=tesla_specs.model if tesla_specs else (model or "Tesla"),
         year=year,
-        is_tesla=is_tesla,
+        is_tesla=True,
         tesla_specs=tesla_specs,
-        message=message
+        message=None
     )
 
 @router.get("/decode", response_model=VinDecodeResult)

@@ -513,74 +513,66 @@ export const GaragePage: React.FC = () => {
 
             {/* Error Message */}
             {plateError && (
-              <div className="mt-5 p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-700 text-sm animate-in fade-in duration-200">
-                <AlertCircle size={18} className="text-tesla-red flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-bold font-montserrat">Не вдалося розпізнати авто</div>
-                  <div className="text-xs text-red-600 mt-0.5">{plateError}</div>
+              <div className="mt-5 p-4 rounded-2xl bg-red-50 border border-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-red-700 text-sm animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle size={18} className="text-tesla-red flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold font-montserrat">
+                      {plateError.includes('не є Tesla') ? 'Автомобіль не є Tesla' : 'Не вдалося розпізнати авто'}
+                    </div>
+                    <div className="text-xs text-red-600 mt-0.5">{plateError}</div>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setAddMode('manual')}
+                  className="px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-montserrat font-bold transition-colors cursor-pointer shrink-0 self-end sm:self-center"
+                >
+                  Обрати Tesla вручну
+                </button>
               </div>
             )}
 
-            {/* Result Card */}
-            {plateResult && (
+            {/* Result Card (Only for verified Tesla) */}
+            {plateResult && plateResult.is_tesla && (
               <div className="mt-6 p-6 rounded-2xl bg-gray-50 border border-gray-200 animate-in zoom-in-95 duration-200">
-                {plateResult.is_tesla ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
-                      <div className="flex items-center gap-2 text-emerald-600 font-montserrat font-bold text-sm">
-                        <CheckCircle2 size={18} />
-                        <span>Знайдено автомобіль Tesla!</span>
-                      </div>
-                      <div className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-gray-200 text-gray-800">
-                        {plateResult.plate}
-                      </div>
+                <div>
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                    <div className="flex items-center gap-2 text-emerald-600 font-montserrat font-bold text-sm">
+                      <CheckCircle2 size={18} />
+                      <span>Знайдено автомобіль Tesla!</span>
                     </div>
-
-                    <div className="space-y-1.5 mb-5">
-                      <h4 className="text-xl font-black font-montserrat text-gray-950">
-                        Tesla {plateResult.tesla_specs ? plateResult.tesla_specs.model : plateResult.model}
-                      </h4>
-                      <div className="text-sm text-gray-600">
-                        Покоління: <strong>{plateResult.tesla_specs?.generation || 'Стандартне'}</strong> • Рік: <strong>{plateResult.year}</strong>
-                      </div>
-                      {plateResult.tesla_specs?.drive && (
-                        <div className="text-xs text-gray-500">
-                          Привід: {plateResult.tesla_specs.drive}
-                        </div>
-                      )}
-                      <div className="text-xs font-mono text-gray-400 pt-1">
-                        VIN: {plateResult.vin}
-                      </div>
+                    <div className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-gray-200 text-gray-800">
+                      {plateResult.plate}
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={handleSaveFromPlate}
-                      className="w-full py-3 px-4 bg-tesla-red hover:bg-red-700 text-white rounded-xl font-montserrat font-bold text-sm transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Plus size={16} />
-                      <span>Додати в Мій Гараж та підібрати запчастини</span>
-                    </button>
                   </div>
-                ) : (
-                  <div className="text-center py-2">
-                    <AlertCircle size={32} className="text-amber-500 mx-auto mb-2" />
-                    <h4 className="font-montserrat font-bold text-gray-900 text-base mb-1">
-                      Знайдено авто іншої марки
+
+                  <div className="space-y-1.5 mb-5">
+                    <h4 className="text-xl font-black font-montserrat text-gray-950">
+                      Tesla {plateResult.tesla_specs ? plateResult.tesla_specs.model : plateResult.model}
                     </h4>
-                    <p className="text-xs text-gray-600 max-w-sm mx-auto mb-4">
-                      {plateResult.message || `Знайдено ${plateResult.mark} ${plateResult.model} (${plateResult.year}), проте наш магазин спеціалізується виключно на автомобілях Tesla.`}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setAddMode('manual')}
-                      className="px-4 py-2 bg-gray-900 text-white text-xs font-montserrat font-bold rounded-xl hover:bg-black transition-colors"
-                    >
-                      Обрати модель Tesla вручну
-                    </button>
+                    <div className="text-sm text-gray-600">
+                      Покоління: <strong>{plateResult.tesla_specs?.generation || 'Стандартне'}</strong> • Рік: <strong>{plateResult.year}</strong>
+                    </div>
+                    {plateResult.tesla_specs?.drive && (
+                      <div className="text-xs text-gray-500">
+                        Привід: {plateResult.tesla_specs.drive}
+                      </div>
+                    )}
+                    <div className="text-xs font-mono text-gray-400 pt-1">
+                      VIN: {plateResult.vin}
+                    </div>
                   </div>
-                )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveFromPlate}
+                    className="w-full py-3 px-4 bg-tesla-red hover:bg-red-700 text-white rounded-xl font-montserrat font-bold text-sm transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Plus size={16} />
+                    <span>Додати в Мій Гараж та підібрати запчастини</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
