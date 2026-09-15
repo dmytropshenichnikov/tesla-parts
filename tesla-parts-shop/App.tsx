@@ -21,6 +21,7 @@ import { ReviewsPage } from './components/ReviewsPage';
 import StaticPage from './components/StaticPage';
 import { SchemesCatalog } from './components/SchemesCatalog';
 import { SchematicView } from './components/SchematicView';
+import { GaragePage } from './components/GaragePage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { Verify } from './components/Verify';
@@ -532,6 +533,7 @@ const App: React.FC = () => {
               }
             />
             <Route path="/schemes" element={<SchemesCatalog />} />
+            <Route path="/garage" element={<GaragePage />} />
             <Route
               path="/schemes/:id"
               element={

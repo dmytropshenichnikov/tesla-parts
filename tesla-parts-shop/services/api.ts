@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, VinDecodeResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, VinDecodeResult, PlateLookupResult } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -330,6 +330,15 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.detail || 'Недійсний VIN-номер Tesla');
+    }
+    return res.json();
+  },
+
+  lookupByPlate: async (plate: string): Promise<PlateLookupResult> => {
+    const res = await fetch(`${API_URL}/vin/lookup-by-plate?plate=${encodeURIComponent(plate.trim())}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Не вдалося знайти автомобіль за цим номером');
     }
     return res.json();
   },

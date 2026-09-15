@@ -202,165 +202,142 @@ const Header: React.FC<HeaderProps> = ({
   );
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      {/* Top Row: Utilities & Info (Hidden on mobile, shown on desktop) */}
-      <div className="hidden md:block bg-tesla-dark text-gray-300 text-xs py-1.5 px-3 sm:px-4 border-b border-gray-800">
-        <div className="container mx-auto flex items-center justify-between gap-2">
-          {/* Left on Desktop: Phone & Messengers */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {phoneNumber && (
-              <a
-                href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
-                className="flex items-center gap-1.5 font-medium text-white hover:text-tesla-red transition text-[11px] sm:text-xs whitespace-nowrap"
-                title="Зателефонувати нам"
-              >
-                <Phone size={12} className="text-emerald-400 fill-emerald-400/20 flex-shrink-0" />
-                <span className="tracking-tight">{phoneNumber}</span>
-              </a>
-            )}
-
-            {/* Messengers */}
-            <div className="flex items-center gap-1.5 border-l border-gray-700/80 pl-2">
-              {socialLinks.telegram && (
-                <a
-                  href={socialLinks.telegram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-[#229ED9] transition p-0.5"
-                  aria-label="Telegram"
-                >
-                  <Send size={13} />
-                </a>
-              )}
-              {socialLinks.viber && (
-                <a
-                  href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-[#7360F2] transition p-0.5"
-                  aria-label="Viber"
-                >
-                  <ViberIcon size={13} color="currentColor" />
-                </a>
-              )}
-              {socialLinks.instagram && (
-                <a
-                  href={socialLinks.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-tesla-red transition p-0.5"
-                  aria-label="Instagram"
-                >
-                  <Instagram size={13} />
-                </a>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop Center: Navigation Pages */}
-          <nav className="hidden md:flex flex-wrap gap-4 md:gap-6 justify-center items-center">
-            <Link to="/reviews" className="hover:text-white transition">
-              Відгуки
-            </Link>
-            {headerPages
-              .filter((page) => page.is_published)
-              .map((page) => (
-                <Link
-                  key={page.slug}
-                  to={`/info/${page.slug}`}
-                  className="hover:text-white transition"
-                >
-                  {page.title}
-                </Link>
-              ))}
-          </nav>
-
-          {/* Right: Currency Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Currency Selector (Clean Segmented Control) */}
-            <div className="flex items-center bg-gray-800/90 rounded-md p-0.5 border border-gray-700/80">
-              {Object.values(Currency).map((cur) => (
-                <button
-                  key={cur}
-                  onClick={() => setCurrency(cur)}
-                  className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold rounded transition ${
-                    currency === cur
-                      ? 'bg-tesla-red text-white shadow-xs'
-                      : 'text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  {cur}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Row: Logo, Nav, Actions */}
-      <div className="max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2 xl:gap-4">
-          {/* Logo (Clean & Roomy on Left) */}
+    <header className="bg-white/95 backdrop-blur-md shadow-xs border-b border-gray-100 sticky top-0 z-50 transition-all">
+      {/* Single Unified Header Row */}
+      <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-5 xl:px-6 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 xl:gap-6">
+          {/* Logo (Clean & Compact on Left) */}
           <TeslaPartsCenterLogo />
 
-          {/* Desktop Navigation (LG+) */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-3.5 font-medium text-tesla-dark whitespace-nowrap text-xs xl:text-sm">
-            {sortedCategories.slice(0, 4).map((cat) => (
-              <Link
-                key={cat.id}
-                to={`/category/${slugify(cat.name)}`}
-                className="hover:text-tesla-red transition px-1 py-1"
+          {/* Center Navigation (LG+) */}
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 text-sm">
+            {/* Catalog Mega-Menu Trigger */}
+            <div className="relative" ref={desktopDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsDesktopDropdownOpen(!isDesktopDropdownOpen)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-montserrat font-bold transition-all cursor-pointer ${
+                  isDesktopDropdownOpen
+                    ? 'bg-gray-900 text-white shadow-xs'
+                    : 'text-gray-800 hover:text-tesla-red hover:bg-gray-50'
+                }`}
               >
-                {cat.name}
-              </Link>
-            ))}
-            {sortedCategories.length > 4 && (
-              <div className="relative" ref={desktopDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsDesktopDropdownOpen(!isDesktopDropdownOpen)}
-                  className="flex items-center hover:text-tesla-red transition cursor-pointer font-medium"
-                >
-                  Усі категорії{' '}
-                  <ChevronDown
-                    size={14}
-                    className={`ml-0.5 transition-transform duration-300 ${
-                      isDesktopDropdownOpen ? 'rotate-180' : 'rotate-0'
-                    }`}
-                  />
-                </button>
-                {isDesktopDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-white shadow-xl rounded-xl py-2 border border-gray-100 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                    {sortedCategories.slice(4).map((cat) => (
+                <span>Каталог</span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-300 ${
+                    isDesktopDropdownOpen ? 'rotate-180 text-tesla-red' : 'text-gray-400'
+                  }`}
+                />
+              </button>
+
+              {/* Mega-Menu Dropdown Panel */}
+              {isDesktopDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2.5 w-[640px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                      Моделі Tesla
+                    </span>
+                    <Link
+                      to="/schemes"
+                      onClick={() => setIsDesktopDropdownOpen(false)}
+                      className="text-xs font-montserrat font-bold text-tesla-red hover:underline flex items-center gap-1"
+                    >
+                      <Layers size={13} />
+                      <span>Перейти до вибух-схем EPC</span>
+                    </Link>
+                  </div>
+
+                  {/* Model Cards Grid */}
+                  <div className="grid grid-cols-5 gap-2.5 mb-4">
+                    {sortedCategories.slice(0, 5).map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsDesktopDropdownOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-tesla-red transition"
+                        className="group flex flex-col items-center text-center p-2.5 rounded-2xl bg-gray-50/80 hover:bg-red-50/60 border border-gray-100 hover:border-red-200 transition-all active:scale-95"
                       >
-                        {cat.name}
+                        <div className="w-12 h-12 rounded-xl overflow-hidden mb-2 bg-gray-200/50 flex items-center justify-center">
+                          {cat.image ? (
+                            <img
+                              src={cat.image}
+                              alt={cat.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                          ) : (
+                            <Car size={24} className="text-gray-400 group-hover:text-tesla-red transition-colors" />
+                          )}
+                        </div>
+                        <span className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-tesla-red transition-colors leading-tight">
+                          {cat.name}
+                        </span>
                       </Link>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Subcategories & All Categories */}
+                  {sortedCategories.length > 5 && (
+                    <div className="pt-3 border-t border-gray-100">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2 px-1 font-montserrat">
+                        Усі категорії
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 text-xs">
+                        {sortedCategories.slice(5).map((cat) => (
+                          <Link
+                            key={cat.id}
+                            to={`/category/${slugify(cat.name)}`}
+                            onClick={() => setIsDesktopDropdownOpen(false)}
+                            className="px-2.5 py-1.5 rounded-lg text-gray-700 hover:text-tesla-red hover:bg-red-50/50 font-medium transition-colors truncate"
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Schemes Link */}
             <Link
               to="/schemes"
-              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1 px-2 xl:px-2.5 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-[11px] xl:text-xs tracking-wide"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-gray-800 hover:text-tesla-red hover:bg-gray-50 font-montserrat font-bold transition-all text-sm group"
             >
-              <Layers size={14} className="text-tesla-red flex-shrink-0" />
+              <Layers size={16} className="text-tesla-red group-hover:scale-110 transition-transform" />
               <span>Схеми</span>
+            </Link>
+
+            {/* My Garage Link */}
+            <Link
+              to="/garage"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-montserrat font-bold transition-all border text-xs shadow-2xs ${
+                activeCar
+                  ? 'bg-red-50/80 text-gray-900 border-red-200 hover:bg-red-100'
+                  : 'bg-gray-50 text-gray-800 border-gray-200/80 hover:bg-gray-100 hover:text-tesla-red'
+              }`}
+              title={activeCar ? `Ваша Tesla: ${activeCar.model}` : 'Перейти в Мій Гараж'}
+            >
+              <Car size={15} className="text-tesla-red flex-shrink-0" />
+              {activeCar ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-gray-500 font-normal">Гараж:</span>
+                  <span className="text-gray-950 font-black tracking-tight">{activeCar.plate || activeCar.model}</span>
+                </span>
+              ) : (
+                <span>Мій Гараж</span>
+              )}
             </Link>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2.5 xl:gap-3 flex-shrink-0">
-            {/* Mobile / Tablet Quick Navigation */}
-            <div className="lg:hidden flex items-center gap-1.5">
+          {/* Right Action Block: Search, Currency, Phone, Profile, Cart */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 flex-shrink-0">
+            {/* Quick Catalog on Mobile */}
+            <div className="lg:hidden flex items-center gap-1">
               <div className="relative" ref={mobileCategoryRef}>
                 <button
                   onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                  className={`flex items-center gap-1 font-bold text-xs text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
+                  className={`flex items-center gap-1 font-montserrat font-bold text-xs text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
                     isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
                   }`}
                 >
@@ -373,78 +350,76 @@ const Header: React.FC<HeaderProps> = ({
                   />
                 </button>
 
-              {isMobileCategoryOpen && (
-                <div className="fixed inset-x-3 top-[58px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-gray-100 max-w-sm sm:max-w-none ml-auto">
-                  {/* Schemes & VIN at top of mobile Catalog */}
-                  <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
-                    <Link
-                      to="/schemes"
-                      onClick={() => setIsMobileCategoryOpen(false)}
-                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-50 text-gray-900 hover:text-tesla-red transition-all group"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-red-50 text-tesla-red border border-red-100 flex items-center justify-center shrink-0">
-                        <Layers size={16} />
-                      </div>
-                      <div>
-                        <div className="font-montserrat font-bold text-xs">Схеми запчастин</div>
-                        <div className="text-[11px] text-gray-400 font-manrope">Інтерактивні вибух-схеми EPC</div>
-                      </div>
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileCategoryOpen(false);
-                        setIsGarageOpen(true);
-                      }}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 text-gray-900 transition-all text-left cursor-pointer"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 flex items-center justify-center shrink-0">
-                        <Car size={16} className="text-tesla-red" />
-                      </div>
-                      <div>
-                        <div className="font-montserrat font-bold text-xs">
-                          {activeCar ? `Гараж: ${activeCar.model}` : 'Підбір за VIN / Гараж'}
-                        </div>
-                        <div className="text-[11px] text-gray-400 font-manrope">За VIN-кодом або моделлю</div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="py-1 max-h-80 overflow-y-auto">
-                    <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100">
-                      Категорії запчастин
-                    </div>
-                    {sortedCategories.map((cat) => (
+                {isMobileCategoryOpen && (
+                  <div className="fixed inset-x-3 top-[54px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-gray-100 max-w-sm sm:max-w-none ml-auto">
+                    {/* Garage & Schemes on Mobile */}
+                    <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
                       <Link
-                        key={cat.id}
-                        to={`/category/${slugify(cat.name)}`}
+                        to="/garage"
                         onClick={() => setIsMobileCategoryOpen(false)}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1.5 duration-150"
+                        className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 text-gray-900 transition-all text-left"
                       >
-                        {cat.name}
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-tesla-red border border-red-100 flex items-center justify-center shrink-0">
+                          <Car size={16} />
+                        </div>
+                        <div>
+                          <div className="font-montserrat font-bold text-xs">
+                            {activeCar ? `Гараж: ${activeCar.plate || activeCar.model}` : 'Мій Гараж'}
+                          </div>
+                          <div className="text-[11px] text-gray-400 font-manrope">За номером авто або VIN</div>
+                        </div>
                       </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <form
-            onSubmit={(e) => {
+                      <Link
+                        to="/schemes"
+                        onClick={() => setIsMobileCategoryOpen(false)}
+                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-50 text-gray-900 hover:text-tesla-red transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 flex items-center justify-center shrink-0">
+                          <Layers size={16} className="text-tesla-red" />
+                        </div>
+                        <div>
+                          <div className="font-montserrat font-bold text-xs">Схеми запчастин</div>
+                          <div className="text-[11px] text-gray-400 font-manrope">Інтерактивні вибух-схеми EPC</div>
+                        </div>
+                      </Link>
+                    </div>
+
+                    <div className="py-1 max-h-80 overflow-y-auto">
+                      <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100 font-montserrat">
+                        Моделі та категорії
+                      </div>
+                      {sortedCategories.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          to={`/category/${slugify(cat.name)}`}
+                          onClick={() => setIsMobileCategoryOpen(false)}
+                          className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1 duration-150"
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Expandable Search Form (Desktop) */}
+            <form
+              onSubmit={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 (document.activeElement as HTMLElement)?.blur();
                 handleSearchSubmit(e);
               }}
-              className="hidden md:flex items-center gap-2"
+              className="hidden md:flex items-center"
             >
-              <div className="relative flex-grow w-28 lg:w-32 xl:w-48 focus-within:w-48 xl:focus-within:w-64 transition-all duration-300 ease-out group origin-right">
+              <div className="relative w-36 lg:w-44 xl:w-56 focus-within:w-60 xl:focus-within:w-72 transition-all duration-300 ease-out group">
                 <input
                   type="text"
                   placeholder="Пошук деталей або VIN..."
-                  className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 pr-8 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
+                  className="w-full bg-gray-100 border border-transparent focus:border-red-300 rounded-full py-2 px-4 pl-9 pr-7 focus:ring-3 focus:ring-red-500/10 focus:bg-white transition-all duration-200 outline-none text-xs text-gray-900 placeholder:text-gray-400 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -458,7 +433,7 @@ const Header: React.FC<HeaderProps> = ({
                 />
                 <Search
                   className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-tesla-red transition-colors duration-200 pointer-events-none"
-                  size={18}
+                  size={15}
                 />
                 {searchQuery && (
                   <button
@@ -469,80 +444,93 @@ const Header: React.FC<HeaderProps> = ({
                         navigate('/');
                       }
                     }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 bg-gray-200/70 hover:bg-gray-300 rounded-full transition-all duration-150 cursor-pointer active:scale-90"
-                    title="Очистити пошук"
-                    aria-label="Очистити пошук"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-700 bg-gray-200/80 rounded-full cursor-pointer"
                   >
-                    <X size={13} />
+                    <X size={11} />
                   </button>
                 )}
               </div>
             </form>
 
+            {/* Mobile Search Button */}
             <button
-              className="md:hidden text-tesla-dark p-2 rounded-full hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
+              className="md:hidden text-gray-700 p-2 rounded-xl hover:bg-gray-100 active:scale-90 transition-all cursor-pointer"
               onClick={handleOpenMobileSearch}
               aria-label="Пошук"
             >
-              <Search size={20} className="transition-transform duration-200 group-hover:rotate-12" />
+              <Search size={19} />
             </button>
 
-            {/* Garage / VIN button on Desktop */}
-            <button
-              type="button"
-              onClick={() => setIsGarageOpen(true)}
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-montserrat font-bold text-gray-800 transition-all cursor-pointer border border-gray-200/80 shadow-2xs"
-              title={activeCar ? `Ваше авто: Tesla ${activeCar.model} (${activeCar.year})` : 'Підбір за VIN-кодом або вибір авто'}
-            >
-              <Car size={15} className="text-tesla-red" />
-              <span>{activeCar ? activeCar.model : 'VIN / Гараж'}</span>
-            </button>
+            {/* Currency Selector (Sleek Micro Pill) */}
+            <div className="hidden sm:flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200/70">
+              {Object.values(Currency).map((cur) => (
+                <button
+                  key={cur}
+                  onClick={() => setCurrency(cur)}
+                  className={`px-2 py-0.5 text-[11px] font-montserrat font-bold rounded-md transition cursor-pointer ${
+                    currency === cur
+                      ? 'bg-white text-gray-950 shadow-xs'
+                      : 'text-gray-400 hover:text-gray-700'
+                  }`}
+                >
+                  {cur}
+                </button>
+              ))}
+            </div>
 
+            {/* Phone Call Button (Desktop) */}
+            {phoneNumber && (
+              <a
+                href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
+                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 hover:text-gray-950 transition-all text-xs font-semibold"
+                title="Зателефонувати нам"
+              >
+                <Phone size={14} className="text-emerald-500" />
+                <span className="font-mono">{phoneNumber}</span>
+              </a>
+            )}
+
+            {/* Profile Link */}
             <Link
               to="/profile"
-              className="hidden sm:flex text-tesla-dark hover:text-tesla-red p-2 rounded-full hover:bg-gray-100 active:scale-90 transition-all duration-200"
+              className="hidden sm:flex text-gray-700 hover:text-tesla-red p-2 rounded-xl hover:bg-gray-50 active:scale-90 transition-all"
               title="Особистий кабінет"
             >
-              <User size={20} />
+              <User size={19} />
             </Link>
 
-            <div
+            {/* Unified Luxury Cart Button */}
+            <button
+              type="button"
               onClick={onCartClick}
-              className="flex items-center gap-2 cursor-pointer group p-1.5 sm:p-1 rounded-xl hover:bg-gray-50 active:scale-90 transition-all duration-200 select-none"
+              className="flex items-center gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gray-950 hover:bg-black text-white active:scale-95 transition-all shadow-sm cursor-pointer group select-none flex-shrink-0"
             >
               <div className="relative flex items-center justify-center">
-                <ShoppingCart
-                  className="text-tesla-dark group-hover:text-tesla-red transition-all duration-200 group-hover:-rotate-12 group-hover:scale-110"
-                  size={20}
-                />
+                <ShoppingCart size={17} className="text-gray-300 group-hover:text-white transition-colors" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-tesla-red text-white text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full ring-2 ring-white animate-in zoom-in-50 duration-200">
+                  <span className="absolute -top-2 -right-2.5 bg-tesla-red text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-gray-950 animate-in zoom-in duration-150">
                     {cartCount}
                   </span>
                 )}
               </div>
-              <div className="hidden lg:block text-sm text-right leading-tight">
-                <div className="text-gray-500 text-xs">Кошик</div>
-                <div className="font-bold text-tesla-dark group-hover:text-tesla-red transition-colors">
+              <div className="hidden sm:block text-left leading-tight">
+                <div className="text-[9px] text-gray-400 uppercase font-montserrat font-bold tracking-wider">
+                  {cartCount > 0 ? `${cartCount} шт` : 'Кошик'}
+                </div>
+                <div className="font-montserrat font-black text-xs text-white">
                   {formatPrice(displayCartTotal)}
                 </div>
               </div>
-            </div>
-
-            <button
-              onClick={handleOpenDrawer}
-              className="md:hidden p-2 text-gray-800 hover:text-tesla-red rounded-xl hover:bg-gray-100 active:scale-85 transition-all duration-200 cursor-pointer group"
-              aria-label="Відкрити меню"
-            >
-              <Menu size={22} className="transition-transform duration-200 group-hover:scale-110" />
             </button>
 
-            <Link
-              to="/checkout"
-              className="hidden sm:inline-flex items-center justify-center bg-tesla-red hover:bg-red-700 active:scale-95 text-white px-3.5 py-2 rounded-xl font-montserrat font-bold transition-all duration-200 text-xs sm:text-sm shadow-sm whitespace-nowrap flex-shrink-0"
+            {/* Mobile Burger Menu Button */}
+            <button
+              onClick={handleOpenDrawer}
+              className="lg:hidden p-2 text-gray-800 hover:text-tesla-red rounded-xl hover:bg-gray-100 active:scale-85 transition-all cursor-pointer"
+              aria-label="Відкрити меню"
             >
-              Оформити
-            </Link>
+              <Menu size={22} />
+            </button>
           </div>
         </div>
 

@@ -11,7 +11,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { api } from '../services/api';
-import { VinDecodeResult, SavedCar } from '../types';
+import { VinDecodeResult, SavedCar, PlateLookupResult } from '../types';
+import { Link } from 'react-router-dom';
 
 interface GarageModalProps {
   isOpen: boolean;
@@ -24,11 +25,13 @@ export const GarageModal: React.FC<GarageModalProps> = ({
   onClose,
   onCarSaved
 }) => {
-  const [activeTab, setActiveTab] = useState<'vin' | 'model'>('vin');
+  const [activeTab, setActiveTab] = useState<'plate' | 'vin' | 'model'>('plate');
   const [vinInput, setVinInput] = useState('');
+  const [plateInput, setPlateInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [decodedCar, setDecodedCar] = useState<VinDecodeResult | null>(null);
+  const [plateResult, setPlateResult] = useState<PlateLookupResult | null>(null);
 
   // Manual selection state
   const [modelsData, setModelsData] = useState<any[]>([]);
@@ -46,6 +49,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
       loadModels();
       setError(null);
       setDecodedCar(null);
+      setPlateResult(null);
     }
   }, [isOpen]);
 
@@ -81,6 +85,49 @@ export const GarageModal: React.FC<GarageModalProps> = ({
     }
   };
 
+  const handlePlateSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = plateInput.trim();
+    if (clean.length < 3) {
+      setError('Введіть номерний знак авто (наприклад, КА 0001 АА)');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      setPlateResult(null);
+      const res = await api.lookupByPlate(clean);
+      setPlateResult(res);
+      if (!res.is_tesla) {
+        setError(res.message || 'Знайдено авто іншої марки. Оберіть модель Tesla вручну.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Не вдалося знайти авто за номером');
+      setPlateResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveFromPlate = () => {
+    if (!plateResult || !plateResult.is_tesla) return;
+    const specs = plateResult.tesla_specs;
+    const car: SavedCar = {
+      id: `plate_${plateResult.plate.replace(/\s+/g, '')}_${plateResult.vin}`,
+      plate: plateResult.plate,
+      vin: plateResult.vin,
+      model: specs ? specs.model : plateResult.model || 'Tesla',
+      generation: specs ? specs.generation : 'Стандартна',
+      year: specs ? specs.year : plateResult.year || 2021,
+      drive: specs ? specs.drive : '',
+      description: specs
+        ? specs.description
+        : `Tesla ${plateResult.model} (${plateResult.year}) [${plateResult.plate}]`
+    };
+    saveCarToGarage(car);
+  };
+
   const handleDecodeVin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = vinInput.trim().toUpperCase();
@@ -105,6 +152,16 @@ export const GarageModal: React.FC<GarageModalProps> = ({
   const saveCarToGarage = (car: SavedCar) => {
     try {
       localStorage.setItem('tesla_garage_active_car', JSON.stringify(car));
+
+      // Also append to all cars list
+      const existingStr = localStorage.getItem('tesla_garage_all_cars');
+      let currentList: SavedCar[] = existingStr ? JSON.parse(existingStr) : [];
+      currentList = currentList.filter(
+        (c) => c.id !== car.id && (!car.vin || c.vin !== car.vin)
+      );
+      currentList.unshift(car);
+      localStorage.setItem('tesla_garage_all_cars', JSON.stringify(currentList));
+
       window.dispatchEvent(new Event('garage-car-changed'));
       setCurrentCar(car);
       if (onCarSaved) onCarSaved(car);
@@ -221,14 +278,28 @@ export const GarageModal: React.FC<GarageModalProps> = ({
 
         {/* Tabs */}
         <div className="p-6 pt-5">
-          <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl mb-6">
+          <div className="grid grid-cols-3 p-1 bg-gray-100 rounded-2xl mb-6">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plate');
+                setError(null);
+              }}
+              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'plate'
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              За номером
+            </button>
             <button
               type="button"
               onClick={() => {
                 setActiveTab('vin');
                 setError(null);
               }}
-              className={`py-2.5 text-sm font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'vin'
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -242,13 +313,13 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                 setActiveTab('model');
                 setError(null);
               }}
-              className={`py-2.5 text-sm font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'model'
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Обрати вручну
+              Вручну
             </button>
           </div>
 
@@ -257,6 +328,68 @@ export const GarageModal: React.FC<GarageModalProps> = ({
               <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
               <span>{error}</span>
             </div>
+          )}
+
+          {/* TAB 0: PLATE */}
+          {activeTab === 'plate' && (
+            <form onSubmit={handlePlateSearch} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-2">
+                  Номерний знак авто (Україна)
+                </label>
+                <div className="relative flex items-stretch border-2 border-gray-900 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-tesla-red bg-white">
+                  <div className="bg-[#0057B7] text-white px-3 flex flex-col justify-center items-center flex-shrink-0 select-none">
+                    <span className="font-mono font-black text-xs text-white">UA</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={plateInput}
+                    onChange={(e) => {
+                      setPlateInput(e.target.value.toUpperCase());
+                      setError(null);
+                    }}
+                    placeholder="КА 0001 АА"
+                    maxLength={12}
+                    className="w-full py-2.5 px-3 font-mono font-black text-lg tracking-wider text-gray-950 placeholder:text-gray-300 outline-none uppercase bg-white"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !plateInput.trim()}
+                    className="px-4 bg-tesla-red hover:bg-red-700 disabled:opacity-50 text-white font-montserrat font-bold text-xs transition-colors cursor-pointer flex-shrink-0 flex items-center gap-1"
+                  >
+                    {loading ? 'Пошук...' : 'Знайти'}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-400 font-manrope">
+                  Введіть держномер. Ми автоматично отримаємо VIN та точну комплектацію Tesla.
+                </p>
+              </div>
+
+              {plateResult && plateResult.is_tesla && (
+                <div className="p-4 bg-green-50/70 border border-green-200 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2 text-green-700 font-montserrat font-bold text-sm">
+                    <CheckCircle2 size={18} />
+                    <span>Автомобіль Tesla знайдено!</span>
+                  </div>
+                  <div className="space-y-1 text-xs font-manrope text-gray-700">
+                    <div className="font-montserrat font-black text-gray-900 text-base">
+                      Tesla {plateResult.tesla_specs ? plateResult.tesla_specs.model : plateResult.model}
+                    </div>
+                    <div className="text-gray-500">
+                      {plateResult.tesla_specs?.generation} • {plateResult.year} рік • {plateResult.plate}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveFromPlate}
+                    className="w-full mt-2 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-montserrat font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle2 size={16} />
+                    Зберегти авто в гараж
+                  </button>
+                </div>
+              )}
+            </form>
           )}
 
           {/* TAB 1: VIN */}
@@ -431,10 +564,23 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                 className="w-full mt-4 py-3.5 bg-tesla-red hover:bg-red-700 text-white rounded-2xl font-montserrat font-bold text-sm transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
               >
                 <CheckCircle2 size={16} />
-                Зберегти в мій гараж
+                <span>Зберегти в мій гараж</span>
               </button>
             </div>
           )}
+
+          {/* Link to full Garage Page */}
+          <div className="pt-4 mt-6 border-t border-gray-100 flex items-center justify-between text-xs">
+            <span className="text-gray-400 font-manrope">Повний гараж із автопарком:</span>
+            <Link
+              to="/garage"
+              onClick={onClose}
+              className="font-montserrat font-bold text-tesla-red hover:text-red-700 flex items-center gap-1 transition-colors group"
+            >
+              <span>Відкрити сторінку Гаража</span>
+              <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>

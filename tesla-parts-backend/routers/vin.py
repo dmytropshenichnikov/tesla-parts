@@ -1,8 +1,111 @@
+import re
+import json
+import urllib.request
+import urllib.parse
 from fastapi import APIRouter, HTTPException, Query
-from schemas import VinDecodeResult
+from schemas import VinDecodeResult, PlateLookupResult
 from services.vin_decoder import decode_tesla_vin
 
 router = APIRouter(prefix="/vin", tags=["vin"])
+
+CYRILLIC_TO_LATIN = {
+    'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'І': 'I',
+    'К': 'K', 'М': 'M', 'О': 'O', 'Р': 'P', 'Т': 'T', 'Х': 'X',
+    'а': 'A', 'в': 'B', 'с': 'C', 'е': 'E', 'н': 'H', 'і': 'I',
+    'к': 'K', 'м': 'M', 'о': 'O', 'р': 'P', 'т': 'T', 'х': 'X'
+}
+
+def normalize_ukrainian_plate(plate: str) -> str:
+    cleaned = re.sub(r'[^a-zA-Zа-яА-ЯіІїЇ0-9]', '', plate).upper()
+    result = []
+    for char in cleaned:
+        result.append(CYRILLIC_TO_LATIN.get(char, char))
+    return "".join(result)
+
+def format_plate_display(plate: str) -> str:
+    # Typical Ukrainian format: AA 1234 BB or AA 1234
+    if len(plate) == 8 and plate[:2].isalpha() and plate[2:6].isdigit() and plate[6:].isalpha():
+        return f"{plate[:2]} {plate[2:6]} {plate[6:]}"
+    elif len(plate) >= 6:
+        return f"{plate[:2]} {plate[2:]}"
+    return plate
+
+@router.get("/lookup-by-plate", response_model=PlateLookupResult)
+def lookup_by_plate(plate: str = Query(..., min_length=2, max_length=15, description="Державний номер авто")):
+    normalized = normalize_ukrainian_plate(plate)
+    if len(normalized) < 4:
+        raise HTTPException(
+            status_code=400,
+            detail="Введіть коректний номерний знак авто (наприклад, КА1234АА)"
+        )
+
+    url = "https://hotline.finance/api/insurance/osago/carDataByNumber/find"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://hotline.finance/ua/osago",
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+    }
+    payload = urllib.parse.urlencode({"number": normalized, "traffic": "1"}).encode('utf-8')
+
+    try:
+        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            if resp.status != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail="Сервіс перевірки номерів тимчасово недоступний. Спробуйте пізніше або введіть VIN вручну."
+                )
+            res_data = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.URLError:
+        raise HTTPException(
+            status_code=502,
+            detail="Помилка з'єднання із сервісом перевірки авто. Спробуйте пізніше або введіть VIN вручну."
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Не вдалося обробити відповідь сервісу перевірки. Спробуйте пізніше або введіть VIN вручну."
+        )
+
+    if not res_data.get("status") or not res_data.get("data"):
+        raise HTTPException(
+            status_code=404,
+            detail="Автомобіль за вказаним номером не знайдено в реєстрах. Перевірте правильність номера або введіть VIN-код вручну."
+        )
+
+    car_data = res_data["data"]
+    vin = (car_data.get("vin") or "").strip().upper()
+    if not vin or len(vin) < 11:
+        raise HTTPException(
+            status_code=404,
+            detail="Не вдалося отримати повний VIN-код для цього автомобіля. Введіть VIN вручну."
+        )
+
+    mark = (car_data.get("markName") or "").strip()
+    model = (car_data.get("modelName") or "").strip()
+    year = int(car_data.get("prodYear") or 0)
+    formatted_plate = format_plate_display(normalized)
+
+    is_tesla = "TESLA" in mark.upper() or vin.startswith(("5YJ", "7SA", "LRW"))
+    tesla_specs = None
+    message = None
+
+    if is_tesla:
+        tesla_specs = decode_tesla_vin(vin)
+    else:
+        message = f"Знайдено автомобіль {mark} {model} ({year}), проте наш магазин спеціалізується виключно на запчастинах для Tesla."
+
+    return PlateLookupResult(
+        plate=formatted_plate,
+        vin=vin,
+        mark=mark,
+        model=model,
+        year=year,
+        is_tesla=is_tesla,
+        tesla_specs=tesla_specs,
+        message=message
+    )
 
 @router.get("/decode", response_model=VinDecodeResult)
 def decode_vin(vin: str = Query(..., min_length=17, max_length=17, description="17-digit Tesla VIN")):

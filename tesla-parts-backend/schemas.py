@@ -358,3 +358,14 @@ class VinDecodeResult(BaseModel):
     body_type: str
     description: str
 
+
+class PlateLookupResult(BaseModel):
+    plate: str
+    vin: str
+    mark: str
+    model: str
+    year: int
+    is_tesla: bool
+    tesla_specs: VinDecodeResult | None = None
+    message: str | None = None
+

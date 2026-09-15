@@ -173,9 +173,24 @@ export interface VinDecodeResult {
 export interface SavedCar {
   id: string;
   vin?: string;
+  plate?: string;
   model: string;
   generation: string;
   year: number;
   drive?: string;
+  plant?: string;
+  body_type?: string;
   description: string;
+  savedAt?: string;
+}
+
+export interface PlateLookupResult {
+  plate: string;
+  vin: string;
+  mark: string;
+  model: string;
+  year: number;
+  is_tesla: boolean;
+  tesla_specs?: VinDecodeResult | null;
+  message?: string | null;
 }
