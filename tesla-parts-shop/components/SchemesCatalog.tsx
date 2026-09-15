@@ -105,10 +105,10 @@ export const SchemesCatalog: React.FC = () => {
             vin: res.vin,
             model: res.model,
             year: res.year,
-            trim: res.trim,
             drive: res.drive,
-            factory: res.factory,
-            generation: res.generation
+            plant: res.plant,
+            generation: res.generation || 'Стандартне',
+            description: res.description || `Tesla ${res.model} ${res.year || ''}`
           };
           localStorage.setItem('tesla_garage_active_car', JSON.stringify(newCar));
           setActiveCar(newCar);
