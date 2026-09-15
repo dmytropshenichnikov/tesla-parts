@@ -330,8 +330,8 @@ export const GaragePage: React.FC = () => {
                   Tesla {activeCar.model}
                 </h2>
                 <div className="text-gray-400 text-sm md:text-base font-medium">
-                  {activeCar.generation} &bull; {activeCar.year} рік
-                  {activeCar.drive ? ` &bull; ${activeCar.drive}` : ''}
+                  {activeCar.generation} • {activeCar.year} рік
+                  {activeCar.drive ? ` • ${activeCar.drive}` : ''}
                 </div>
               </div>
 
@@ -507,7 +507,7 @@ export const GaragePage: React.FC = () => {
 
               <div className="flex items-center justify-between text-xs text-gray-400 px-1">
                 <span>Приклади: КА1234АА, АА7777ВВ, ВС1234ХХ</span>
-                <span>Безкоштовно &bull; За 0.3 сек</span>
+                <span>Безкоштовно • За 0.3 сек</span>
               </div>
             </form>
 
@@ -542,7 +542,7 @@ export const GaragePage: React.FC = () => {
                         Tesla {plateResult.tesla_specs ? plateResult.tesla_specs.model : plateResult.model}
                       </h4>
                       <div className="text-sm text-gray-600">
-                        Покоління: <strong>{plateResult.tesla_specs?.generation || 'Стандартне'}</strong> &bull; Рік: <strong>{plateResult.year}</strong>
+                        Покоління: <strong>{plateResult.tesla_specs?.generation || 'Стандартне'}</strong> • Рік: <strong>{plateResult.year}</strong>
                       </div>
                       {plateResult.tesla_specs?.drive && (
                         <div className="text-xs text-gray-500">
@@ -653,10 +653,10 @@ export const GaragePage: React.FC = () => {
                     Tesla {vinResult.model}
                   </h4>
                   <div className="text-sm text-gray-600">
-                    Покоління: <strong>{vinResult.generation}</strong> &bull; Рік: <strong>{vinResult.year}</strong>
+                    Покоління: <strong>{vinResult.generation}</strong> • Рік: <strong>{vinResult.year}</strong>
                   </div>
                   <div className="text-xs text-gray-500">
-                    Привід: {vinResult.drive} &bull; Завод: {vinResult.plant}
+                    Привід: {vinResult.drive} • Завод: {vinResult.plant}
                   </div>
                 </div>
 
@@ -822,7 +822,7 @@ export const GaragePage: React.FC = () => {
                     )}
                   </div>
                   <div className="text-xs text-gray-500 mb-4">
-                    {c.generation} &bull; {c.year} &bull; {c.drive || 'Standard'}
+                    {c.generation} • {c.year} • {c.drive || 'Standard'}
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
