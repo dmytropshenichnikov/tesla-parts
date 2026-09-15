@@ -76,3 +76,55 @@ export interface DashboardStats {
   pendingOrders: number;
   lowStockItems: number;
 }
+
+export interface HotspotVariant {
+  id?: string;
+  name: string;
+  type?: 'original' | 'analog';
+  condition?: 'used' | 'new';
+  priceUAH: number;
+  priceUSD: number;
+  inStock: boolean;
+  product_id?: string | null;
+}
+
+export interface SchematicHotspot {
+  id?: number;
+  schematic_id?: number;
+  number: number;
+  x: number;
+  y: number;
+  part_number?: string;
+  name: string;
+  product_id?: string | null;
+  variants_json?: string;
+  variants?: HotspotVariant[];
+  product?: Product | null;
+  sort_order?: number;
+}
+
+export interface SchematicSummary {
+  id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  image_url: string;
+  sort_order: number;
+  created_at?: string;
+  hotspots_count: number;
+}
+
+export interface Schematic {
+  id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  image_url: string;
+  sort_order: number;
+  created_at?: string;
+  hotspots: SchematicHotspot[];
+}

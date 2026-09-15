@@ -200,3 +200,33 @@ class SearchQueryLog(SQLModel, table=True):
     results_count: int = Field(default=0, index=True)
     created_at: datetime = Field(default_factory=get_kyiv_time, index=True)
 
+
+class Schematic(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    model: str = Field(index=True)
+    generation: str = Field(index=True)
+    section: str = Field(index=True)
+    subsystem: str = Field(index=True)
+    image_url: str
+    sort_order: int = Field(default=0, index=True)
+    created_at: datetime = Field(default_factory=get_kyiv_time)
+
+    hotspots: List["SchematicHotspot"] = Relationship(back_populates="schematic", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
+
+class SchematicHotspot(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    schematic_id: int = Field(foreign_key="schematic.id", index=True)
+    number: int
+    x: float
+    y: float
+    part_number: Optional[str] = None
+    name: str
+    product_id: Optional[str] = Field(default=None, foreign_key="product.id")
+    variants_json: Optional[str] = None
+    sort_order: int = Field(default=0)
+
+    schematic: Optional[Schematic] = Relationship(back_populates="hotspots")
+    product: Optional[Product] = Relationship()
+

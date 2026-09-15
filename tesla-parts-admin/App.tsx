@@ -21,6 +21,7 @@ import { CustomerProfile } from './components/CustomerProfile';
 import { PromoCodeList } from './components/PromoCodeList';
 import { EmailCampaigns } from './components/EmailCampaigns';
 import { SearchAnalytics } from './components/SearchAnalytics';
+import { SchematicManager } from './components/SchematicManager';
 import { ResetPasswordPage } from './pages/ResetPassword';
 import { useAuth } from './AuthContext'; // Import useAuth
 
@@ -66,6 +67,7 @@ const App: React.FC = () => {
                   <Route path="/products/edit/:id" element={<ProductForm />} />
                   <Route path="/orders" element={<OrderList />} />
                   <Route path="/categories" element={<CategoryList />} />
+                  <Route path="/schematics" element={<SchematicManager />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route
                     path="/settings/reset-password"

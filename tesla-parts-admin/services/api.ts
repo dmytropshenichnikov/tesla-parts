@@ -1,4 +1,4 @@
-import { Product, Order, Category, Subcategory } from '../types';
+import { Product, Order, Category, Subcategory, Schematic, SchematicSummary } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -1009,4 +1009,74 @@ export const ApiService = {
     });
     if (!res.ok) throw new Error('Failed to clear search queries');
   },
+
+  // --- Schematics API ---
+  getSchematics: async (params?: {
+    model?: string;
+    generation?: string;
+    section?: string;
+    q?: string;
+  }): Promise<SchematicSummary[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.model) searchParams.append('model', params.model);
+    if (params?.generation) searchParams.append('generation', params.generation);
+    if (params?.section) searchParams.append('section', params.section);
+    if (params?.q) searchParams.append('q', params.q);
+    const queryString = searchParams.toString();
+    const url = `${API_URL}/schematics${queryString ? `?${queryString}` : ''}`;
+    const res = await _authenticatedFetch(url, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch schematics');
+    return res.json();
+  },
+
+  getSchematic: async (id: number): Promise<Schematic> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/${id}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch schematic');
+    return res.json();
+  },
+
+  createSchematic: async (data: any): Promise<Schematic> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create schematic');
+    return res.json();
+  },
+
+  updateSchematic: async (id: number, data: any): Promise<Schematic> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update schematic');
+    return res.json();
+  },
+
+  deleteSchematic: async (id: number): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete schematic');
+  },
+
+  uploadSchematicImage: async (file: File): Promise<{ image_url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await _authenticatedFetch(`${API_URL}/schematics/upload-image`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Failed to upload schematic image');
+    return res.json();
+  },
 };
+
+export const api = ApiService;
+

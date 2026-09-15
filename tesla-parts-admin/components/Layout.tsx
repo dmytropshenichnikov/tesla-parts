@@ -20,6 +20,7 @@ import {
   FolderTree,
   Star,
   Search,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
@@ -94,6 +95,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         return 'Розсилки';
       case '/search-analytics':
         return 'Пошукова аналітика';
+      case '/schematics':
+        return 'Схеми запчастин (EPC)';
       default:
         return 'Адмін Панель';
     }
@@ -154,6 +157,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             icon={Layers}
             label="Товари"
             active={location.pathname === '/products'}
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            to="/schematics"
+            icon={MapPin}
+            label="Схеми запчастин"
+            active={location.pathname === '/schematics'}
             collapsed={collapsed}
           />
           <SidebarItem

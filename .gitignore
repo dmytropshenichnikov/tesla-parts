@@ -1,2 +1,7 @@
 tesla-parts-backend/.venv/
 tesla-parts-backend/.env
+
+__pycache__/
+*.pyc
+*.db
+

@@ -275,3 +275,86 @@ class DirectEmailCampaignRequest(BaseModel):
     customer_ids: List[int] = []
     emails: List[str] = []
 
+
+class HotspotVariant(BaseModel):
+    id: str | None = None
+    name: str
+    type: str | None = "original"
+    condition: str | None = "used"
+    priceUAH: float = 0.0
+    priceUSD: float = 0.0
+    inStock: bool = True
+    product_id: str | None = None
+
+
+class SchematicHotspotBase(BaseModel):
+    number: int
+    x: float
+    y: float
+    part_number: str | None = None
+    name: str
+    product_id: str | None = None
+    variants_json: str | None = None
+    sort_order: int = 0
+
+
+class SchematicHotspotCreate(SchematicHotspotBase):
+    pass
+
+
+class SchematicHotspotRead(SchematicHotspotBase):
+    id: int
+    schematic_id: int
+    product: ProductRead | None = None
+    variants: List[HotspotVariant] = []
+
+
+class SchematicBase(BaseModel):
+    title: str
+    model: str
+    generation: str
+    section: str
+    subsystem: str
+    image_url: str
+    sort_order: int = 0
+
+
+class SchematicCreate(SchematicBase):
+    hotspots: List[SchematicHotspotCreate] = []
+
+
+class SchematicUpdate(BaseModel):
+    title: str | None = None
+    model: str | None = None
+    generation: str | None = None
+    section: str | None = None
+    subsystem: str | None = None
+    image_url: str | None = None
+    sort_order: int | None = None
+    hotspots: List[SchematicHotspotCreate] | None = None
+
+
+class SchematicRead(SchematicBase):
+    id: int
+    created_at: datetime | None = None
+    hotspots: List[SchematicHotspotRead] = []
+
+
+class SchematicSummary(SchematicBase):
+    id: int
+    created_at: datetime | None = None
+    hotspots_count: int = 0
+
+
+class VinDecodeResult(BaseModel):
+    vin: str
+    is_valid: bool
+    make: str = "Tesla"
+    model: str
+    generation: str
+    year: int
+    plant: str
+    drive: str
+    body_type: str
+    description: str
+

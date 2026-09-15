@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, create_engine, Session, select
 from sqlalchemy import text, inspect
 import os
-from models import Settings, User, SearchQueryLog # Import models
+from models import Settings, User, SearchQueryLog, Schematic, SchematicHotspot # Import models
 from auth import get_password_hash # Import password hashing utility
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -33,6 +33,8 @@ def create_db_and_tables():
     _ensure_product_created_at_column()
     _ensure_product_is_popular_column()
     _ensure_product_part_type_column()
+    _ensure_product_search_keywords_column()
+    _ensure_product_meta_columns()
     _ensure_order_note_column()
     
     with Session(engine) as session:
@@ -160,4 +162,25 @@ def _ensure_product_part_type_column():
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE product ADD COLUMN part_type VARCHAR"))
             conn.commit()
+
+def _ensure_product_search_keywords_column():
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("product")]
+    if "search_keywords" not in columns:
+        print("Adding 'search_keywords' column to 'product' table...")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE product ADD COLUMN search_keywords VARCHAR"))
+            conn.commit()
+
+def _ensure_product_meta_columns():
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("product")]
+    with engine.connect() as conn:
+        if "meta_title" not in columns:
+            print("Adding 'meta_title' column to 'product' table...")
+            conn.execute(text("ALTER TABLE product ADD COLUMN meta_title VARCHAR"))
+        if "meta_description" not in columns:
+            print("Adding 'meta_description' column to 'product' table...")
+            conn.execute(text("ALTER TABLE product ADD COLUMN meta_description VARCHAR"))
+        conn.commit()
 

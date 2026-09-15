@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, VinDecodeResult } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -288,4 +288,56 @@ export const api = {
       console.warn('Failed to log search query', e);
     }
   },
+
+  // --- Schematics API ---
+  getSchematics: async (params?: {
+    model?: string;
+    generation?: string;
+    section?: string;
+    q?: string;
+  }): Promise<SchematicSummary[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.model) searchParams.append('model', params.model);
+    if (params?.generation) searchParams.append('generation', params.generation);
+    if (params?.section) searchParams.append('section', params.section);
+    if (params?.q) searchParams.append('q', params.q);
+    const queryString = searchParams.toString();
+    const url = `${API_URL}/schematics${queryString ? `?${queryString}` : ''}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch schematics');
+    return res.json();
+  },
+
+  getSchematic: async (id: number): Promise<Schematic> => {
+    const res = await fetch(`${API_URL}/schematics/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch schematic');
+    return res.json();
+  },
+
+  getSchematicFilters: async (): Promise<{
+    models: string[];
+    generations: string[];
+    sections: string[];
+    subsystems: string[];
+  }> => {
+    const res = await fetch(`${API_URL}/schematics/meta/filters`);
+    if (!res.ok) throw new Error('Failed to fetch schematic filters');
+    return res.json();
+  },
+
+  decodeVin: async (vin: string): Promise<VinDecodeResult> => {
+    const res = await fetch(`${API_URL}/vin/decode?vin=${encodeURIComponent(vin.trim().toUpperCase())}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Недійсний VIN-номер Tesla');
+    }
+    return res.json();
+  },
+
+  getVinModels: async (): Promise<any[]> => {
+    const res = await fetch(`${API_URL}/vin/models`);
+    if (!res.ok) throw new Error('Failed to fetch car models');
+    return res.json();
+  },
 };
+

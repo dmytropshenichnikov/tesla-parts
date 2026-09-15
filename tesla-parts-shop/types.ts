@@ -104,3 +104,78 @@ export interface Review {
   id: number;
   image_url: string;
 }
+
+export interface HotspotVariant {
+  id?: string;
+  name: string;
+  type?: 'original' | 'analog';
+  condition?: 'used' | 'new';
+  priceUAH: number;
+  priceUSD: number;
+  inStock: boolean;
+  product_id?: string | null;
+}
+
+export interface SchematicHotspot {
+  id: number;
+  schematic_id: number;
+  number: number;
+  x: number;
+  y: number;
+  part_number?: string;
+  name: string;
+  product_id?: string | null;
+  variants_json?: string;
+  variants?: HotspotVariant[];
+  product?: Product | null;
+  sort_order?: number;
+}
+
+export interface SchematicSummary {
+  id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  image_url: string;
+  sort_order: number;
+  created_at?: string;
+  hotspots_count: number;
+}
+
+export interface Schematic {
+  id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  image_url: string;
+  sort_order: number;
+  created_at?: string;
+  hotspots: SchematicHotspot[];
+}
+
+export interface VinDecodeResult {
+  vin: string;
+  is_valid: boolean;
+  make: string;
+  model: string;
+  generation: string;
+  year: number;
+  plant: string;
+  drive: string;
+  body_type: string;
+  description: string;
+}
+
+export interface SavedCar {
+  id: string;
+  vin?: string;
+  model: string;
+  generation: string;
+  year: number;
+  drive?: string;
+  description: string;
+}

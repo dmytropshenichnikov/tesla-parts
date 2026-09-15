@@ -11,8 +11,11 @@ import {
   Phone,
   ChevronRight,
   Star,
+  Layers,
+  Car,
 } from 'lucide-react';
-import { Category, Currency, Page } from '../types';
+import { Category, Currency, Page, SavedCar } from '../types';
+import { GarageModal } from './GarageModal';
 import TeslaPartsCenterLogo from './ShopLogo';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/currency';
@@ -65,6 +68,22 @@ const Header: React.FC<HeaderProps> = ({
 
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
+  const [isGarageOpen, setIsGarageOpen] = useState(false);
+  const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
+
+  useEffect(() => {
+    const loadCar = () => {
+      try {
+        const saved = localStorage.getItem('tesla_garage_active_car');
+        setActiveCar(saved ? JSON.parse(saved) : null);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadCar();
+    window.addEventListener('garage-car-changed', loadCar);
+    return () => window.removeEventListener('garage-car-changed', loadCar);
+  }, []);
 
   const handleOpenMobileSearch = () => {
     setIsMobileSearchClosing(false);
@@ -312,6 +331,13 @@ const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
             )}
+            <Link
+              to="/schemes"
+              className="hover:text-tesla-red transition font-medium flex items-center gap-1.5"
+            >
+              <Layers size={16} className="text-tesla-red" />
+              <span>Схеми запчастин</span>
+            </Link>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
@@ -406,6 +432,17 @@ const Header: React.FC<HeaderProps> = ({
               aria-label="Пошук"
             >
               <Search size={20} className="transition-transform duration-200 group-hover:rotate-12" />
+            </button>
+
+            {/* Garage button */}
+            <button
+              type="button"
+              onClick={() => setIsGarageOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-montserrat font-bold text-gray-800 transition-all cursor-pointer border border-gray-200/80 shadow-2xs"
+              title={activeCar ? `Ваше авто: Tesla ${activeCar.model} (${activeCar.year})` : 'Додати авто в гараж'}
+            >
+              <Car size={15} className="text-tesla-red" />
+              <span>{activeCar ? activeCar.model : 'Гараж'}</span>
             </button>
 
             <Link
@@ -569,6 +606,33 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <Link
+                  to="/schemes"
+                  onClick={() => handleAnimatedCloseDrawer()}
+                  className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-red-50/50 rounded-xl transition-all hover:translate-x-1 group mb-1 active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Layers size={16} className="text-tesla-red flex-shrink-0" />
+                    <span>Схеми запчастин</span>
+                  </span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAnimatedCloseDrawer();
+                    setIsGarageOpen(true);
+                  }}
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-xl transition-all hover:translate-x-1 group mb-1 active:scale-[0.98] text-left cursor-pointer"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Car size={16} className="text-tesla-red flex-shrink-0" />
+                    <span>{activeCar ? `Гараж: ${activeCar.model}` : 'Мій гараж'}</span>
+                  </span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <Link
                   to="/reviews"
                   onClick={() => handleAnimatedCloseDrawer()}
                   className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-amber-50/50 rounded-xl transition-all hover:translate-x-1 group mb-1 active:scale-[0.98]"
@@ -673,6 +737,13 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Garage Modal */}
+      <GarageModal
+        isOpen={isGarageOpen}
+        onClose={() => setIsGarageOpen(false)}
+        onCarSaved={(car) => setActiveCar(car)}
+      />
     </header>
   );
 };

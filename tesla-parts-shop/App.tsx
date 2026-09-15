@@ -19,6 +19,8 @@ import SubcategoryCard from './components/SubcategoryCard';
 import ProductPage from './components/ProductPage';
 import { ReviewsPage } from './components/ReviewsPage';
 import StaticPage from './components/StaticPage';
+import { SchemesCatalog } from './components/SchemesCatalog';
+import { SchematicView } from './components/SchematicView';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { Verify } from './components/Verify';
@@ -526,6 +528,17 @@ const App: React.FC = () => {
                   searchQuery={searchQuery}
                   seoRecord={staticSeo['search']}
                   onClearSearch={() => setSearchQuery('')}
+                />
+              }
+            />
+            <Route path="/schemes" element={<SchemesCatalog />} />
+            <Route
+              path="/schemes/:id"
+              element={
+                <SchematicView
+                  currency={currency}
+                  uahPerUsd={uahPerUsd}
+                  onAddToCart={addToCart}
                 />
               }
             />
