@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Layers,
   Search,
@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   ShieldCheck,
   ArrowRight,
-  Filter
+  Filter,
+  Check
 } from 'lucide-react';
 import { api } from '../services/api';
 import { SchematicSummary, SavedCar } from '../types';
@@ -36,6 +37,7 @@ const GENERATIONS_BY_MODEL: Record<string, string[]> = {
 
 export const SchemesCatalog: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,10 +47,43 @@ export const SchemesCatalog: React.FC = () => {
   const [selectedGen, setSelectedGen] = useState<string>('Всі покоління');
   const [searchInput, setSearchInput] = useState<string>('');
   const [activeSearch, setActiveSearch] = useState<string>('');
+  const [vinBanner, setVinBanner] = useState<string | null>(null);
 
   // Garage state
   const [isGarageOpen, setIsGarageOpen] = useState(false);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
+
+  useEffect(() => {
+    const vinParam = searchParams.get('vin');
+    const modelParam = searchParams.get('model');
+    if (modelParam && TESLA_MODELS.some(m => m.id === modelParam)) {
+      setSelectedModel(modelParam);
+    }
+    if (vinParam && vinParam.length === 17) {
+      api.decodeVin(vinParam).then(res => {
+        if (res.is_valid && res.model) {
+          setSelectedModel(res.model);
+          if (res.generation) {
+            setSelectedGen(res.generation);
+          }
+          const newCar: SavedCar = {
+            id: `car_${Date.now()}`,
+            vin: res.vin,
+            model: res.model,
+            year: res.year,
+            trim: res.trim,
+            drive: res.drive,
+            factory: res.factory,
+            generation: res.generation
+          };
+          localStorage.setItem('tesla_garage_active_car', JSON.stringify(newCar));
+          setActiveCar(newCar);
+          window.dispatchEvent(new CustomEvent('garage-car-changed'));
+          setVinBanner(`Розпізнано за VIN: Tesla ${res.model} ${res.year || ''} (${res.generation || ''})`);
+        }
+      }).catch(console.error);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadActiveCar();
@@ -141,6 +176,21 @@ export const SchemesCatalog: React.FC = () => {
           Інтерактивні складальні схеми вузлів (EPC) та сумісні оригінальні деталі й якісні аналоги для вашої комплектації.
         </p>
       </div>
+
+      {vinBanner && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 size={20} className="text-emerald-600 flex-shrink-0" />
+            <span className="font-montserrat font-bold text-sm">{vinBanner}</span>
+          </div>
+          <button
+            onClick={() => setVinBanner(null)}
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-950 underline cursor-pointer"
+          >
+            Закрити
+          </button>
+        </div>
+      )}
 
       {/* Search & Garage Banner */}
       <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-8 space-y-4">

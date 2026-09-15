@@ -81,8 +81,13 @@ const Header: React.FC<HeaderProps> = ({
       }
     };
     loadCar();
+    const handleOpenGarage = () => setIsGarageOpen(true);
     window.addEventListener('garage-car-changed', loadCar);
-    return () => window.removeEventListener('garage-car-changed', loadCar);
+    window.addEventListener('open-garage-modal', handleOpenGarage);
+    return () => {
+      window.removeEventListener('garage-car-changed', loadCar);
+      window.removeEventListener('open-garage-modal', handleOpenGarage);
+    };
   }, []);
 
   const handleOpenMobileSearch = () => {
@@ -164,8 +169,18 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
+  const isTeslaVin = (val: string) => {
+    const clean = val.trim().toUpperCase();
+    return clean.length === 17 && /^[A-HJ-NPR-Z0-9]{17}$/.test(clean);
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const clean = searchQuery.trim().toUpperCase();
+    if (isTeslaVin(clean)) {
+      navigate(`/schemes?vin=${encodeURIComponent(clean)}`);
+      return;
+    }
     onSearch(searchQuery);
   };
 
@@ -288,8 +303,8 @@ const Header: React.FC<HeaderProps> = ({
           {/* Logo (Clean & Roomy on Left) */}
           <TeslaPartsCenterLogo />
 
-          {/* Desktop Navigation (XL+) */}
-          <div className="hidden xl:flex items-center gap-6 font-medium text-tesla-dark whitespace-nowrap">
+          {/* Desktop Navigation (LG+) */}
+          <div className="hidden lg:flex items-center gap-5 xl:gap-6 font-medium text-tesla-dark whitespace-nowrap">
             {sortedCategories.slice(0, 4).map((cat) => (
               <Link
                 key={cat.id}
@@ -333,7 +348,7 @@ const Header: React.FC<HeaderProps> = ({
             )}
             <Link
               to="/schemes"
-              className="hover:text-tesla-red transition font-medium flex items-center gap-1.5"
+              className="hover:text-tesla-red transition font-bold font-montserrat flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-tesla-red border border-red-200/70 shadow-2xs hover:bg-red-100/80 active:scale-95 text-xs tracking-wide"
             >
               <Layers size={16} className="text-tesla-red" />
               <span>Схеми запчастин</span>
@@ -341,21 +356,23 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            <div className="xl:hidden relative" ref={mobileCategoryRef}>
-              <button
-                onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                className={`flex items-center gap-1.5 font-bold text-xs sm:text-sm text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 sm:px-3 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
-                  isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
-                }`}
-              >
-                <span>Каталог</span>
-                <ChevronDown
-                  size={13}
-                  className={`text-gray-500 transition-transform duration-300 ${
-                    isMobileCategoryOpen ? 'rotate-180 text-tesla-red' : 'rotate-0'
+            {/* Mobile / Tablet Quick Navigation */}
+            <div className="lg:hidden flex items-center gap-1.5">
+              <div className="relative" ref={mobileCategoryRef}>
+                <button
+                  onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
+                  className={`flex items-center gap-1 font-bold text-xs text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
+                    isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
                   }`}
-                />
-              </button>
+                >
+                  <span>Каталог</span>
+                  <ChevronDown
+                    size={13}
+                    className={`text-gray-500 transition-transform duration-300 ${
+                      isMobileCategoryOpen ? 'rotate-180 text-tesla-red' : 'rotate-0'
+                    }`}
+                  />
+                </button>
 
               {isMobileCategoryOpen && (
                 <div className="absolute right-0 top-full mt-2 w-64 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-from-top-2 duration-200">
@@ -378,8 +395,28 @@ const Header: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            <form
-              onSubmit={(e) => {
+            <Link
+              to="/schemes"
+              className="lg:hidden flex items-center gap-1 font-bold text-xs text-tesla-red bg-red-50 hover:bg-red-100 py-1.5 px-2 rounded-xl border border-red-200/70 shadow-2xs active:scale-95 transition whitespace-nowrap"
+              title="Схеми запчастин"
+            >
+              <Layers size={13} className="text-tesla-red" />
+              <span>Схеми</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsGarageOpen(true)}
+              className="lg:hidden flex items-center gap-1 font-bold text-xs text-gray-700 hover:text-tesla-red bg-gray-100 hover:bg-gray-200 py-1.5 px-2 rounded-xl border border-gray-200/80 shadow-2xs active:scale-95 transition whitespace-nowrap cursor-pointer"
+              title="Пошук за VIN / Гараж"
+            >
+              <Car size={13} className="text-tesla-red" />
+              <span>{activeCar ? activeCar.model.replace('Model ', 'M') : 'VIN'}</span>
+            </button>
+          </div>
+
+          <form
+            onSubmit={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 (document.activeElement as HTMLElement)?.blur();
@@ -387,10 +424,10 @@ const Header: React.FC<HeaderProps> = ({
               }}
               className="hidden md:flex items-center gap-2"
             >
-              <div className="relative flex-grow w-36 lg:w-48 focus-within:w-72 transition-all duration-300 ease-out group origin-right">
+              <div className="relative flex-grow w-36 lg:w-48 xl:w-56 focus-within:w-72 transition-all duration-300 ease-out group origin-right">
                 <input
                   type="text"
-                  placeholder="Пошук деталей..."
+                  placeholder="Пошук деталей або VIN..."
                   className="w-full bg-gray-100 border border-transparent focus:border-tesla-red/30 rounded-full py-2 px-4 pl-10 pr-8 focus:ring-3 focus:ring-tesla-red/15 focus:bg-white transition-all duration-300 outline-none text-[16px] sm:text-sm text-gray-800 placeholder:text-gray-400 shadow-inner"
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
@@ -434,15 +471,15 @@ const Header: React.FC<HeaderProps> = ({
               <Search size={20} className="transition-transform duration-200 group-hover:rotate-12" />
             </button>
 
-            {/* Garage button */}
+            {/* Garage / VIN button on Desktop */}
             <button
               type="button"
               onClick={() => setIsGarageOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-montserrat font-bold text-gray-800 transition-all cursor-pointer border border-gray-200/80 shadow-2xs"
-              title={activeCar ? `Ваше авто: Tesla ${activeCar.model} (${activeCar.year})` : 'Додати авто в гараж'}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 active:scale-95 text-xs font-montserrat font-bold text-gray-800 transition-all cursor-pointer border border-gray-200/80 shadow-2xs"
+              title={activeCar ? `Ваше авто: Tesla ${activeCar.model} (${activeCar.year})` : 'Підбір за VIN-кодом або вибір авто'}
             >
               <Car size={15} className="text-tesla-red" />
-              <span>{activeCar ? activeCar.model : 'Гараж'}</span>
+              <span>{activeCar ? activeCar.model : 'VIN / Гараж'}</span>
             </button>
 
             <Link
