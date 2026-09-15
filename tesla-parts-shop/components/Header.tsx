@@ -298,18 +298,18 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Row: Logo, Nav, Actions */}
-      <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-4 xl:px-6 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 xl:gap-4">
+      <div className="max-w-[1680px] w-full mx-auto px-4 sm:px-6 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2 xl:gap-4">
           {/* Logo (Clean & Roomy on Left) */}
           <TeslaPartsCenterLogo />
 
           {/* Desktop Navigation (LG+) */}
-          <div className="hidden lg:flex items-center gap-2 xl:gap-4 font-medium text-tesla-dark whitespace-nowrap text-xs xl:text-sm">
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-3.5 font-medium text-tesla-dark whitespace-nowrap text-xs xl:text-sm">
             {sortedCategories.slice(0, 4).map((cat) => (
               <Link
                 key={cat.id}
                 to={`/category/${slugify(cat.name)}`}
-                className="hover:text-tesla-red transition"
+                className="hover:text-tesla-red transition px-1 py-1"
               >
                 {cat.name}
               </Link>
@@ -440,7 +440,7 @@ const Header: React.FC<HeaderProps> = ({
               }}
               className="hidden md:flex items-center gap-2"
             >
-              <div className="relative flex-grow w-32 lg:w-36 xl:w-52 focus-within:w-56 xl:focus-within:w-72 transition-all duration-300 ease-out group origin-right">
+              <div className="relative flex-grow w-28 lg:w-32 xl:w-48 focus-within:w-48 xl:focus-within:w-64 transition-all duration-300 ease-out group origin-right">
                 <input
                   type="text"
                   placeholder="Пошук деталей або VIN..."
