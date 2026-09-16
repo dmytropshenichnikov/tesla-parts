@@ -102,6 +102,15 @@ const resolveOption = (
   return sameModel.find((o) => o.category === o.model) || sameModel[0];
 };
 
+/** «1 точка / 2 точки / 5 точок» — щоб у картках не було «1 точок» */
+const pluralPoints = (n: number) => {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} точка`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} точки`;
+  return `${n} точок`;
+};
+
 export const SchematicManager: React.FC = () => {
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1230,7 +1239,7 @@ export const SchematicManager: React.FC = () => {
                   )}
                   <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full font-montserrat flex items-center gap-1 shadow-sm">
                     <MapPin size={12} />
-                    {s.hotspots_count} точок
+                    {pluralPoints(s.hotspots_count)}
                   </div>
                 </div>
 
