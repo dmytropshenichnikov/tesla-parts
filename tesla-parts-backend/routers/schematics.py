@@ -5,7 +5,7 @@ from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 
 from database import get_session
-from models import Schematic, SchematicHotspot, Product, Category
+from models import Schematic, SchematicHotspot, Product, Category, Subcategory
 from schemas import (
     SchematicRead,
     SchematicSummary,
@@ -203,6 +203,42 @@ def get_schematic_sections(
 
     sections.sort(key=lambda item: (-item["count"], item["section"]))
     return {"sections": sections, "total": len(schematics)}
+
+
+@router.get("/section-options")
+def get_section_options(
+    category_id: Optional[int] = None,
+    session: Session = Depends(get_session)
+):
+    """Розділи й підсистеми для схем — з підкатегорій КАТАЛОГУ.
+
+    Щоб «КУЗОВ», «Кузов» і «кузов» не розповзались на три різні розділи,
+    адміністратор обирає значення зі списку каталогу, а не вписує текст.
+    Верхній рівень підкатегорій = розділ схеми, їхні діти = підсистема.
+    """
+    if not category_id:
+        return {"sections": []}
+
+    rows = session.exec(
+        select(Subcategory)
+        .where(Subcategory.category_id == category_id)
+        .order_by(Subcategory.sort_order.desc(), Subcategory.id)
+    ).all()
+
+    children: dict = {}
+    tops = []
+    for item in rows:
+        if item.parent_id is None:
+            tops.append(item)
+        else:
+            children.setdefault(item.parent_id, []).append(item.name)
+
+    return {
+        "sections": [
+            {"section": top.name, "subsystems": children.get(top.id, [])}
+            for top in tops
+        ]
+    }
 
 
 @router.get("/meta/filters")

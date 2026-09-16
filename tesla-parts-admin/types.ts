@@ -136,6 +136,16 @@ export interface SchematicSummary {
   hotspots_count: number;
 }
 
+/**
+ * Розділ схеми з каталогу: «КУЗОВ» і його підсистеми («ПЕРЕДНІЙ БАМПЕР»…).
+ * Джерело — підкатегорії каталогу, щоб не було різнобою
+ * «КУЗОВ» / «Кузов» / «кузов», який ламає навігацію по схемах.
+ */
+export interface SchematicSectionOption {
+  section: string;
+  subsystems: string[];
+}
+
 export interface Schematic {
   id: number;
   title: string;

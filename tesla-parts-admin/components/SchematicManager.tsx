@@ -24,7 +24,7 @@ import {
   Copy
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption } from '../types';
+import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption, SchematicSectionOption } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -63,6 +63,8 @@ const DRAG_THRESHOLD_PX = 5;
  * Якщо сесія обірвалась або вкладка закрилась — роботу можна відновити.
  */
 const DRAFT_PREFIX = 'schematicDraft:';
+/** Пункт списку, який перемикає на ручне введення */
+const CUSTOM_OPTION = '__custom__';
 const draftKeyFor = (id?: number) => `${DRAFT_PREFIX}${id && id > 0 ? id : 'new'}`;
 
 /**
@@ -132,6 +134,11 @@ export const SchematicManager: React.FC = () => {
   const hasDragged = useRef<boolean>(false);
   // Зсув курсора відносно центру піна на момент натискання
   const pinDragOffset = useRef<{ dx: number; dy: number } | null>(null);
+
+  // Розділи/підсистеми з каталогу для обраної моделі
+  const [sectionOptions, setSectionOptions] = useState<SchematicSectionOption[]>([]);
+  const [sectionMode, setSectionMode] = useState<'catalog' | 'custom'>('catalog');
+  const [subsystemMode, setSubsystemMode] = useState<'catalog' | 'custom'>('catalog');
 
   // Чернетка: знімок схеми на момент відкриття + пропозиція відновити
   const loadedSnapshot = useRef<string>('');
@@ -578,6 +585,28 @@ export const SchematicManager: React.FC = () => {
     (document.activeElement as HTMLElement | null)?.blur();
     imageContainerRef.current?.focus({ preventScroll: true });
   };
+
+  // Підсистеми обраного розділу (з каталогу)
+  const catalogSubsystems =
+    sectionOptions.find((o) => o.section === editingSchematic?.section)?.subsystems || [];
+
+  // Підтягуємо розділи з каталогу для обраної моделі
+  useEffect(() => {
+    const option = modelOptions.find((o) => o.category === formCategory);
+    if (!option?.category_id) {
+      setSectionOptions([]);
+      return;
+    }
+    api.getSchematicSectionOptions(option.category_id).then(setSectionOptions);
+  }, [formCategory, modelOptions]);
+
+  // Якщо збережене значення не з каталогу — одразу показуємо ручне поле
+  useEffect(() => {
+    if (!editingSchematic || sectionOptions.length === 0) return;
+    if (!sectionOptions.some((o) => o.section === editingSchematic.section)) {
+      setSectionMode('custom');
+    }
+  }, [sectionOptions, editingSchematic?.section]);
 
   // Автозбереження чернетки: якщо щось обірветься, робота не пропаде
   useEffect(() => {
@@ -1140,29 +1169,105 @@ export const SchematicManager: React.FC = () => {
         <div className="md:col-span-2">
           <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
             <span>Розділ (Section)</span>
-            <InfoTooltip text="Основний розділ за стандартами каталогу Tesla EPC. За ним схеми групуються в каталозі та у бічному фільтрі розділів на сторінці схем (наприклад: «10 - BODY», «НАРУЖНЫЕ КРЕПЛЕНИЯ»)." />
+            <InfoTooltip text="Береться з КАТАЛОГУ — верхній рівень підкатегорій обраної моделі («КУЗОВ», «ЗОВНІШНЄ ОЗДОБЛЕННЯ», «ХОДОВА ЧАСТИНА»). За цим списком клієнт ходить у схемах: авто → розділ → підсистема. Якщо вибрати зі списку, розділ ніколи не розʼїдеться на «КУЗОВ» / «Кузов» / «кузов»." />
           </label>
-          <input
-            type="text"
-            value={editingSchematic.section}
-            onChange={(e) => setEditingSchematic({ ...editingSchematic, section: e.target.value })}
-            placeholder="напр. НАРУЖНЫЕ КРЕПЛЕНИЯ"
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
-          />
+          {sectionMode === 'catalog' ? (
+            <select
+              value={editingSchematic.section}
+              disabled={sectionOptions.length === 0}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === CUSTOM_OPTION) {
+                  setSectionMode('custom');
+                  setEditingSchematic({ ...editingSchematic, section: '', subsystem: '' });
+                  return;
+                }
+                setEditingSchematic({ ...editingSchematic, section: value, subsystem: '' });
+              }}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none disabled:text-gray-400"
+            >
+              <option value="">
+                {sectionOptions.length === 0 ? 'Завантаження розділів…' : '— оберіть розділ —'}
+              </option>
+              {sectionOptions.map((option) => (
+                <option key={option.section} value={option.section}>
+                  {option.section}
+                </option>
+              ))}
+              <option value={CUSTOM_OPTION}>Інший розділ (вписати вручну)</option>
+            </select>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={editingSchematic.section}
+                onChange={(e) => setEditingSchematic({ ...editingSchematic, section: e.target.value })}
+                placeholder="напр. НАРУЖНЫЕ КРЕПЛЕНИЯ"
+                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setSectionMode('catalog')}
+                className="px-3 py-2 text-xs font-montserrat font-bold text-tesla-red border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+              >
+                Зі списку
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="md:col-span-2">
           <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
             <span>Підсистема (Subsystem)</span>
-            <InfoTooltip text="Підкатегорія або підсистема вузла всередині розділу. Допомагає клієнту швидко фільтрувати та знаходити суміжні схеми вузлів на сайті (наприклад: «Защита днища и диффузор»)." />
+            <InfoTooltip text="Підкатегорія всередині обраного розділу — теж з каталогу («ПЕРЕДНІЙ БАМПЕР», «ПЕРЕДНІ КРИЛА»). Саме за нею клієнт бачить останній крок перед схемою." />
           </label>
-          <input
-            type="text"
-            value={editingSchematic.subsystem}
-            onChange={(e) => setEditingSchematic({ ...editingSchematic, subsystem: e.target.value })}
-            placeholder="напр. Защита днища и диффузор"
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
-          />
+          {subsystemMode === 'catalog' && catalogSubsystems.length > 0 ? (
+            <select
+              value={editingSchematic.subsystem}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === CUSTOM_OPTION) {
+                  setSubsystemMode('custom');
+                  setEditingSchematic({ ...editingSchematic, subsystem: '' });
+                  return;
+                }
+                setEditingSchematic({ ...editingSchematic, subsystem: value });
+              }}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
+            >
+              <option value="">— оберіть підсистему —</option>
+              {catalogSubsystems.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+              <option value={CUSTOM_OPTION}>Інша підсистема (вписати вручну)</option>
+            </select>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={editingSchematic.subsystem}
+                onChange={(e) => setEditingSchematic({ ...editingSchematic, subsystem: e.target.value })}
+                placeholder="напр. Защита днища и диффузор"
+                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
+              />
+              {catalogSubsystems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSubsystemMode('catalog')}
+                  className="px-3 py-2 text-xs font-montserrat font-bold text-tesla-red border border-red-200 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                >
+                  Зі списку
+                </button>
+              )}
+            </div>
+          )}
+          {editingSchematic.section && catalogSubsystems.length === 0 && sectionOptions.length > 0 && (
+            <p className="mt-1 text-[11px] text-gray-400 font-manrope">
+              У каталозі цей розділ без підрозділів — впишіть підсистему вручну.
+            </p>
+          )}
         </div>
 
         <div className="md:col-span-1">

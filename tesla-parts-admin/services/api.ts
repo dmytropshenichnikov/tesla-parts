@@ -1,4 +1,4 @@
-import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption } from '../types';
+import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -1112,6 +1112,28 @@ export const ApiService = {
     if (!res.ok) throw new Error('Failed to fetch schematic model options');
     const data = await res.json();
     return data.options || [];
+  },
+
+  /**
+   * Розділи й підсистеми схем із каталогу (підкатегорії обраної категорії).
+   * Використовується у списках вибору, щоб не плодити «КУЗОВ» / «Кузов».
+   */
+  getSchematicSectionOptions: async (
+    categoryId?: number
+  ): Promise<SchematicSectionOption[]> => {
+    if (!categoryId) return [];
+    try {
+      const res = await _authenticatedFetch(
+        `${API_URL}/schematics/section-options?category_id=${categoryId}`,
+        { headers: getHeaders() }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.sections || [];
+    } catch (err) {
+      console.warn('Failed to load schematic section options', err);
+      return [];
+    }
   },
 
   getSchematic: async (id: number): Promise<Schematic> => {
