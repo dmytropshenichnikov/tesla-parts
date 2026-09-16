@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -20,7 +20,8 @@ import {
   Link as LinkIcon,
   Unlink,
   Package,
-  Sparkles
+  Sparkles,
+  Copy
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption } from '../types';
@@ -122,7 +123,12 @@ export const SchematicManager: React.FC = () => {
 
   // Catalog products for linking
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState<string>('');
+
+  // Буфер обміну для точок: одна деталь може стояти у кількох місцях схеми,
+  // тому точку можна скопіювати (⌘C) і вставити (⌘V).
+  const [pointClipboard, setPointClipboard] = useState<SchematicHotspot | null>(null);
 
   // Add/Link Variant Modal state
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -140,8 +146,13 @@ export const SchematicManager: React.FC = () => {
 
   useEffect(() => {
     loadSchematics();
-    loadCatalogProducts();
   }, [filterModel, searchQuery]);
+
+  // Каталог товарів вантажимо один раз: раніше він перезавантажувався на кожен
+  // символ у пошуку списку схем, через що модалка «прив'язати товар» висла.
+  useEffect(() => {
+    loadCatalogProducts();
+  }, []);
 
   const loadModelOptions = async () => {
     try {
@@ -172,11 +183,92 @@ export const SchematicManager: React.FC = () => {
 
   const loadCatalogProducts = async () => {
     try {
+      setCatalogLoading(true);
       const products = await api.getProducts();
       setCatalogProducts(products || []);
     } catch (err) {
       console.error('Failed to load products for link:', err);
+    } finally {
+      setCatalogLoading(false);
     }
+  };
+
+  /** Товар підходить під обрану модель? `category` — список через кому. */
+  const productMatchesModel = (product: Product, model: string) => {
+    if (!model) return true;
+    const needle = model.trim().toLowerCase();
+    const tokens = (product.category || '')
+      .split(',')
+      .map((token) => token.trim().toLowerCase())
+      .filter(Boolean);
+    if (tokens.length > 0) return tokens.includes(needle);
+    // Якщо модель у товару не заповнена — шукаємо в назві
+    return (product.name || '').toLowerCase().includes(needle);
+  };
+
+  // Фільтр каталогу рахуємо один раз на зміну, а не двічі щорендера
+  const filteredCatalogProducts = useMemo(() => {
+    if (!editingSchematic) return [];
+    const query = productSearchQuery.trim().toLowerCase();
+    return catalogProducts.filter((product) => {
+      if (filterBySchematicModel && !productMatchesModel(product, editingSchematic.model)) {
+        return false;
+      }
+      if (!query) return true;
+      const name = (product.name || '').toLowerCase();
+      const number = (product.detail_number || product.cross_number || product.id || '').toLowerCase();
+      return name.includes(query) || number.includes(query);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogProducts, productSearchQuery, filterBySchematicModel, editingSchematic?.model]);
+
+  /** Точки на схемі: усі збіги однаково показуємо на полотні. */
+  const nextHotspotNumber = (hotspots: SchematicHotspot[]) =>
+    hotspots.reduce((acc, h) => Math.max(acc, h.number || 0), 0) + 1;
+
+  /** Копіює точку в буфер (номер не переносимо — він унікальний на схемі). */
+  const handleCopyHotspot = (index: number) => {
+    if (!editingSchematic) return;
+    const source = editingSchematic.hotspots[index];
+    if (!source) return;
+    setPointClipboard({ ...source, variants: (source.variants || []).map((v) => ({ ...v })) });
+    setSuccessMsg(`Точку #${source.number} скопійовано. Натисніть ⌘V (Ctrl+V), щоб вставити копію.`);
+  };
+
+  /**
+   * Вставляє копію скопійованої точки. Новий номер — наступний вільний,
+   * парт-номер, назва та варіанти переносяться як є.
+   */
+  const handlePasteHotspot = (source?: SchematicHotspot | null) => {
+    if (!editingSchematic) return;
+    const original = source || pointClipboard;
+    if (!original) return;
+
+    const number = nextHotspotNumber(editingSchematic.hotspots);
+    const copy: SchematicHotspot = {
+      ...original,
+      id: undefined,
+      number,
+      x: Math.min(99.5, Math.max(0.5, Number((original.x + 4).toFixed(1)))),
+      y: Math.min(99.5, Math.max(0.5, Number((original.y + 4).toFixed(1)))),
+      sort_order: number,
+      variants: (original.variants || []).map((v) => ({ ...v, id: undefined })),
+    };
+
+    const updated = [...editingSchematic.hotspots, copy];
+    setEditingSchematic({ ...editingSchematic, hotspots: updated });
+    setSelectedHotspotIdx(updated.length - 1);
+    // Одразу вмикаємо режим розміщення: клік по схемі поставить копію точно
+    setIsRepositioningMode(true);
+    setSuccessMsg(`Точку вставлено як #${number}. Клікніть на схемі, щоб поставити її в потрібне місце.`);
+  };
+
+  /** Дублює точку одним кліком (те саме, що ⌘C + ⌘V). */
+  const handleDuplicateHotspot = (index: number) => {
+    if (!editingSchematic) return;
+    const source = editingSchematic.hotspots[index];
+    if (!source) return;
+    handlePasteHotspot(source);
   };
 
   const handleCreateNew = async () => {
@@ -305,6 +397,9 @@ export const SchematicManager: React.FC = () => {
       return;
     }
 
+    // Клік по схемі забирає фокус з полів форми (щоб ⌘C/⌘V працювали з точками)
+    (document.activeElement as HTMLElement | null)?.blur();
+
     const rect = imageContainerRef.current.getBoundingClientRect();
     const xPx = e.clientX - rect.left;
     const yPx = e.clientY - rect.top;
@@ -395,6 +490,63 @@ export const SchematicManager: React.FC = () => {
       hotspots: updated
     });
     setSelectedHotspotIdx(updated.length > 0 ? Math.max(0, index - 1) : null);
+  };
+
+  // ⌘C / Ctrl+C — скопіювати обрану точку, ⌘V / Ctrl+V — вставити копію.
+  // У текстових полях не перехоплюємо, щоб не ламати звичайне копіювання тексту.
+  useEffect(() => {
+    const isEditableField = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      if (isEditableField(e.target)) return;
+      if (!editingSchematic) return;
+
+      const key = e.key.toLowerCase();
+
+      if (key === 'c' && selectedHotspotIdx !== null) {
+        e.preventDefault();
+        handleCopyHotspot(selectedHotspotIdx);
+        return;
+      }
+
+      if (key === 'v' && pointClipboard) {
+        e.preventDefault();
+        handlePasteHotspot();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingSchematic, selectedHotspotIdx, pointClipboard]);
+
+  /** Копіює парт-номер у системний буфер обміну. */
+  const copyPartNumber = async (value?: string) => {
+    const text = (value || '').trim();
+    if (!text) {
+      setError('Парт-номер порожній — немає що копіювати');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setSuccessMsg(`Парт-номер ${text} скопійовано`);
+    } catch {
+      // Фолбек, якщо браузер заблокував Clipboard API
+      const helper = document.createElement('textarea');
+      helper.value = text;
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      document.execCommand('copy');
+      document.body.removeChild(helper);
+      setSuccessMsg(`Парт-номер ${text} скопійовано`);
+    }
   };
 
   const handleAddVariant = (hotspotIdx: number) => {
@@ -903,10 +1055,13 @@ export const SchematicManager: React.FC = () => {
                     transform: 'translate(-50%, -50%)',
                     touchAction: 'none'
                   }}
+                  tabIndex={0}
                   onMouseDown={(e) => handlePinMouseDown(idx, e)}
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedHotspotIdx(idx);
+                    // Знімаємо фокус з полів, щоб ⌘C копіював точку, а не текст в інпуті
+                    (document.activeElement as HTMLElement | null)?.blur();
                   }}
                   className={`absolute w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-black text-xs transition-transform shadow-md cursor-grab active:cursor-grabbing select-none ${
                     isDragging
@@ -923,8 +1078,21 @@ export const SchematicManager: React.FC = () => {
             })}
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope">
-            <span>💡 Перетягуйте точки мишкою по схемі або натисніть кнопку «Перемістити кліком» праворуч</span>
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-400 font-manrope">
+            <span className="flex items-center gap-1.5">
+              <Info size={12} className="shrink-0" />
+              Перетягуйте точки мишкою по схемі або натисніть «Перемістити кліком» праворуч
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Copy size={12} className="shrink-0" />
+              <strong className="font-montserrat text-gray-500">⌘C</strong> — копіювати точку,
+              <strong className="font-montserrat text-gray-500">⌘V</strong> — вставити копію
+              {pointClipboard && (
+                <span className="text-red-600 font-manrope">
+                  (у буфері точка #{pointClipboard.number})
+                </span>
+              )}
+            </span>
           </div>
         </div>
 
@@ -935,12 +1103,21 @@ export const SchematicManager: React.FC = () => {
               {selectedHotspot ? `Редагування точки #${selectedHotspot.number}` : 'Список деталей вузла'}
             </h3>
             {selectedHotspot && (
-              <button
-                onClick={() => handleDeleteHotspot(selectedHotspotIdx!)}
-                className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-montserrat font-bold cursor-pointer"
-              >
-                <Trash2 size={14} /> Видалити точку
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleDuplicateHotspot(selectedHotspotIdx!)}
+                  title="Створити копію цієї точки (⌘C, потім ⌘V). Одна деталь часто стоїть у кількох місцях схеми."
+                  className="text-xs text-gray-700 hover:text-red-600 flex items-center gap-1 font-montserrat font-bold cursor-pointer"
+                >
+                  <Copy size={14} /> Копіювати точку
+                </button>
+                <button
+                  onClick={() => handleDeleteHotspot(selectedHotspotIdx!)}
+                  className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-montserrat font-bold cursor-pointer"
+                >
+                  <Trash2 size={14} /> Видалити
+                </button>
+              </div>
             )}
           </div>
 
@@ -962,13 +1139,23 @@ export const SchematicManager: React.FC = () => {
                   <label className="block text-xs font-bold font-montserrat text-gray-700 mb-1">
                     Парт-номер (Tesla)
                   </label>
-                  <input
-                    type="text"
-                    value={selectedHotspot.part_number || ''}
-                    onChange={(e) => handleUpdateHotspot(selectedHotspotIdx, 'part_number', e.target.value)}
-                    placeholder="напр. 1499151-00-C"
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={selectedHotspot.part_number || ''}
+                      onChange={(e) => handleUpdateHotspot(selectedHotspotIdx, 'part_number', e.target.value)}
+                      placeholder="напр. 1499151-00-C"
+                      className="w-full pl-3 pr-9 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope font-mono"
+                    />
+                    <button
+                      type="button"
+                      title="Скопіювати парт-номер у буфер обміну"
+                      onClick={() => copyPartNumber(selectedHotspot.part_number)}
+                      className="absolute right-1.5 top-1.5 p-1 text-gray-400 hover:text-red-600 hover:bg-white rounded-md transition-colors cursor-pointer"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1159,24 +1346,37 @@ export const SchematicManager: React.FC = () => {
                   <div
                     key={idx}
                     onClick={() => setSelectedHotspotIdx(idx)}
-                    className="p-3 bg-gray-50 hover:bg-red-50 rounded-xl border border-gray-200 cursor-pointer transition-colors flex items-center justify-between"
+                    className="p-3 bg-gray-50 hover:bg-red-50 rounded-xl border border-gray-200 cursor-pointer transition-colors flex items-center justify-between gap-2 group"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-red-600 text-white font-montserrat font-bold text-xs flex items-center justify-center">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-red-600 text-white font-montserrat font-bold text-xs flex items-center justify-center shrink-0">
                         {h.number}
                       </span>
-                      <div>
-                        <div className="font-montserrat font-bold text-gray-900 text-xs">
+                      <div className="min-w-0">
+                        <div className="font-montserrat font-bold text-gray-900 text-xs truncate">
                           {h.name}
                         </div>
-                        <div className="text-[11px] font-mono text-gray-400">
+                        <div className="text-[11px] font-mono text-gray-400 truncate">
                           {h.part_number || 'Не вказано парт-номер'}
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-500 font-manrope">
-                      {h.variants?.length || 0} вар.
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs text-gray-500 font-manrope">
+                        {h.variants?.length || 0} вар.
+                      </span>
+                      <button
+                        type="button"
+                        title="Копіювати точку (одна деталь може стояти в кількох місцях)"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateHotspot(idx);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-white rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1292,42 +1492,14 @@ export const SchematicManager: React.FC = () => {
                       <span>Фільтрувати тільки для <strong>{editingSchematic.model}</strong></span>
                     </label>
                     <span className="text-gray-400">
-                      Знайдено:{' '}
-                      {
-                        catalogProducts.filter((p) => {
-                          if (filterBySchematicModel) {
-                            const pText = `${p.category || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
-                            if (!pText.includes(editingSchematic.model.toLowerCase())) return false;
-                          }
-                          if (productSearchQuery.trim()) {
-                            const q = productSearchQuery.toLowerCase();
-                            const matchName = (p.name || '').toLowerCase().includes(q);
-                            const matchSku = (p.detail_number || p.id || '').toLowerCase().includes(q);
-                            return matchName || matchSku;
-                          }
-                          return true;
-                        }).length
-                      }
+                      {catalogLoading ? 'Завантаження...' : `Знайдено: ${filteredCatalogProducts.length}`}
                     </span>
                   </div>
                 </div>
 
                 {/* Products List */}
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {catalogProducts
-                    .filter((p) => {
-                      if (filterBySchematicModel) {
-                        const pText = `${p.category || ''} ${p.name || ''} ${p.description || ''}`.toLowerCase();
-                        if (!pText.includes(editingSchematic.model.toLowerCase())) return false;
-                      }
-                      if (productSearchQuery.trim()) {
-                        const q = productSearchQuery.toLowerCase();
-                        const matchName = (p.name || '').toLowerCase().includes(q);
-                        const matchSku = (p.detail_number || p.id || '').toLowerCase().includes(q);
-                        return matchName || matchSku;
-                      }
-                      return true;
-                    })
+                  {filteredCatalogProducts
                     .slice(0, 40)
                     .map((p) => (
                       <div
@@ -1424,9 +1596,28 @@ export const SchematicManager: React.FC = () => {
                       </div>
                     ))}
 
-                  {catalogProducts.length === 0 && (
-                    <div className="text-center py-6 text-gray-400 text-xs font-manrope">
+                  {catalogLoading && (
+                    <div className="flex items-center justify-center gap-2 py-6 text-gray-400 text-xs font-manrope">
+                      <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                       Завантаження товарів каталогу...
+                    </div>
+                  )}
+
+                  {!catalogLoading && filteredCatalogProducts.length === 0 && (
+                    <div className="text-center py-6 text-gray-400 text-xs font-manrope space-y-1">
+                      <p>Нічого не знайдено.</p>
+                      {filterBySchematicModel && (
+                        <p className="text-[11px]">
+                          Увімкнено фільтр «тільки для {editingSchematic.model}» — зніміть його,
+                          щоб шукати серед усіх {catalogProducts.length} товарів.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!catalogLoading && filteredCatalogProducts.length > 40 && (
+                    <div className="text-center pt-1 text-[11px] text-gray-400 font-manrope">
+                      Показано перші 40 із {filteredCatalogProducts.length} — уточніть пошук
                     </div>
                   )}
                 </div>
