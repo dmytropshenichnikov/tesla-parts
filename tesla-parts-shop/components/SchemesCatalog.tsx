@@ -315,6 +315,11 @@ export const SchemesCatalog: React.FC = () => {
       ? [ALL_GENERATIONS, ...activeModelObj.generations]
       : [];
 
+  // Номери кроків рахуємо динамічно: якщо кроку покоління немає,
+  // наступні зсуваються, щоб нумерація була послідовною.
+  const sectionStepNumber = availableGenerations.length > 0 ? 3 : 2;
+  const subsystemStepNumber = sectionStepNumber + 1;
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Breadcrumbs */}
@@ -589,7 +594,7 @@ export const SchemesCatalog: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              3. Оберіть розділ
+              {sectionStepNumber}. Оберіть розділ
             </span>
             {sections.length > 0 && (
               <button
@@ -656,7 +661,7 @@ export const SchemesCatalog: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              4. Оберіть підсистему
+              {subsystemStepNumber}. Оберіть підсистему
             </span>
             <button
               onClick={() => setSelectedSubsystem(ALL_SUBSYSTEMS)}
