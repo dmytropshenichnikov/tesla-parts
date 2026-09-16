@@ -79,6 +79,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await ApiService.login(username, password);
       setAccessToken(response.access_token);
       setRefreshToken(response.refresh_token);
+      // Повідомляємо сторінки, що сесія знову робоча — вони перезавантажать дані
+      window.dispatchEvent(
+        new CustomEvent('admin-tokens-refreshed', {
+          detail: {
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token,
+          },
+        })
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to login');
       throw err;
