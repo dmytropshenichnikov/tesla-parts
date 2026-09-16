@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShoppingCart,
   Search,
@@ -129,6 +130,17 @@ const Header: React.FC<HeaderProps> = ({
       return () => clearTimeout(timer);
     }
   }, [isDrawerOpen, isDrawerRendered]);
+
+  useEffect(() => {
+    if (isDrawerRendered || isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDrawerRendered, isDrawerOpen]);
 
   const handleAnimatedCloseDrawer = (afterClose?: () => void) => {
     if (isDrawerClosing) return;
@@ -601,20 +613,21 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {(isDrawerRendered || isDrawerOpen) && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className={`fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer ${
-              isDrawerClosing ? 'animate-backdrop-fade-out' : 'animate-backdrop-fade'
-            }`}
-            onClick={() => handleAnimatedCloseDrawer()}
-          />
+      {(isDrawerRendered || isDrawerOpen) && typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] h-[100dvh] w-screen flex justify-end">
+            <div
+              className={`fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer ${
+                isDrawerClosing ? 'animate-backdrop-fade-out' : 'animate-backdrop-fade'
+              }`}
+              onClick={() => handleAnimatedCloseDrawer()}
+            />
 
-          <div
-            className={`relative w-full max-w-[320px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto ${
-              isDrawerClosing ? 'animate-drawer-slide-out' : 'animate-drawer-slide'
-            }`}
-          >
+            <div
+              className={`relative w-full max-w-[320px] bg-white h-[100dvh] max-h-[100dvh] shadow-2xl z-10 flex flex-col justify-between p-5 overflow-y-auto overscroll-contain ${
+                isDrawerClosing ? 'animate-drawer-slide-out' : 'animate-drawer-slide'
+              }`}
+            >
             <div>
               <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
                 <TeslaPartsCenterLogo />
@@ -780,7 +793,8 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Garage Modal */}
