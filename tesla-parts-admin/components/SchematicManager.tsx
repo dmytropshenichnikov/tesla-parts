@@ -59,6 +59,13 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
 const DRAG_THRESHOLD_PX = 5;
 
 /**
+ * Незбережена чернетка схеми в localStorage.
+ * Якщо сесія обірвалась або вкладка закрилась — роботу можна відновити.
+ */
+const DRAFT_PREFIX = 'schematicDraft:';
+const draftKeyFor = (id?: number) => `${DRAFT_PREFIX}${id && id > 0 ? id : 'new'}`;
+
+/**
  * Моделі та покоління більше не дублюються тут хардкодом — вони приходять
  * з категорій каталогу через `/schematics/model-options`. Так адмінка,
  * магазин і каталог завжди показують один і той самий набір.
@@ -125,6 +132,10 @@ export const SchematicManager: React.FC = () => {
   const hasDragged = useRef<boolean>(false);
   // Зсув курсора відносно центру піна на момент натискання
   const pinDragOffset = useRef<{ dx: number; dy: number } | null>(null);
+
+  // Чернетка: знімок схеми на момент відкриття + пропозиція відновити
+  const loadedSnapshot = useRef<string>('');
+  const [draftToRestore, setDraftToRestore] = useState<{ savedAt: string; schematic: Schematic } | null>(null);
 
   // Catalog products for linking
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
@@ -308,9 +319,7 @@ export const SchematicManager: React.FC = () => {
     // Модель/покоління беремо з категорій каталогу, а не з хардкоду.
     const options = modelOptions.length > 0 ? modelOptions : await loadModelOptions();
     const preset = pickDefaultOption(options);
-    setIsNew(true);
-    setFormCategory(preset?.category || '');
-    setEditingSchematic({
+    const blank: Schematic = {
       id: 0,
       title: '',
       model: preset?.model || '',
@@ -320,8 +329,13 @@ export const SchematicManager: React.FC = () => {
       image_url: '',
       sort_order: 1,
       hotspots: []
-    });
+    };
+    setIsNew(true);
+    setFormCategory(preset?.category || '');
+    setEditingSchematic(blank);
     setSelectedHotspotIdx(null);
+    loadedSnapshot.current = JSON.stringify(blank);
+    offerDraftIfAny(0, blank);
   };
 
   const handleEdit = async (id: number) => {
@@ -334,6 +348,8 @@ export const SchematicManager: React.FC = () => {
       setEditingSchematic(data);
       setIsNew(false);
       setSelectedHotspotIdx(data.hotspots.length > 0 ? 0 : null);
+      loadedSnapshot.current = JSON.stringify(data);
+      offerDraftIfAny(id, data);
     } catch (err: any) {
       setError(err.message || 'Помилка завантаження схеми');
     } finally {
@@ -552,6 +568,50 @@ export const SchematicManager: React.FC = () => {
     imageContainerRef.current?.focus({ preventScroll: true });
   };
 
+  // Автозбереження чернетки: якщо щось обірветься, робота не пропаде
+  useEffect(() => {
+    if (!editingSchematic) return;
+    const key = draftKeyFor(editingSchematic.id);
+    const serialized = JSON.stringify(editingSchematic);
+    if (serialized === loadedSnapshot.current) return; // нічого не змінилось
+
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify({ savedAt: new Date().toISOString(), schematic: editingSchematic }));
+      } catch {
+        /* переповнений localStorage — не критично */
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [editingSchematic]);
+
+  const clearDraft = (id?: number) => {
+    try {
+      localStorage.removeItem(draftKeyFor(id));
+    } catch {
+      /* ignore */
+    }
+    setDraftToRestore(null);
+  };
+
+  /** Читає збережену чернетку й пропонує відновити, якщо вона відрізняється. */
+  const offerDraftIfAny = (id: number | undefined, current: Schematic) => {
+    try {
+      const raw = localStorage.getItem(draftKeyFor(id));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.schematic) return;
+      if (JSON.stringify(parsed.schematic) === JSON.stringify(current)) {
+        localStorage.removeItem(draftKeyFor(id));
+        return;
+      }
+      setDraftToRestore({ savedAt: parsed.savedAt, schematic: parsed.schematic });
+    } catch {
+      /* ignore */
+    }
+  };
+
   // ⌘C / Ctrl+C — скопіювати обрану точку, ⌘V / Ctrl+V — вставити копію.
   // У текстових полях не перехоплюємо, щоб не ламати звичайне копіювання тексту.
   useEffect(() => {
@@ -704,6 +764,9 @@ export const SchematicManager: React.FC = () => {
         setSuccessMsg('Схему оновлено');
       }
 
+      // Успішно збережено — чернетка більше не потрібна
+      clearDraft(editingSchematic.id);
+      loadedSnapshot.current = '';
       setEditingSchematic(null);
       loadSchematics();
     } catch (err: any) {
@@ -936,6 +999,44 @@ export const SchematicManager: React.FC = () => {
           <CheckCircle2 size={18} className="shrink-0 text-green-600" />
           <span className="flex-1">{successMsg}</span>
           <button onClick={() => setSuccessMsg(null)} className="text-xs underline shrink-0">Закрити</button>
+        </div>
+      )}
+
+      {/* Незбережена чернетка після обриву сесії / закриття вкладки */}
+      {draftToRestore && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-sm font-manrope flex flex-wrap items-center gap-3">
+          <AlertCircle size={18} className="shrink-0 text-amber-600" />
+          <span className="flex-1">
+            Знайдено незбережену чернетку від{' '}
+            <strong>
+              {new Date(draftToRestore.savedAt).toLocaleString('uk-UA', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </strong>{' '}
+            — у ній {draftToRestore.schematic.hotspots.length} точок.
+          </span>
+          <button
+            onClick={() => {
+              setEditingSchematic(draftToRestore.schematic);
+              setSelectedHotspotIdx(
+                draftToRestore.schematic.hotspots.length > 0 ? 0 : null
+              );
+              setDraftToRestore(null);
+              setSuccessMsg('Чернетку відновлено — не забудьте зберегти схему');
+            }}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-montserrat font-bold cursor-pointer"
+          >
+            Відновити
+          </button>
+          <button
+            onClick={() => clearDraft(editingSchematic.id)}
+            className="px-3 py-1.5 bg-white hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-montserrat font-bold cursor-pointer"
+          >
+            Відхилити
+          </button>
         </div>
       )}
 

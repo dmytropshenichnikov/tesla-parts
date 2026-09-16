@@ -53,10 +53,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Set up the callback for ApiService to use when an unauthorized error occurs
   useEffect(() => {
     setUnauthorizedCallback(() => {
-      // This function is called by ApiService on 401
+      // Викликається з ApiService, коли оновити токен не вдалось
       handleLogoutError();
     });
   }, []); // Run once on mount
+
+  // ApiService оновлює токен сам (напр. посеред збереження схеми) і повідомляє
+  // про це подією — тримаємо стан React у синхроні з localStorage
+  useEffect(() => {
+    const handleTokensRefreshed = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      if (detail.accessToken) setAccessToken(detail.accessToken);
+      if (detail.refreshToken) setRefreshToken(detail.refreshToken);
+      setShowSessionExpiredModal(false);
+    };
+
+    window.addEventListener('admin-tokens-refreshed', handleTokensRefreshed);
+    return () => window.removeEventListener('admin-tokens-refreshed', handleTokensRefreshed);
+  }, []);
 
   const login = async (username: string, password: string) => {
     try {
@@ -77,24 +91,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setShowSessionExpiredModal(false); // Ensure modal is hidden on explicit logout
   };
 
+  /**
+   * Сесія протухла. Токени НЕ чистимо й зі сторінки не викидаємо: показуємо
+   * вікно повторного входу поверх поточної сторінки, щоб незбережена робота
+   * (схема з точками, форма товару тощо) залишилась на екрані.
+   */
   const handleLogoutError = () => {
-    setAccessToken(null);
-    setRefreshToken(null);
-    setShowSessionExpiredModal(true); // Show modal when unauthorized error leads to logout
+    setShowSessionExpiredModal(true);
   };
 
   const refreshAccessToken = async () => {
-    if (!refreshToken) {
-      handleLogoutError(); // No refresh token, trigger error logout
+    const stored = refreshToken || localStorage.getItem('refreshToken');
+    if (!stored) {
+      handleLogoutError(); // Немає чим оновлювати — просимо увійти знову
       throw new Error('No refresh token available');
     }
     try {
-      const response = await ApiService.refreshToken(refreshToken);
+      const response = await ApiService.refreshToken(stored);
       setAccessToken(response.access_token);
       setRefreshToken(response.refresh_token);
+      setShowSessionExpiredModal(false);
     } catch (err: any) {
       console.error('Failed to refresh token:', err);
-      handleLogoutError(); // Refresh failed, trigger error logout
+      handleLogoutError();
       throw err;
     }
   };

@@ -34,10 +34,62 @@ const isTokenExpired = (token: string | null): boolean => {
   if (!token) return true;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.exp * 1000 < Date.now() + 5 * 60 * 1000; // Consider expired 5 mins before actual expiry
+    return payload.exp * 1000 < Date.now() + 2 * 60 * 1000; // Оновлюємо за 2 хв до кінця
   } catch (e) {
     return true; // Malformed token
   }
+};
+
+/**
+ * Одночасні запити не мають смикати оновлення токена по черзі — тримаємо одну
+ * спільну операцію й перевикористовуємо її результат.
+ */
+let refreshInFlight: Promise<string> | null = null;
+
+const applyTokens = (accessToken: string, refreshToken?: string) => {
+  localStorage.setItem('accessToken', accessToken);
+  if (refreshToken) {
+    localStorage.setItem('refreshToken', refreshToken);
+  }
+  // Повідомляємо AuthContext, щоб стан у React не розходився з localStorage
+  window.dispatchEvent(
+    new CustomEvent('admin-tokens-refreshed', {
+      detail: { accessToken, refreshToken },
+    })
+  );
+};
+
+/** Тихо оновлює access-токен. Кидає помилку лише якщо оновлення неможливе. */
+const refreshAccessTokenInternal = async (): Promise<string> => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    throw new Error('Немає refresh-токена');
+  }
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      // Дві спроби: короткий збій мережі не має виглядати як «сесія закінчилась»
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const currentToken = localStorage.getItem('refreshToken') || refreshToken;
+          const res = await ApiService.refreshToken(currentToken);
+          applyTokens(res.access_token, res.refresh_token);
+          return res.access_token;
+        } catch (err) {
+          lastError = err;
+          if (attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 600));
+          }
+        }
+      }
+      throw lastError;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+
+  return refreshInFlight;
 };
 
 // Generic authenticated fetch wrapper with refresh token logic
@@ -73,50 +125,58 @@ const isTokenExpired = (token: string | null): boolean => {
 //   return response;
 // }
 
+/**
+ * Готує опції запиту з актуальними заголовками.
+ * Викликається заново для повторної спроби після оновлення токена.
+ */
+function buildRequestOptions(options: RequestInit, isMultipart: boolean): RequestInit {
+  const headers: any = { ...getHeaders(isMultipart), ...(options.headers || {}) };
+
+  // Для FormData браузер має сам виставити multipart-межу — Content-Type прибираємо
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
+
+  return { ...options, headers };
+}
+
 // Generic authenticated fetch wrapper with refresh token logic
 async function _authenticatedFetch(
   url: string,
   options: RequestInit = {},
   isMultipart: boolean = false
 ): Promise<Response> {
-  const accessToken = localStorage.getItem('accessToken');
-  const refreshToken = localStorage.getItem('refreshToken');
+  const isAuthUrl = url.includes('/auth/');
 
-  if (isTokenExpired(accessToken) && refreshToken) {
+  // Якщо токен от-от протухне — оновлюємо його заздалегідь, ще до запиту
+  if (isTokenExpired(localStorage.getItem('accessToken'))) {
     try {
-      const refreshResponse = await ApiService.refreshToken(refreshToken);
-      localStorage.setItem('accessToken', refreshResponse.access_token);
-      localStorage.setItem('refreshToken', refreshResponse.refresh_token);
+      await refreshAccessTokenInternal();
     } catch (refreshError) {
       console.error('Token refresh failed:', refreshError);
-      onUnauthorized(); // Refresh failed, log out
+      onUnauthorized();
       throw new Error('Unauthorized: Token refresh failed.');
     }
   }
 
-  let headers = getHeaders(isMultipart); // Pass isMultipart to getHeaders
-  options.headers = { ...headers, ...options.headers };
+  let response = await fetch(url, buildRequestOptions(options, isMultipart));
 
-  if (options.body instanceof FormData) {
-    // Якщо ми бачимо, що body - це FormData, ми МУСИМО видалити Content-Type.
-    // Це дозволить браузеру самому встановити 'multipart/form-data; boundary=...'
-
-    // TypeScript трюк для видалення ключа з HeadersInit
-    if (options.headers && 'Content-Type' in options.headers) {
-      delete (options.headers as any)['Content-Type'];
+  // 401 — не викидаємо одразу, а пробуємо оновити токен і повторити запит.
+  // Саме так зникали «вильоти» на логін посеред роботи зі схемою.
+  if (response.status === 401 && !isAuthUrl) {
+    try {
+      await refreshAccessTokenInternal();
+      response = await fetch(url, buildRequestOptions(options, isMultipart));
+    } catch (refreshError) {
+      console.error('Повторна авторизація не вдалась:', refreshError);
+      onUnauthorized();
+      throw new Error('Unauthorized: session expired.');
     }
 
-    // Якщо headers - це об'єкт класу Headers (рідше, але буває)
-    if (options.headers instanceof Headers) {
-      options.headers.delete('Content-Type');
+    if (response.status === 401) {
+      onUnauthorized();
+      throw new Error('Unauthorized: session expired.');
     }
-  }
-
-  let response = await fetch(url, options);
-
-  if (response.status === 401 && !url.includes('/auth/')) {
-    onUnauthorized();
-    throw new Error('Unauthorized: Invalid credentials or session expired.');
   }
 
   return response;

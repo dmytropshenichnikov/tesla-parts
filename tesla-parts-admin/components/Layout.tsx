@@ -23,6 +23,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
+import { SessionExpiredModal } from './SessionExpiredModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -280,6 +281,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
+
+      {/* Вікно повторного входу: показується поверх сторінки й не втрачає роботу */}
+      <SessionExpiredModal />
     </div>
   );
 };
