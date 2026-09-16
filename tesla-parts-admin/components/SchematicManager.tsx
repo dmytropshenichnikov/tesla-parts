@@ -55,6 +55,9 @@ const InfoTooltip: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+/** Скільки пікселів курсор має відійти, щоб це вважалось перетягуванням, а не кліком. */
+const DRAG_THRESHOLD_PX = 5;
+
 /**
  * Моделі та покоління більше не дублюються тут хардкодом — вони приходять
  * з категорій каталогу через `/schematics/model-options`. Так адмінка,
@@ -120,6 +123,8 @@ export const SchematicManager: React.FC = () => {
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const hasDragged = useRef<boolean>(false);
+  // Зсув курсора відносно центру піна на момент натискання
+  const pinDragOffset = useRef<{ dx: number; dy: number } | null>(null);
 
   // Catalog products for linking
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
@@ -222,36 +227,32 @@ export const SchematicManager: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogProducts, productSearchQuery, filterBySchematicModel, editingSchematic?.model]);
 
-  /** Точки на схемі: усі збіги однаково показуємо на полотні. */
-  const nextHotspotNumber = (hotspots: SchematicHotspot[]) =>
-    hotspots.reduce((acc, h) => Math.max(acc, h.number || 0), 0) + 1;
-
-  /** Копіює точку в буфер (номер не переносимо — він унікальний на схемі). */
+  /** Копіює точку в буфер разом із номером, парт-номером і варіантами. */
   const handleCopyHotspot = (index: number) => {
     if (!editingSchematic) return;
     const source = editingSchematic.hotspots[index];
     if (!source) return;
     setPointClipboard({ ...source, variants: (source.variants || []).map((v) => ({ ...v })) });
-    setSuccessMsg(`Точку #${source.number} скопійовано. Натисніть ⌘V (Ctrl+V), щоб вставити копію.`);
+    setSuccessMsg(`Точку #${source.number} скопійовано. Натисніть ⌘V, щоб вставити копію.`);
   };
 
   /**
-   * Вставляє копію скопійованої точки. Новий номер — наступний вільний,
-   * парт-номер, назва та варіанти переносяться як є.
+   * Вставляє копію скопійованої точки.
+   *
+   * Номер НЕ змінюємо: та сама деталь у різних місцях схеми позначається тим
+   * самим номером — саме для цього й потрібна копія. Парт-номер, назва та
+   * варіанти теж переносяться як є.
    */
   const handlePasteHotspot = (source?: SchematicHotspot | null) => {
     if (!editingSchematic) return;
     const original = source || pointClipboard;
     if (!original) return;
 
-    const number = nextHotspotNumber(editingSchematic.hotspots);
     const copy: SchematicHotspot = {
       ...original,
       id: undefined,
-      number,
-      x: Math.min(99.5, Math.max(0.5, Number((original.x + 4).toFixed(1)))),
-      y: Math.min(99.5, Math.max(0.5, Number((original.y + 4).toFixed(1)))),
-      sort_order: number,
+      x: Math.min(99.5, Math.max(0.5, Number((original.x + 5).toFixed(1)))),
+      y: Math.min(99.5, Math.max(0.5, Number((original.y + 5).toFixed(1)))),
       variants: (original.variants || []).map((v) => ({ ...v, id: undefined })),
     };
 
@@ -260,7 +261,9 @@ export const SchematicManager: React.FC = () => {
     setSelectedHotspotIdx(updated.length - 1);
     // Одразу вмикаємо режим розміщення: клік по схемі поставить копію точно
     setIsRepositioningMode(true);
-    setSuccessMsg(`Точку вставлено як #${number}. Клікніть на схемі, щоб поставити її в потрібне місце.`);
+    setSuccessMsg(
+      `Точку #${copy.number} вставлено (номер збережено). Клікніть на схемі, щоб поставити її в потрібне місце.`
+    );
   };
 
   /** Дублює точку одним кліком (те саме, що ⌘C + ⌘V). */
@@ -344,18 +347,38 @@ export const SchematicManager: React.FC = () => {
     setDraggingIdx(idx);
     dragStartPos.current = { x: e.clientX, y: e.clientY };
     hasDragged.current = false;
+
+    // Запам'ятовуємо, у якій саме точці піна натиснули. Без цього пін
+    // «стрибав» центром під курсор навіть від найменшого зсуву мишки.
+    const container = imageContainerRef.current;
+    const hotspot = editingSchematic?.hotspots[idx];
+    if (container && hotspot) {
+      const rect = container.getBoundingClientRect();
+      pinDragOffset.current = {
+        dx: e.clientX - (rect.left + (hotspot.x / 100) * rect.width),
+        dy: e.clientY - (rect.top + (hotspot.y / 100) * rect.height),
+      };
+    } else {
+      pinDragOffset.current = { dx: 0, dy: 0 };
+    }
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (draggingIdx === null || !imageContainerRef.current || !editingSchematic) return;
-      const rect = imageContainerRef.current.getBoundingClientRect();
-      const xPx = e.clientX - rect.left;
-      const yPx = e.clientY - rect.top;
 
-      if (dragStartPos.current && Math.hypot(e.clientX - dragStartPos.current.x, e.clientY - dragStartPos.current.y) > 3) {
-        hasDragged.current = true;
+      // Поки курсор не відійшов від точки натискання — це клік, а не перетягування.
+      // Нічого не рухаємо, інакше пін «стрибає» під курсор.
+      const start = dragStartPos.current;
+      if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) <= DRAG_THRESHOLD_PX) {
+        return;
       }
+      hasDragged.current = true;
+
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const offset = pinDragOffset.current || { dx: 0, dy: 0 };
+      const xPx = e.clientX - offset.dx - rect.left;
+      const yPx = e.clientY - offset.dy - rect.top;
 
       const xPercent = Math.max(0.5, Math.min(99.5, Math.round((xPx / rect.width) * 1000) / 10));
       const yPercent = Math.max(0.5, Math.min(99.5, Math.round((yPx / rect.height) * 1000) / 10));
@@ -397,8 +420,9 @@ export const SchematicManager: React.FC = () => {
       return;
     }
 
-    // Клік по схемі забирає фокус з полів форми (щоб ⌘C/⌘V працювали з точками)
-    (document.activeElement as HTMLElement | null)?.blur();
+    // Клік по схемі забирає фокус з полів форми й переносить його на полотно,
+    // щоб ⌘C/⌘V працювали з точками, а не з текстом в інпуті
+    focusCanvas();
 
     const rect = imageContainerRef.current.getBoundingClientRect();
     const xPx = e.clientX - rect.left;
@@ -490,6 +514,12 @@ export const SchematicManager: React.FC = () => {
       hotspots: updated
     });
     setSelectedHotspotIdx(updated.length > 0 ? Math.max(0, index - 1) : null);
+  };
+
+  /** Знімає фокус з полів і ставить його на полотно схеми. */
+  const focusCanvas = () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    imageContainerRef.current?.focus({ preventScroll: true });
   };
 
   // ⌘C / Ctrl+C — скопіювати обрану точку, ⌘V / Ctrl+V — вставити копію.
@@ -853,8 +883,18 @@ export const SchematicManager: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-manrope">
-          {error}
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-manrope flex items-center gap-3">
+          <AlertCircle size={18} className="shrink-0 text-red-600" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="text-xs underline shrink-0">Закрити</button>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-manrope flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-150">
+          <CheckCircle2 size={18} className="shrink-0 text-green-600" />
+          <span className="flex-1">{successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} className="text-xs underline shrink-0">Закрити</button>
         </div>
       )}
 
@@ -1024,8 +1064,21 @@ export const SchematicManager: React.FC = () => {
 
           <div
             ref={imageContainerRef}
+            tabIndex={0}
             onClick={handleCanvasClick}
-            className={`relative w-full border border-gray-200 rounded-xl overflow-hidden bg-gray-50 select-none min-h-[380px] flex items-center justify-center ${
+            onKeyDown={(e) => {
+              // ⌘C/⌘V працюють і коли фокус на полотні схеми
+              if (!(e.metaKey || e.ctrlKey)) return;
+              const key = e.key.toLowerCase();
+              if (key === 'c' && selectedHotspotIdx !== null) {
+                e.preventDefault();
+                handleCopyHotspot(selectedHotspotIdx);
+              } else if (key === 'v' && pointClipboard) {
+                e.preventDefault();
+                handlePasteHotspot();
+              }
+            }}
+            className={`relative w-full border border-gray-200 rounded-xl overflow-hidden bg-gray-50 select-none min-h-[380px] flex items-center justify-center outline-none focus:ring-2 focus:ring-red-300 ${
               isRepositioningMode ? 'cursor-crosshair ring-2 ring-amber-400' : 'cursor-crosshair'
             }`}
           >
@@ -1060,8 +1113,8 @@ export const SchematicManager: React.FC = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedHotspotIdx(idx);
-                    // Знімаємо фокус з полів, щоб ⌘C копіював точку, а не текст в інпуті
-                    (document.activeElement as HTMLElement | null)?.blur();
+                    // Фокус іде на полотно, щоб ⌘C копіював точку, а не текст в інпуті
+                    focusCanvas();
                   }}
                   className={`absolute w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-black text-xs transition-transform shadow-md cursor-grab active:cursor-grabbing select-none ${
                     isDragging
