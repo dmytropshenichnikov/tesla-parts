@@ -653,6 +653,24 @@ export const SchematicManager: React.FC = () => {
     imageContainerRef.current?.focus({ preventScroll: true });
   };
 
+  /**
+   * Місце схеми в каталозі, виведене з її ж товарів: беремо перший варіант,
+   * привʼязаний до товару, і дивимось, у якій підкатегорії він лежить.
+   */
+  const schemePlacement = useMemo(() => {
+    if (!editingSchematic) return null;
+    for (const hotspot of editingSchematic.hotspots) {
+      for (const variant of hotspot.variants || []) {
+        if (!variant.product_id) continue;
+        const product = catalogProducts.find((p) => p.id === variant.product_id);
+        if (!product) continue;
+        const placement = resolveProductPlacement(product);
+        if (placement) return placement;
+      }
+    }
+    return null;
+  }, [editingSchematic, catalogProducts, subcategoryIndex]);
+
   // Підсистеми обраного розділу (з каталогу)
   const catalogSubsystems =
     sectionOptions.find((o) => o.section === editingSchematic?.section)?.subsystems || [];
@@ -1234,6 +1252,30 @@ export const SchematicManager: React.FC = () => {
         </div>
 
         <div className="md:col-span-2">
+          {schemePlacement && (
+            <div className="mb-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingSchematic({
+                    ...editingSchematic,
+                    section: schemePlacement.section,
+                    subsystem: schemePlacement.subsystem || editingSchematic.subsystem,
+                  });
+                  setSectionMode('catalog');
+                  setSubsystemMode('catalog');
+                  setSuccessMsg(
+                    `Розділ і підсистему взято з каталогу за товаром: «${schemePlacement.section}»` +
+                      (schemePlacement.subsystem ? ` / ${schemePlacement.subsystem}` : '')
+                  );
+                }}
+                title={`У каталозі цей товар лежить у «${schemePlacement.section}»`}
+                className="text-[11px] font-montserrat font-bold text-tesla-red hover:underline cursor-pointer"
+              >
+                Взяти розділ з товару
+              </button>
+            </div>
+          )}
           <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
             <span>Розділ (Section)</span>
             <InfoTooltip text="Береться з КАТАЛОГУ — верхній рівень підкатегорій обраної моделі («КУЗОВ», «ЗОВНІШНЄ ОЗДОБЛЕННЯ», «ХОДОВА ЧАСТИНА»). За цим списком клієнт ходить у схемах: авто → розділ → підсистема. Якщо вибрати зі списку, розділ ніколи не розʼїдеться на «КУЗОВ» / «Кузов» / «кузов»." />
