@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown,
   Copy,
+  GripVertical,
 } from 'lucide-react';
 
 interface SubcategoryItemProps {
@@ -324,6 +325,13 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
             </div>
           )}
           {!canExpand && <div className="w-6" />} {/* Spacer */}
+          <span
+            className="text-gray-300 hover:text-tesla-red cursor-grab active:cursor-grabbing mr-1"
+            title="Перетягніть, щоб змінити порядок"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={15} />
+          </span>
           {/* Sorting Arrows for Subcategory */}
           <div
             className="flex flex-col items-center mr-1"
@@ -1214,6 +1222,14 @@ const CategoryList: React.FC = () => {
 
       {/* Categories List */}
       <div className="space-y-4">
+        <div className="flex items-start gap-2 p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-900 font-manrope">
+          <GripVertical size={16} className="shrink-0 mt-0.5 text-blue-500" />
+          <span>
+            Порядок моделей і підкатегорій змінюється <strong>перетягуванням рядка</strong> (або
+            стрілками ↑↓). Він одразу застосовується в каталозі, на головній сторінці та в
+            розділі «Схеми запчастин».
+          </span>
+        </div>
         {sortedCategories.map((category, idx) => (
           <div
             key={category.id}
@@ -1337,6 +1353,13 @@ const CategoryList: React.FC = () => {
                   className="flex items-center gap-4 cursor-pointer flex-1"
                   onClick={() => toggleExpand(category.id)}
                 >
+                  <span
+                    className="text-gray-300 hover:text-tesla-red cursor-grab active:cursor-grabbing transition-colors"
+                    title="Перетягніть, щоб змінити порядок"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <GripVertical size={18} />
+                  </span>
                   {expandedCategories.includes(category.id) ? (
                     <ChevronDown size={20} className="text-gray-500" />
                   ) : (
