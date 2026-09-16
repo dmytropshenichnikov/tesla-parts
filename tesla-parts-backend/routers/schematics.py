@@ -92,31 +92,15 @@ def list_schematics(
     query = select(Schematic)
     if model and model != "all" and model != "Всі моделі":
         clean_model = model.strip()
-        # Модель може бути назвою категорії-варіанта («Model 3 Highland»,
-        # «Model Y Juniper», «Model 3 Classic»...). Тоді базову модель і
-        # покоління визначаємо за категоріями каталогу, а не хардкодом.
         category_names = [
             c.name for c in session.exec(select(Category)).all() if c.name
         ]
         base_category = _base_category_name(clean_model, category_names)
-        if base_category:
-            variant = clean_model[len(base_category):].strip()
-            clean_model = base_category
-            if not generation or generation == "Всі покоління":
-                generation = variant
-        else:
-            # Це БАЗОВА категорія, під якою є окремі категорії-варіанти
-            # («Model 3 Highland», «Model Y Juniper»). Категорії не змішуємо:
-            # під «Model 3» показуємо лише те, що не належить варіантам.
-            for name in category_names:
-                if name.lower().startswith(clean_model.lower() + " "):
-                    variant_keyword = name[len(clean_model):].strip().lower()
-                    if variant_keyword:
-                        query = query.where(
-                            ~func.lower(Schematic.generation).like(f"%{variant_keyword}%")
-                        )
-
-        query = query.where(func.lower(Schematic.model) == clean_model.lower())
+        target_model = base_category or clean_model
+        if base_category and (not generation or generation == "Всі покоління"):
+            generation = clean_model[len(base_category):].strip()
+        for condition in _owns_name_conditions(target_model, generation, category_names):
+            query = query.where(condition)
 
     if generation and generation != "Всі покоління":
         gen_clean = generation.strip().lower()
@@ -181,12 +165,11 @@ def get_schematic_sections(
             c.name for c in session.exec(select(Category)).all() if c.name
         ]
         base_category = _base_category_name(clean_model, category_names)
-        if base_category:
-            variant = clean_model[len(base_category):].strip()
-            clean_model = base_category
-            if not generation or generation == "Всі покоління":
-                generation = variant
-        query = query.where(func.lower(Schematic.model) == clean_model.lower())
+        target_model = base_category or clean_model
+        if base_category and (not generation or generation == "Всі покоління"):
+            generation = clean_model[len(base_category):].strip()
+        for condition in _owns_name_conditions(target_model, generation, category_names):
+            query = query.where(condition)
 
     if generation and generation != "Всі покоління":
         query = query.where(func.lower(Schematic.generation).like(f"%{generation.strip().lower()}%"))
@@ -267,6 +250,17 @@ def get_schematics_for_subcategory(
     if subsystem:
         query = query.where(Schematic.subsystem == subsystem)
 
+    # Головне: схема належить тій САМІЙ категорії, у якій лежить підкатегорія.
+    # Інакше схема з «Model 3 Highland» показувалась і на звичайній «Model 3».
+    category = session.get(Category, subcategory.category_id) if subcategory.category_id else None
+    if category and category.name:
+        category_names = [c.name for c in session.exec(select(Category)).all() if c.name]
+        base_category = _base_category_name(category.name, category_names)
+        target_model = base_category or category.name
+        variant = category.name[len(base_category):].strip() if base_category else None
+        for condition in _owns_name_conditions(target_model, variant, category_names):
+            query = query.where(condition)
+
     schematics = session.exec(query.order_by(Schematic.sort_order, Schematic.id)).all()
     results = []
     for item in schematics:
@@ -317,6 +311,8 @@ def get_subsystem_info(
             select(Category).where(func.lower(Category.name) == model.strip().lower())
         ).first()
         if category:
+            # Категорію знайдено точно — працюємо ЛИШЕ в ній, щоб «Model 3»
+            # не підтягувала підкатегорії «Model 3 Highland».
             category_ids.append(category.id)
         else:
             for category in session.exec(select(Category)).all():
@@ -346,7 +342,8 @@ def get_subsystem_info(
         return None
 
     match = find_in(category_ids) if category_ids else None
-    if not match:
+    if not match and not model:
+        # Без позначки про модель (напр. пошук за VIN) шукаємо по всьому каталогу
         match = find_in(None)
 
     if not match:
@@ -508,6 +505,46 @@ def _base_category_name(name: str, all_names: List[str]) -> Optional[str]:
     return base
 
 
+def _variant_suffixes(base_name: str, all_names: List[str]) -> List[str]:
+    """Покоління-варіанти, під які є окремі категорії.
+
+    «Model 3» → ['Highland'],  «Model Y» → ['Juniper'],  «Model 3» (без варіантів) → [].
+    """
+    base = (base_name or "").strip().lower()
+    if not base:
+        return []
+    suffixes: List[str] = []
+    for name in all_names:
+        candidate = (name or "").strip()
+        if not candidate or candidate.lower() == base:
+            continue
+        if candidate.lower().startswith(base + " "):
+            suffix = candidate[len(base):].strip()
+            if suffix and suffix not in suffixes:
+                suffixes.append(suffix)
+    return suffixes
+
+
+def _owns_name_conditions(model_name: str, generation: Optional[str], all_names: List[str]) -> list:
+    """Умови «схема належить САМЕ цій моделі/поколінню».
+
+    «Model 3» і «Model 3 Highland» — це різні категорії каталогу, тому під
+    базовою моделлю показуємо лише те, що НЕ належить категоріям-варіантам.
+    Без цього схема з Highland «підтягувалась» і на звичайну Model 3.
+    """
+    model = (model_name or "").strip()
+    if not model:
+        return []
+    conditions = [func.lower(Schematic.model) == model.lower()]
+    variant = (generation or "").strip()
+    if variant and variant != "Всі покоління":
+        conditions.append(func.lower(Schematic.generation).like(f"%{variant.lower()}%"))
+    else:
+        for suffix in _variant_suffixes(model, all_names):
+            conditions.append(~func.lower(Schematic.generation).like(f"%{suffix.lower()}%"))
+    return conditions
+
+
 @router.get("/model-options")
 def get_schematic_model_options(session: Session = Depends(get_session)):
     """Опції моделей і поколінь для редактора схем — побудовані з категорій."""
@@ -575,8 +612,15 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
                 )
             ).first() or 0
         else:
-            # Базова модель: покоління беремо з уже наявних схем цієї моделі.
-            generations = list(existing) or [DEFAULT_GENERATION]
+            # Базова модель: їй належать ЛИШЕ схеми, які не пішли у варіанти
+            # («Model 3 Highland», «Model Y Juniper»). Інакше та сама схема
+            # рахувалась і під «Model 3», і під «Model 3 Highland».
+            variants = _variant_suffixes(name, names)
+            own_generations = [
+                g for g in existing
+                if not any(v.lower() in (g or "").lower() for v in variants)
+            ]
+            generations = own_generations or [DEFAULT_GENERATION]
             option = {
                 "category": name,
                 "category_id": category.id,
@@ -587,11 +631,14 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
                 "pinned_generation": len(generations) == 1,
                 "is_accessory": False,
             }
-            schematics_count = session.exec(
-                select(func.count(Schematic.id)).where(
-                    func.lower(Schematic.model) == name.lower()
+            scope = select(func.count(Schematic.id)).where(
+                func.lower(Schematic.model) == name.lower()
+            )
+            for suffix in variants:
+                scope = scope.where(
+                    ~func.lower(Schematic.generation).like(f"%{suffix.lower()}%")
                 )
-            ).first() or 0
+            schematics_count = session.exec(scope).first() or 0
 
         option["schematics_count"] = schematics_count
         (accessories if option["is_accessory"] else vehicles).append(option)
