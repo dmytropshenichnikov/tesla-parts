@@ -6,6 +6,15 @@ import { SubcategorySchemeSummary } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
+/** «1 точка / 2 точки / 5 точок» */
+const pluralPoints = (n: number) => {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} точка`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} точки`;
+  return `${n} точок`;
+};
+
 /**
  * Блок «Схема цього вузла» на сторінці підкатегорії каталогу.
  *
@@ -80,7 +89,7 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
           <div className="flex items-center gap-3 shrink-0">
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-tesla-red bg-red-50 border border-red-100 px-2.5 py-1 rounded-full font-montserrat">
               <MapPin size={11} />
-              {scheme.hotspots_count} точок
+              {pluralPoints(scheme.hotspots_count)}
             </span>
             <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-tesla-red group-hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-colors whitespace-nowrap">
               Переглянути на схемі
