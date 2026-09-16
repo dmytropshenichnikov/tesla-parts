@@ -218,16 +218,31 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   );
 
   // Крихти не мають повторювати одне й те саме: у схемах назва вузла часто
-  // збігається з назвою підсистеми чи розділу — тоді останній пункт зайвий.
+  // збігається з назвою підсистеми чи розділу. Прибираємо пропущене, але
+  // поточний вузол лишаємо останнім пунктом (жирним).
   const crumbKey = (value?: string | null) =>
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  const titleKey = crumbKey(schematic.title);
-  const sectionKey = crumbKey(schematic.section);
-  const subsystemKey = crumbKey(schematic.subsystem);
-  const showSectionCrumb = Boolean(schematic.section) && sectionKey !== titleKey;
-  const showSubsystemCrumb =
-    Boolean(schematic.subsystem) && subsystemKey !== titleKey && subsystemKey !== sectionKey;
-  const showTitleCrumb = titleKey !== sectionKey && titleKey !== subsystemKey;
+  const shopQuery = `model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}`;
+  const crumbChain = [
+    { label: `${schematic.model} ${schematic.generation}`, to: `/schemes?${shopQuery}` },
+    schematic.section
+      ? {
+          label: schematic.section,
+          to: `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}`,
+        }
+      : null,
+    schematic.subsystem
+      ? {
+          label: schematic.subsystem,
+          to: `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}&subsystem=${encodeURIComponent(schematic.subsystem)}`,
+        }
+      : null,
+    { label: schematic.title, to: null },
+  ].filter(Boolean) as { label: string; to: string | null }[];
+  const breadcrumbs = crumbChain.filter((item, idx) => {
+    const next = crumbChain[idx + 1];
+    return !next || crumbKey(item.label) !== crumbKey(next.label);
+  });
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 max-w-7xl">
@@ -248,41 +263,21 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         <Link to="/schemes" className="hover:text-tesla-red transition-colors">
           Схеми запчастин Tesla
         </Link>
-        <ChevronRight size={12} className="text-gray-400 shrink-0" />
-        <Link
-          to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}`}
-          className="hover:text-tesla-red transition-colors"
-        >
-          {schematic.model} {schematic.generation}
-        </Link>
-        {showSectionCrumb && (
-          <>
+        {breadcrumbs.map((crumb, idx) => (
+          <span
+            key={`crumb-${idx}-${crumb.label}`}
+            className="flex items-center gap-1.5 sm:gap-2 shrink-0"
+          >
             <ChevronRight size={12} className="text-gray-400 shrink-0" />
-            <Link
-              to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}&section=${encodeURIComponent(schematic.section)}`}
-              className="hover:text-tesla-red transition-colors"
-            >
-              {schematic.section}
-            </Link>
-          </>
-        )}
-        {showSubsystemCrumb && (
-          <>
-            <ChevronRight size={12} className="text-gray-400 shrink-0" />
-            <Link
-              to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}&section=${encodeURIComponent(schematic.section)}&subsystem=${encodeURIComponent(schematic.subsystem)}`}
-              className="hover:text-tesla-red transition-colors"
-            >
-              {schematic.subsystem}
-            </Link>
-          </>
-        )}
-        {showTitleCrumb && (
-          <>
-            <ChevronRight size={12} className="text-gray-400 shrink-0" />
-            <span className="text-gray-900 font-semibold">{schematic.title}</span>
-          </>
-        )}
+            {crumb.to ? (
+              <Link to={crumb.to} className="hover:text-tesla-red transition-colors">
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="text-gray-900 font-semibold">{crumb.label}</span>
+            )}
+          </span>
+        ))}
       </nav>
 
       {/* Header Info */}
