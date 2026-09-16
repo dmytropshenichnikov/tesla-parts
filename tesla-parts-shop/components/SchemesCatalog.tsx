@@ -10,10 +10,12 @@ import {
   ShieldCheck,
   ArrowRight,
   Filter,
-  Check
+  Check,
+  Package
 } from 'lucide-react';
 import { api } from '../services/api';
-import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup } from '../types';
+import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup, Product } from '../types';
+import { slugify } from '../utils/slugify';
 import { GarageModal } from './GarageModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -76,6 +78,9 @@ export const SchemesCatalog: React.FC = () => {
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [selectedSubsystem, setSelectedSubsystem] = useState<string>('');
   const [showAllSchematics, setShowAllSchematics] = useState(false);
+  // Деталі каталогу, що відповідають обраній підсистемі
+  const [subsystemParts, setSubsystemParts] = useState<Product[]>([]);
+  const [subsystemCatalog, setSubsystemCatalog] = useState<{ id: number; name: string } | null>(null);
   const [searchInput, setSearchInput] = useState<string>('');
   const [activeSearch, setActiveSearch] = useState<string>('');
   const [vinBanner, setVinBanner] = useState<string | null>(null);
@@ -165,6 +170,41 @@ export const SchemesCatalog: React.FC = () => {
     }
     api.getSchematicSections({ model: selectedModel }).then(setSections);
   }, [selectedModel]);
+
+  // На кроці «підсистема» підтягуємо деталі саме цього вузла з каталогу
+  useEffect(() => {
+    if (!selectedModel || !selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) {
+      setSubsystemParts([]);
+      setSubsystemCatalog(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const info = await api.getSubcategoryForSubsystem({
+        model: selectedModel,
+        subsystem: selectedSubsystem,
+      });
+      if (cancelled) return;
+      if (!info.subcategory_id) {
+        setSubsystemParts([]);
+        setSubsystemCatalog(null);
+        return;
+      }
+      setSubsystemCatalog({
+        id: info.subcategory_id,
+        name: info.subcategory_name || selectedSubsystem,
+      });
+      const products = await api
+        .getProducts({ subId: info.subcategory_id, limit: 6 })
+        .catch(() => []);
+      if (!cancelled) setSubsystemParts(products || []);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedModel, selectedSubsystem]);
 
   // Зміна авто скидає обраний шлях
   useEffect(() => {
@@ -712,6 +752,66 @@ export const SchemesCatalog: React.FC = () => {
           </div>
         )}
       </div>
+      )}
+
+      {/* Деталі вузла з каталогу — той самий вузол, ті самі товари */}
+      {subsystemCatalog && subsystemParts.length > 0 && (
+        <div className="mt-10 pt-8 border-t border-gray-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg font-bold font-montserrat text-gray-900 flex items-center gap-2">
+                <Package size={18} className="text-tesla-red" />
+                Деталі вузла «{subsystemCatalog.name}»
+                <span className="text-xs font-normal text-gray-400 font-manrope">
+                  ({subsystemParts.length})
+                </span>
+              </h2>
+              <p className="text-xs text-gray-500 font-manrope mt-1">
+                Ті самі деталі, що й у каталозі — можна купити навіть без схеми.
+              </p>
+            </div>
+            <Link
+              to={`/category/${slugify(selectedModel)}/sub/${subsystemCatalog.id}`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-red-50 hover:text-tesla-red text-gray-700 rounded-xl text-xs font-montserrat font-bold transition-colors"
+            >
+              Усі деталі розділу
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {subsystemParts.map((item) => (
+              <Link
+                key={item.id}
+                to={`/product/${item.id}`}
+                className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+              >
+                <div className="h-28 bg-[#fbfbfb] p-3 flex items-center justify-center border-b border-gray-50">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <Package size={28} className="text-gray-300" />
+                  )}
+                </div>
+                <div className="p-3">
+                  <div className="text-[11px] text-gray-400 font-mono truncate">
+                    {item.detail_number || item.id}
+                  </div>
+                  <div className="font-montserrat font-bold text-xs text-gray-900 leading-tight line-clamp-2 mt-1 group-hover:text-tesla-red transition-colors">
+                    {item.name}
+                  </div>
+                  <div className="mt-2 font-montserrat font-black text-sm text-gray-900">
+                    {item.inStock ? `${item.priceUAH} ₴` : 'Немає в наявності'}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Garage Modal */}

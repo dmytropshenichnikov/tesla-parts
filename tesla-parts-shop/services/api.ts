@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, VinDecodeResult, PlateLookupResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, SubcategorySchemeSummary, VinDecodeResult, PlateLookupResult } from '../types';
 
 /**
  * Абсолютна адреса бекенду (api.teslapartscenter.com.ua).
@@ -378,6 +378,47 @@ export const api = {
     } catch (e) {
       console.warn('Failed to load schematic sections', e);
       return [];
+    }
+  },
+
+  /**
+   * Схеми, що відповідають підкатегорії каталогу — щоб у каталозі поруч із
+   * товарами підкатегорії була кнопка «Схема цього вузла».
+   */
+  getSchematicsForSubcategory: async (
+    subcategoryId: number
+  ): Promise<SubcategorySchemeSummary[]> => {
+    if (!subcategoryId) return [];
+    try {
+      const res = await apiFetch(`/schematics/for-subcategory/${subcategoryId}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.schematics || [];
+    } catch (e) {
+      console.warn('Failed to load schematics for subcategory', e);
+      return [];
+    }
+  },
+
+  /**
+   * Підкатегорія каталогу, що відповідає підсистемі схеми — щоб на кроці
+   * «підсистема» показати деталі саме цього вузла.
+   */
+  getSubcategoryForSubsystem: async (params: {
+    model?: string;
+    subsystem?: string;
+  }): Promise<{ subcategory_id: number | null; subcategory_name?: string }> => {
+    if (!params.subsystem) return { subcategory_id: null };
+    const searchParams = new URLSearchParams();
+    if (params.model) searchParams.append('model', params.model);
+    searchParams.append('subsystem', params.subsystem);
+    try {
+      const res = await apiFetch(`/schematics/subsystem-info?${searchParams.toString()}`);
+      if (!res.ok) return { subcategory_id: null };
+      return await res.json();
+    } catch (e) {
+      console.warn('Failed to resolve subsystem subcategory', e);
+      return { subcategory_id: null };
     }
   },
 

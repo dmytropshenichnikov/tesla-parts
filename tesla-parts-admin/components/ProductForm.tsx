@@ -582,7 +582,7 @@ export const ProductForm: React.FC = () => {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-semibold text-gray-700">
-                      Категорія #{index + 1}
+                      Модель #{index + 1}
                     </span>
                     {categoryAssignments.length > 1 && (
                       <button
@@ -596,7 +596,7 @@ export const ProductForm: React.FC = () => {
                     )}
                   </div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Категорія
+                    Модель (з каталогу)
                   </label>
                   <select
                     value={assignment.categoryId ?? ''}
@@ -620,9 +620,13 @@ export const ProductForm: React.FC = () => {
               ))}
               {categoryAssignments.length === 0 && (
                 <div className="text-sm text-gray-500">
-                  Додайте принаймні одну категорію
+                  Додайте принаймні одну модель
                 </div>
               )}
+              <p className="text-xs text-gray-400">
+                Модель береться з каталогу, а підкатегорія визначає розділ. Окреме
+                текстове поле моделі не потрібне — воно формується автоматично.
+              </p>
             </div>
           </div>
 

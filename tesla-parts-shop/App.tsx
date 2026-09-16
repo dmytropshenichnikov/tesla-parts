@@ -13,6 +13,7 @@ import { useAuth } from './context/AppContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
+import { SubcategoryScheme } from './components/SubcategoryScheme';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
 import SubcategoryCard from './components/SubcategoryCard';
@@ -1207,6 +1208,11 @@ const CategoryView: React.FC<CategoryViewProps> = ({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Схема цього вузла — якщо для підкатегорії вона існує */}
+      {!loading && selectedSubcategory && (
+        <SubcategoryScheme subcategoryId={selectedSubcategory} />
       )}
 
       {loading ? (

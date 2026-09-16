@@ -166,6 +166,18 @@ export interface SchematicSectionGroup {
 /**
  * Використання деталі на схемі — для блоку «Є на схемах» на сторінці товару.
  */
+/** Схема, що відповідає підкатегорії каталогу (для блоку «Схема цього вузла»). */
+export interface SubcategorySchemeSummary {
+  id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  image_url: string;
+  hotspots_count: number;
+}
+
 export interface SchematicUsage {
   schematic_id: number;
   title: string;

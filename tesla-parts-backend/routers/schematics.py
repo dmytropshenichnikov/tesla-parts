@@ -205,6 +205,122 @@ def get_schematic_sections(
     return {"sections": sections, "total": len(schematics)}
 
 
+def _section_and_subsystem_for_subcategory(
+    subcategory: Subcategory,
+    by_id: dict
+) -> tuple:
+    """Як підкатегорія каталогу співвідноситься з полями схеми.
+
+    Верхній рівень підкатегорій — це «розділ» схеми, їхні діти — «підсистема».
+    Тобто «ЗАХИСТИ ПЕРЕДНІ» (id 142, батько «ЗОВНІШНЄ ОЗДОБЛЕННЯ») → схема
+    з section = «ЗОВНІШНЄ ОЗДОБЛЕННЯ» і subsystem = «ЗАХИСТИ ПЕРЕДНІ».
+    """
+    if subcategory.parent_id:
+        parent = by_id.get(subcategory.parent_id)
+        if parent:
+            return parent.name, subcategory.name
+    return subcategory.name, ""
+
+
+@router.get("/for-subcategory/{subcategory_id}")
+def get_schematics_for_subcategory(
+    subcategory_id: int,
+    session: Session = Depends(get_session)
+):
+    """Схеми, які відповідають підкатегорії каталогу.
+
+    Потрібно, щоб у каталозі поруч із товарами підкатегорії була кнопка
+    «Схема» — як в інших каталогах запчастин.
+    """
+    subcategory = session.get(Subcategory, subcategory_id)
+    if not subcategory:
+        return {"schematics": [], "subcategory": None}
+
+    all_subcategories = session.exec(select(Subcategory)).all()
+    by_id = {item.id: item for item in all_subcategories}
+    section, subsystem = _section_and_subsystem_for_subcategory(subcategory, by_id)
+
+    query = select(Schematic).where(Schematic.section == section)
+    if subsystem:
+        query = query.where(Schematic.subsystem == subsystem)
+
+    schematics = session.exec(query.order_by(Schematic.sort_order, Schematic.id)).all()
+    results = []
+    for item in schematics:
+        hotspots_count = session.exec(
+            select(func.count(SchematicHotspot.id)).where(SchematicHotspot.schematic_id == item.id)
+        ).first() or 0
+        results.append({
+            "id": item.id,
+            "title": item.title,
+            "model": item.model,
+            "generation": item.generation,
+            "section": item.section,
+            "subsystem": item.subsystem,
+            "image_url": item.image_url,
+            "hotspots_count": hotspots_count,
+        })
+
+    return {
+        "subcategory": {"id": subcategory.id, "name": subcategory.name},
+        "section": section,
+        "subsystem": subsystem,
+        "schematics": results,
+    }
+
+
+@router.get("/subsystem-info")
+def get_subsystem_info(
+    model: Optional[str] = None,
+    subsystem: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """Підкатегорія каталогу, яка відповідає підсистемі схеми.
+
+    Дає магазину id підкатегорії, щоб на кроці «підсистема» показати деталі
+    саме цього вузла, а не весь каталог.
+    """
+    if not subsystem:
+        return {"subcategory_id": None}
+
+    subcategories = session.exec(select(Subcategory)).all()
+    wanted = subsystem.strip().lower()
+
+    # 1) спершу шукаємо в межах категорії обраної моделі
+    category_ids = []
+    if model:
+        category = session.exec(
+            select(Category).where(func.lower(Category.name) == model.strip().lower())
+        ).first()
+        if category:
+            category_ids.append(category.id)
+        else:
+            for category in session.exec(select(Category)).all():
+                if model.strip().lower().startswith(category.name.strip().lower()):
+                    category_ids.append(category.id)
+
+    def find_in(scope):
+        for item in subcategories:
+            if scope is not None and item.category_id not in scope:
+                continue
+            if item.name.strip().lower() == wanted:
+                return item
+        return None
+
+    match = find_in(category_ids) if category_ids else None
+    if not match:
+        match = find_in(None)
+
+    if not match:
+        return {"subcategory_id": None}
+
+    return {
+        "subcategory_id": match.id,
+        "subcategory_name": match.name,
+        "category_id": match.category_id,
+    }
+
+
 @router.get("/by-product/{product_id}")
 def get_schematics_by_product(
     product_id: str,
