@@ -20,7 +20,10 @@ from services.image_uploader import image_uploader
 
 router = APIRouter(prefix="/schematics", tags=["schematics"])
 
-def _format_hotspot(hotspot: SchematicHotspot) -> SchematicHotspotRead:
+def _format_hotspot(
+    hotspot: SchematicHotspot,
+    products_by_id: Optional[dict] = None
+) -> SchematicHotspotRead:
     variants = []
     if hotspot.variants_json:
         try:
@@ -29,6 +32,20 @@ def _format_hotspot(hotspot: SchematicHotspot) -> SchematicHotspotRead:
                 variants = [HotspotVariant(**v) for v in parsed]
         except Exception:
             variants = []
+
+    # Варіант, привʼязаний до товару каталогу, показує АКТУАЛЬНІ ціну й
+    # наявність із каталогу, а не знімок на момент привʼязки. Саме тому зміна
+    # ціни в каталозі одразу видна на схемах. Назву, тип і стан НЕ чіпаємо —
+    # це підписи адміністратора (напр. «Оригінал б/у (Осталось мало)»).
+    if products_by_id:
+        for variant in variants:
+            product = products_by_id.get(variant.product_id) if variant.product_id else None
+            if not product:
+                continue
+            variant.priceUAH = product.priceUAH or 0.0
+            if product.priceUSD:
+                variant.priceUSD = product.priceUSD
+            variant.inStock = product.inStock
     
     product_read = None
     if hotspot.product:
@@ -287,8 +304,29 @@ def get_schematic(schematic_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Схему не знайдено")
     
     sorted_hotspots = sorted(schematic.hotspots, key=lambda h: (h.number, h.sort_order))
-    formatted_hotspots = [_format_hotspot(h) for h in sorted_hotspots]
-    
+
+    # Збираємо всі товари, до яких привʼязані варіанти точок, одним запитом —
+    # щоб віддати на фронт актуальні ціни з каталогу.
+    variant_product_ids = set()
+    for hotspot in sorted_hotspots:
+        if not hotspot.variants_json:
+            continue
+        try:
+            for raw in json.loads(hotspot.variants_json):
+                if isinstance(raw, dict) and raw.get("product_id"):
+                    variant_product_ids.add(raw["product_id"])
+        except Exception:
+            continue
+
+    products_by_id = {}
+    if variant_product_ids:
+        rows = session.exec(
+            select(Product).where(Product.id.in_(variant_product_ids))
+        ).all()
+        products_by_id = {row.id: row for row in rows}
+
+    formatted_hotspots = [_format_hotspot(h, products_by_id) for h in sorted_hotspots]
+
     return SchematicRead(
         id=schematic.id,
         title=schematic.title,
