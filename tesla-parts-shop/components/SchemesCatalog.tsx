@@ -679,34 +679,42 @@ export const SchemesCatalog: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {sections.map((group) => (
                 <button
                   key={group.section}
                   onClick={() =>
                     goToStep({ section: group.section, subsystem: null, all: null })
                   }
-                  className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+                  className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center shrink-0 overflow-hidden transition-colors group-hover:bg-tesla-red group-hover:text-white">
+                  {/* Картинка велика — по ній одразу видно, які деталі в розділі */}
+                  <div className="w-[42%] min-w-[104px] max-w-[190px] aspect-[4/3] shrink-0 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
                     {group.image ? (
                       <img
                         src={group.image}
                         alt={group.section}
-                        className="w-full h-full object-contain bg-white"
+                        loading="lazy"
+                        className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <Layers size={18} />
+                      <Layers size={30} className="text-gray-300" />
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">
-                      {group.section}
+                  <div className="flex items-center justify-between gap-3 flex-1 min-w-0">
+                    <div className="min-w-0">
+                      <div className="font-montserrat font-black text-sm sm:text-base text-tesla-dark leading-tight uppercase">
+                        {group.section}
+                      </div>
+                      <span className="inline-block mt-2 text-[11px] font-manrope font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                        {group.count} {pluralSchemes(group.count)}
+                        {group.subsystems.length > 1 && ` • ${group.subsystems.length} підсистем`}
+                      </span>
                     </div>
-                    <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
-                      {group.count} {pluralSchemes(group.count)}
-                      {group.subsystems.length > 1 && ` • ${group.subsystems.length} підсистем`}
-                    </div>
+                    <ChevronRight
+                      size={18}
+                      className="text-gray-300 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all shrink-0"
+                    />
                   </div>
                 </button>
               ))}
@@ -737,23 +745,33 @@ export const SchemesCatalog: React.FC = () => {
               <button
                 key={sub.subsystem}
                 onClick={() => goToStep({ subsystem: sub.subsystem })}
-                className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+                className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
-                {sub.image && (
-                  <div className="w-full h-24 mb-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
+                <div className="w-[42%] min-w-[104px] max-w-[190px] aspect-[4/3] shrink-0 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                  {sub.image ? (
                     <img
                       src={sub.image}
                       alt={sub.subsystem}
                       loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                     />
-                  </div>
-                )}
-                <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">
-                  {sub.subsystem}
+                  ) : (
+                    <Layers size={30} className="text-gray-300" />
+                  )}
                 </div>
-                <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
-                  {sub.count} {pluralSchemes(sub.count)}
+                <div className="flex items-center justify-between gap-3 flex-1 min-w-0">
+                  <div className="min-w-0">
+                    <div className="font-montserrat font-black text-sm sm:text-base text-tesla-dark leading-tight uppercase">
+                      {sub.subsystem}
+                    </div>
+                    <span className="inline-block mt-2 text-[11px] font-manrope font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                      {sub.count} {pluralSchemes(sub.count)}
+                    </span>
+                  </div>
+                  <ChevronRight
+                    size={18}
+                    className="text-gray-300 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all shrink-0"
+                  />
                 </div>
               </button>
             ))}
