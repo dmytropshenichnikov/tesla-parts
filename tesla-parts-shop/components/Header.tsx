@@ -214,6 +214,10 @@ const Header: React.FC<HeaderProps> = ({
     (a, b) => (b.sort_order ?? 0) - (a.sort_order ?? 0)
   );
 
+  // Моделі окремо, аксесуари окремо — аксесуари завжди показуємо останніми
+  const accessoryCategories = sortedCategories.filter((c) => c.name === 'Аксесуари');
+  const carCategories = sortedCategories.filter((c) => c.name !== 'Аксесуари');
+
   return (
     <header className="bg-white/95 backdrop-blur-md shadow-xs border-b border-gray-100 sticky top-0 z-50 transition-all">
       {/* Single Unified Header Row */}
@@ -246,31 +250,32 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* Mega-Menu Dropdown Panel */}
               {isDesktopDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2.5 w-[760px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center justify-between mb-3 px-1">
+                <div className="absolute top-full left-0 mt-2.5 w-[860px] bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between mb-3.5 px-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 font-montserrat">
                       Моделі Tesla
                     </span>
                     <Link
                       to="/schemes"
                       onClick={() => setIsDesktopDropdownOpen(false)}
-                      className="text-xs font-montserrat font-bold text-tesla-red hover:underline flex items-center gap-1"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-tesla-red hover:bg-tesla-red hover:text-white font-montserrat font-bold text-xs transition-colors"
                     >
                       <Layers size={13} />
-                      <span>Перейти до вибух-схем EPC</span>
+                      <span>Схеми запчастин (EPC)</span>
                     </Link>
                   </div>
 
-                  {/* Model Cards Grid (All 6 models including Highland & Juniper) */}
-                  <div className="grid grid-cols-6 gap-2 mb-4">
-                    {sortedCategories.filter(c => c.name !== 'Аксесуари').map((cat) => (
+                  {/* Усі категорії одним рядом карток — включно з аксесуарами,
+                      щоб вони не губились у дрібному підписі внизу */}
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {[...carCategories, ...accessoryCategories].map((cat) => (
                       <Link
                         key={cat.id}
                         to={`/category/${slugify(cat.name)}`}
                         onClick={() => setIsDesktopDropdownOpen(false)}
-                        className="group flex flex-col items-center text-center p-2 rounded-2xl bg-gray-50/80 hover:bg-red-50/60 border border-gray-100 hover:border-red-200 transition-all active:scale-95"
+                        className="group flex items-center gap-3 p-3 rounded-2xl bg-gray-50/80 hover:bg-red-50/60 border border-gray-100 hover:border-red-200 transition-all active:scale-95"
                       >
-                        <div className="w-12 h-12 rounded-xl overflow-hidden mb-2 bg-gray-200/50 flex items-center justify-center">
+                        <div className="w-14 h-14 shrink-0 rounded-xl overflow-hidden bg-gray-200/50 flex items-center justify-center">
                           {cat.image ? (
                             <img
                               src={cat.image}
@@ -281,33 +286,17 @@ const Header: React.FC<HeaderProps> = ({
                             <Car size={24} className="text-gray-400 group-hover:text-tesla-red transition-colors" />
                           )}
                         </div>
-                        <span className="font-montserrat font-bold text-[11px] text-gray-900 group-hover:text-tesla-red transition-colors leading-tight">
-                          {cat.name}
-                        </span>
+                        <div className="min-w-0">
+                          <div className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-tesla-red transition-colors leading-tight truncate">
+                            {cat.name}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-manrope truncate">
+                            {cat.name === 'Аксесуари' ? 'килимки, чохли, дрібниці' : 'запчастини та вузли'}
+                          </div>
+                        </div>
                       </Link>
                     ))}
                   </div>
-
-                  {/* Other categories (e.g. Accessories) */}
-                  {sortedCategories.some(c => c.name === 'Аксесуари') && (
-                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between px-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-                        Додатково
-                      </span>
-                      <div className="flex gap-2">
-                        {sortedCategories.filter(c => c.name === 'Аксесуари').map((cat) => (
-                          <Link
-                            key={cat.id}
-                            to={`/category/${slugify(cat.name)}`}
-                            onClick={() => setIsDesktopDropdownOpen(false)}
-                            className="px-3 py-1.5 rounded-xl text-xs text-gray-700 hover:text-tesla-red hover:bg-red-50/60 font-montserrat font-bold transition-colors border border-gray-100"
-                          >
-                            {cat.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -396,7 +385,7 @@ const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div>
                           <div className="font-montserrat font-bold text-xs">Схеми запчастин</div>
-                          <div className="text-[11px] text-gray-400 font-manrope">Інтерактивні вибух-схеми EPC</div>
+                          <div className="text-[11px] text-gray-400 font-manrope">Схеми вузлів (EPC)</div>
                         </div>
                       </Link>
                     </div>

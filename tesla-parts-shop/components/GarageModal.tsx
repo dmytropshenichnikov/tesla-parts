@@ -7,7 +7,6 @@ import {
   AlertCircle,
   Search,
   Trash2,
-  ShieldCheck,
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
@@ -15,6 +14,7 @@ import { api } from '../services/api';
 import { VinDecodeResult, SavedCar, PlateLookupResult } from '../types';
 import { Link } from 'react-router-dom';
 import { getCarTargetInfo } from './GaragePage';
+import { TeslaCarIcon } from './TeslaCarIcon';
 
 interface GarageModalProps {
   isOpen: boolean;
@@ -234,16 +234,16 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between p-5 pb-3 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center font-bold">
-              <Car size={20} />
+            <div className="w-8 h-8 rounded-lg bg-red-50 text-tesla-red flex items-center justify-center font-bold">
+              <Car size={17} />
             </div>
             <div>
-              <h2 className="text-xl font-black font-montserrat text-gray-900 tracking-tight">
+              <h2 className="text-lg font-black font-montserrat text-gray-900 tracking-tight">
                 Мій гараж
               </h2>
-              <p className="text-xs text-gray-500 font-manrope">
+              <p className="text-[11px] text-gray-500 font-manrope">
                 Додайте авто для точного підбору запчастин
               </p>
             </div>
@@ -262,49 +262,47 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         {currentCar && (() => {
           const target = getCarTargetInfo(currentCar);
           return (
-            <div className="mx-6 mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-tesla-red font-bold shrink-0">
-                    <ShieldCheck size={22} />
+            <div className="mx-5 mt-3 p-3 bg-gray-50 rounded-2xl border border-gray-200/80">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-tesla-red shrink-0 overflow-hidden">
+                  <TeslaCarIcon model={currentCar.model} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-green-600 font-montserrat flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Активне авто в гаражі
                   </div>
-                  <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-green-600 font-montserrat flex items-center gap-1">
-                      <CheckCircle2 size={12} /> Активне авто в гаражі
-                    </div>
-                    <div className="font-montserrat font-bold text-gray-900 text-sm">
-                      {target.fullTitle} • {currentCar.year}
-                    </div>
-                    <div className="text-xs text-gray-500 font-manrope">
-                      {currentCar.generation} {currentCar.drive ? `• ${currentCar.drive}` : ''}
-                    </div>
+                  <div className="font-montserrat font-bold text-gray-900 text-sm truncate">
+                    {target.fullTitle} • {currentCar.year}
+                  </div>
+                  <div className="text-[11px] text-gray-500 font-manrope truncate">
+                    {currentCar.generation} {currentCar.drive ? `• ${currentCar.drive}` : ''}
                   </div>
                 </div>
 
                 <button
                   onClick={handleRemoveCar}
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
                   title="Видалити авто з гаража"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               </div>
 
-              <div className="flex gap-2 pt-1 border-t border-gray-200/60">
+              <div className="flex gap-2 mt-3">
                 <Link
                   to={`/category/${target.categorySlug}`}
                   onClick={onClose}
-                  className="flex-1 py-2 px-3 bg-tesla-red hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 py-1.5 px-3 bg-tesla-red hover:bg-red-700 text-white rounded-lg text-[11px] font-montserrat font-bold text-center flex items-center justify-center gap-1 transition-colors whitespace-nowrap"
                 >
-                  <span>Деталі {target.displayName}</span>
-                  <ArrowRight size={13} />
+                  <span>Деталі</span>
+                  <ArrowRight size={12} />
                 </Link>
                 <Link
                   to={target.schemesUrl}
                   onClick={onClose}
-                  className="flex-1 py-2 px-3 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-montserrat font-bold text-center flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 py-1.5 px-3 bg-gray-900 hover:bg-black text-white rounded-lg text-[11px] font-montserrat font-bold text-center flex items-center justify-center gap-1 transition-colors whitespace-nowrap"
                 >
-                  <span>Схеми {target.displayName}</span>
+                  <span>Схеми</span>
                 </Link>
               </div>
             </div>
@@ -312,15 +310,15 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         })()}
 
         {/* Tabs */}
-        <div className="p-6 pt-5">
-          <div className="grid grid-cols-3 p-1 bg-gray-100 rounded-2xl mb-6">
+        <div className="p-5 pt-4">
+          <div className="grid grid-cols-3 p-0.5 bg-gray-100 rounded-xl mb-4">
             <button
               type="button"
               onClick={() => {
                 setActiveTab('plate');
                 setError(null);
               }}
-              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+              className={`py-1.5 text-[11px] font-montserrat font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'plate'
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -334,7 +332,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                 setActiveTab('vin');
                 setError(null);
               }}
-              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+              className={`py-1.5 text-[11px] font-montserrat font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'vin'
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -348,7 +346,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                 setActiveTab('model');
                 setError(null);
               }}
-              className={`py-2 text-xs font-montserrat font-bold rounded-xl transition-all cursor-pointer ${
+              className={`py-1.5 text-[11px] font-montserrat font-bold rounded-lg transition-all cursor-pointer ${
                 activeTab === 'model'
                   ? 'bg-gray-900 text-white shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -385,7 +383,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                     }}
                     placeholder="КА 0001 АА"
                     maxLength={12}
-                    className="w-full py-2.5 px-3 font-mono font-black text-lg tracking-wider text-gray-950 placeholder:text-gray-300 outline-none uppercase bg-white"
+                    className="w-full py-2 px-3 font-mono font-black text-base tracking-wider text-gray-950 placeholder:text-gray-300 outline-none uppercase bg-white"
                   />
                   <button
                     type="submit"
