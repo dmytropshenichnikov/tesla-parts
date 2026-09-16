@@ -156,6 +156,8 @@ export interface SchematicModelOption {
 export interface SchematicSubsystem {
   subsystem: string;
   count: number;
+  /** Картинка підкатегорії з каталогу (якщо адміністратор її завантажив). */
+  image?: string | null;
 }
 
 /** Розділ схем (напр. «НАРУЖНЫЕ КРЕПЛЕНИЯ») зі своїми підсистемами. */

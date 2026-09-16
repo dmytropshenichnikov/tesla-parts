@@ -751,6 +751,9 @@ export const SchematicManager: React.FC = () => {
     };
   }, [formCategory, editingSchematic?.model, editingSchematic?.section, editingSchematic?.subsystem]);
 
+  /** Обрана категорія схеми (з опцій, підтягнутих з каталогу) */
+  const activeCategoryOption = modelOptions.find((o) => o.category === formCategory) || null;
+
   // Підсистеми обраного розділу (з каталогу)
   const catalogSubsystems =
     sectionOptions.find((o) => o.section === editingSchematic?.section)?.subsystems || [];
@@ -1294,30 +1297,44 @@ export const SchematicManager: React.FC = () => {
           </select>
         </div>
 
-        <div>
-          <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
-            <span>Покоління</span>
-            <InfoTooltip text="Підтягується з обраної категорії (напр. «Model 3 Highland» → покоління Highland). Для базової моделі пропонуються покоління, які вже використані у схемах цієї моделі." />
-          </label>
-          <select
-            value={editingSchematic.generation}
-            onChange={(e) => setEditingSchematic({ ...editingSchematic, generation: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
-          >
-            {(() => {
-              const option = modelOptions.find((o) => o.category === formCategory);
-              const list = option
-                ? Array.from(new Set([option.generation, ...option.generations])).filter(Boolean)
-                : [];
-              const withCurrent = editingSchematic.generation && !list.includes(editingSchematic.generation)
-                ? [editingSchematic.generation, ...list]
-                : list;
-              return withCurrent.map((g) => (
-                <option key={g} value={g}>{g}</option>
-              ));
-            })()}
-          </select>
-        </div>
+        {/* Покоління показуємо лише коли категорія його НЕ визначає.
+            Для «Model 3 Highland» покоління вже в назві категорії — поле зайве. */}
+        {activeCategoryOption?.pinned_generation ? (
+          <div>
+            <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+              <span>Покоління</span>
+              <InfoTooltip text="Визначається категорією: «Model 3 Highland» уже означає покоління Highland, тому окремо його обирати не потрібно." />
+            </label>
+            <div className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-manrope text-gray-500">
+              {editingSchematic.generation} — з категорії
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="flex items-center text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">
+              <span>Покоління</span>
+              <InfoTooltip text="Для базової моделі пропонуються покоління, які вже використані у схемах цієї моделі." />
+            </label>
+            <select
+              value={editingSchematic.generation}
+              onChange={(e) => setEditingSchematic({ ...editingSchematic, generation: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
+            >
+              {(() => {
+                const option = modelOptions.find((o) => o.category === formCategory);
+                const list = option
+                  ? Array.from(new Set([option.generation, ...option.generations])).filter(Boolean)
+                  : [];
+                const withCurrent = editingSchematic.generation && !list.includes(editingSchematic.generation)
+                  ? [editingSchematic.generation, ...list]
+                  : list;
+                return withCurrent.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ));
+              })()}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-bold font-montserrat text-gray-700 uppercase mb-1">

@@ -201,20 +201,25 @@ def get_schematic_sections(
         bucket["count"] += 1
         bucket["subsystems"][subsystem_name] = bucket["subsystems"].get(subsystem_name, 0) + 1
 
-    # Картинку розділу беремо з однойменної підкатегорії каталогу
-    section_images: dict = {}
+    # Картинки беремо з однойменних підкатегорій каталогу — і для розділу,
+    # і для кожної підсистеми: у каталозі вони вже завантажені адміністратором
+    images_by_name: dict = {}
     for sub in session.exec(select(Subcategory)).all():
         if sub.image:
-            section_images.setdefault(sub.name.strip().lower(), sub.image)
+            images_by_name.setdefault(sub.name.strip().lower(), sub.image)
 
     sections = []
     for bucket in grouped.values():
         sections.append({
             "section": bucket["section"],
-            "image": section_images.get(bucket["section"].strip().lower()),
+            "image": images_by_name.get(bucket["section"].strip().lower()),
             "count": bucket["count"],
             "subsystems": [
-                {"subsystem": name, "count": count}
+                {
+                    "subsystem": name,
+                    "count": count,
+                    "image": images_by_name.get(name.strip().lower()),
+                }
                 for name, count in sorted(bucket["subsystems"].items())
             ],
         })

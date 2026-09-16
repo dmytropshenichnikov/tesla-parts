@@ -640,6 +640,16 @@ export const SchemesCatalog: React.FC = () => {
                 onClick={() => setSelectedSubsystem(sub.subsystem)}
                 className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
               >
+                {sub.image && (
+                  <div className="w-full h-24 mb-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
+                    <img
+                      src={sub.image}
+                      alt={sub.subsystem}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                )}
                 <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">
                   {sub.subsystem}
                 </div>
