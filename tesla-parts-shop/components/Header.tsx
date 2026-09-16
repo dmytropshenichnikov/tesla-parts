@@ -223,12 +223,13 @@ const Header: React.FC<HeaderProps> = ({
     <header className="bg-white/95 backdrop-blur-md shadow-xs border-b border-gray-100 sticky top-0 z-50 transition-all">
       {/* Single Unified Header Row */}
       <div className="max-w-[1680px] w-full mx-auto px-3 sm:px-5 xl:px-6 py-2 sm:py-2.5">
-        <div className="flex items-center justify-between gap-2 sm:gap-3 xl:gap-6">
+        {/* Навігація тримається лівого краю — одразу за логотипом, не по центру */}
+        <div className="flex items-center gap-2 sm:gap-3 xl:gap-5">
           {/* Logo (Clean & Compact on Left) */}
           <TeslaPartsCenterLogo />
 
-          {/* Center Navigation (LG+) */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 text-sm">
+          {/* Navigation (LG+) — притиснута до логотипа */}
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 text-sm shrink-0">
             {/* Catalog Mega-Menu Trigger */}
             <div className="relative" ref={desktopDropdownRef}>
               <button
@@ -345,7 +346,7 @@ const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Action Block: Search, Currency, Phone, Profile, Cart */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 flex-shrink-0 ml-auto">
             {/* Quick Catalog on Mobile */}
             <div className="lg:hidden flex items-center gap-1">
               <div className="relative" ref={mobileCategoryRef}>
