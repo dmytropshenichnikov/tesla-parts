@@ -11,7 +11,6 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Sparkles,
   ShieldCheck,
   PackageCheck,
   Layers,

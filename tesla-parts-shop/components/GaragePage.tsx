@@ -10,7 +10,7 @@ import {
   ChevronRight,
   ArrowRight,
   Layers,
-  Sparkles,
+  BookmarkCheck,
   Copy,
   Check,
   RotateCcw,
@@ -929,7 +929,7 @@ export const GaragePage: React.FC = () => {
 
         <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
           <div className="w-10 h-10 rounded-xl bg-red-100 text-tesla-red flex items-center justify-center mb-3">
-            <Sparkles size={20} />
+            <BookmarkCheck size={20} />
           </div>
           <h4 className="font-montserrat font-bold text-base text-gray-900 mb-1">
             Збереження в 1 клік
