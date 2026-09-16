@@ -65,7 +65,18 @@
    - Category names containing «аксесуар» are accessory categories: they get the universal generation and
      are listed last in the admin/shop pickers.
 
+7. **Одна гілка для продакшну — `main` (НЕ ПЕРЕМИКАТИ СЕРВЕР НА FEATURE-ГІЛКУ):**
+   - Продакшн-сервер стоїть на `main`. Робота ведеться у `feature/*` і перед деплоєм
+     вливається в `main`.
+   - Деплой — тільки через `./deploy/deploy.sh`. Він перевіряє чисту робочу копію,
+     що поточна гілка саме `main`, і **сам вливає `feature/improvements`**, якщо там
+     є зміни, яких немає в `main`.
+   - 2026-09-16 сервер вручну перемкнули на `main`, який тоді відставав, і правки
+     адмінки зникли з прода. Саме тому є скрипт і це правило.
+   - Після пушу в `feature/*` перед деплоєм обов'язково: `git checkout main &&
+     git merge origin/feature/improvements`.
+
 ## Core Workflows
 - **Migrations:** Use provided migration scripts (`migrate_*.py`) for DB schema updates.
 - **Testing:** Run backend tests with `.venv/bin/pytest` and frontend typechecks with `npx tsc --noEmit`.
-- **Deployment:** Follow `DEPLOYMENT.md` for standard procedures.
+- **Deployment:** Use `./deploy/deploy.sh` (єдина точка деплою). Деталі — `DEPLOYMENT.md`.
