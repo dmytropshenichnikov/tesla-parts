@@ -14,6 +14,7 @@ import {
   Star,
   Layers,
   Car,
+  Grid2x2,
 } from 'lucide-react';
 import { Category, Currency, Page, SavedCar } from '../types';
 import { GarageModal } from './GarageModal';
@@ -233,12 +234,18 @@ const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setIsDesktopDropdownOpen(!isDesktopDropdownOpen)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl font-montserrat font-bold transition-all cursor-pointer ${
+                className={`group flex items-center gap-1.5 px-3 py-2 rounded-xl font-montserrat font-bold transition-all cursor-pointer ${
                   isDesktopDropdownOpen
                     ? 'bg-gray-900 text-white shadow-xs'
                     : 'text-gray-800 hover:text-tesla-red hover:bg-gray-50'
                 }`}
               >
+                <Grid2x2
+                  size={16}
+                  className={`flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                    isDesktopDropdownOpen ? 'text-white' : 'text-tesla-red'
+                  }`}
+                />
                 <span>Каталог</span>
                 <ChevronDown
                   size={14}
@@ -348,6 +355,7 @@ const Header: React.FC<HeaderProps> = ({
                     isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
                   }`}
                 >
+                  <Grid2x2 size={14} className="text-tesla-red flex-shrink-0" />
                   <span>Каталог</span>
                   <ChevronDown
                     size={13}

@@ -410,16 +410,14 @@ export const SchemesCatalog: React.FC = () => {
         )}
       </div>
 
-      {/* КРОК 1: вибір автомобіля. Поки авто не обрано — більше нічого не показуємо */}
+      {/* КРОК 1: вибір автомобіля. Поки авто не обрано — більше нічого не показуємо.
+          Вигляд карток — той самий, що й на головній каталогу (великі фото). */}
       {!selectedModel && !activeSearch && (
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm mb-8">
-          <div className="flex items-center gap-2.5 mb-2">
-            <Car size={20} className="text-tesla-red" />
-            <h2 className="font-montserrat font-black text-lg sm:text-xl text-gray-900">
-              Оберіть ваш автомобіль
-            </h2>
-          </div>
-          <p className="text-sm text-gray-500 font-manrope mb-6 max-w-2xl">
+        <div className="mb-10 sm:mb-12">
+          <h2 className="font-montserrat font-black text-2xl sm:text-3xl md:text-4xl text-center text-tesla-dark mb-3">
+            Оберіть модель вашого Tesla
+          </h2>
+          <p className="text-sm text-gray-500 font-manrope mb-8 max-w-2xl mx-auto text-center">
             Схеми вузлів (EPC) відрізняються для кожної моделі та покоління. Оберіть своє авто —
             і ми покажемо лише сумісні вузли та деталі.
           </p>
@@ -429,7 +427,7 @@ export const SchemesCatalog: React.FC = () => {
               Завантаження моделей...
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {carOptions.map((o) => (
                 <button
                   key={o.category}
@@ -437,29 +435,44 @@ export const SchemesCatalog: React.FC = () => {
                     setSelectedModel(o.category);
                     setSelectedGen(ALL_GENERATIONS);
                   }}
-                  className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+                  className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98] text-left"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <div className="w-full h-28 mb-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
-                    {o.image ? (
-                      <img
-                        src={o.image}
-                        alt={o.category}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10 group-hover:via-black/30 transition-all duration-300 z-10" />
+                  {o.image ? (
+                    <img
+                      src={o.image}
+                      alt={o.category}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center">
+                      <Car size={72} className="text-white/15" />
+                    </div>
+                  )}
+
+                  {/* Кількість схем — як бейдж у куті, щоб не заважав фото */}
+                  <div className="absolute top-4 right-4 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm text-[11px] font-montserrat font-bold text-gray-900 shadow-sm">
+                    <Layers size={12} className="text-tesla-red" />
+                    <span>
+                      {o.schematics_count > 0
+                        ? `${o.schematics_count} ${pluralSchemes(o.schematics_count)}`
+                        : 'схем ще немає'}
+                    </span>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 p-6 z-20 text-white w-full">
+                    <h3 className="text-xl md:text-2xl font-bold mb-1 group-hover:translate-x-0.5 transition-transform duration-200">
+                      Tesla {o.category}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-200 group-hover:text-white transition-colors">
+                      <span>Переглянути схеми</span>
+                      <ArrowRight
+                        size={16}
+                        className="transition-transform duration-300 group-hover:translate-x-1.5"
                       />
-                    ) : (
-                      <span className="w-10 h-10 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center transition-colors group-hover:bg-tesla-red group-hover:text-white">
-                        <Car size={20} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-montserrat font-bold text-sm text-gray-900">
-                    Tesla {o.category}
-                  </div>
-                  <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
-                    {o.schematics_count > 0
-                      ? `${o.schematics_count} ${pluralSchemes(o.schematics_count)}`
-                      : 'схем ще немає'}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -467,22 +480,24 @@ export const SchemesCatalog: React.FC = () => {
           )}
 
           {accessoryOptions.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
-              <span className="text-[11px] uppercase tracking-wider font-montserrat font-bold text-gray-400">
-                Аксесуари та універсальні схеми
-              </span>
-              {accessoryOptions.map((o) => (
-                <button
-                  key={o.category}
-                  onClick={() => {
-                    setSelectedModel(o.category);
-                    setSelectedGen(ALL_GENERATIONS);
-                  }}
-                  className="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-montserrat font-semibold text-gray-700 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
-                >
-                  {o.category}
-                </button>
-              ))}
+            <div className="mt-8 p-5 sm:p-6 rounded-3xl bg-white border border-gray-100 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="text-[11px] uppercase tracking-wider font-montserrat font-bold text-gray-400">
+                  Аксесуари та універсальні схеми
+                </span>
+                {accessoryOptions.map((o) => (
+                  <button
+                    key={o.category}
+                    onClick={() => {
+                      setSelectedModel(o.category);
+                      setSelectedGen(ALL_GENERATIONS);
+                    }}
+                    className="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-montserrat font-semibold text-gray-700 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
+                  >
+                    {o.category}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
