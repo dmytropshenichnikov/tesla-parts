@@ -40,6 +40,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Active highlighted hotspot pin / part
   const [activeHotspotId, setActiveHotspotId] = useState<number | null>(null);
+  // Наведення працює в обидва боки: навів на номер на схемі — підсвітилась
+  // деталь у списку; навів на деталь у списку — підсвітився номер на схемі.
+  const [hoveredHotspotId, setHoveredHotspotId] = useState<number | null>(null);
 
   // Collapsed / Expanded state for variants (map of hotspot.id -> boolean)
   const [expandedVariants, setExpandedVariants] = useState<Record<number, boolean>>({});
@@ -331,6 +334,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             {/* Red Hotspot Pins */}
             {schematic.hotspots.map((h) => {
               const isActive = activeHotspotId === h.id;
+              const isHovered = hoveredHotspotId === h.id;
               return (
                 <button
                   key={h.id}
@@ -340,11 +344,17 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                     transform: 'translate(-50%, -50%)'
                   }}
                   onClick={() => handleSelectHotspot(h)}
+                  onMouseEnter={() => setHoveredHotspotId(h.id)}
+                  onMouseLeave={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
+                  onFocus={() => setHoveredHotspotId(h.id)}
+                  onBlur={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
                   title={`#${h.number}: ${h.name}`}
                   className={`absolute w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[9px] sm:text-xs transition-all duration-200 cursor-pointer shadow-sm ${
                     isActive
                       ? 'bg-tesla-red text-white ring-3 ring-red-300 ring-offset-1 scale-120 z-20 shadow-red-500/40'
-                      : 'bg-tesla-red text-white hover:scale-110 z-10 hover:shadow'
+                      : isHovered
+                        ? 'bg-tesla-red text-white ring-4 ring-red-200 scale-125 z-30 shadow-lg shadow-red-500/40'
+                        : 'bg-tesla-red text-white hover:scale-110 z-10 hover:shadow'
                   }`}
                 >
                   {h.number}
@@ -354,7 +364,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           </div>
 
           <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
-            <span>Клікніть на червоний номер, щоб підсвітити деталь у списку</span>
+            <span>
+              Наведіть на номер — підсвітиться деталь у списку (і навпаки). Клік закріплює вибір
+            </span>
             <span className="font-semibold text-gray-600 hidden sm:inline">{schematic.hotspots.length} деталей на схемі</span>
           </div>
         </div>
@@ -376,6 +388,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           <div className="space-y-3">
             {schematic.hotspots.map((h) => {
               const isActive = activeHotspotId === h.id;
+              const isHovered = hoveredHotspotId === h.id;
               const isExpanded = expandedVariants[h.id] ?? false;
               const variants = h.variants || [];
               const hasMultipleVariants = variants.length > 1;
@@ -393,10 +406,14 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                   key={h.id}
                   ref={(el) => (partRefs.current[h.id] = el)}
                   onClick={() => setActiveHotspotId(h.id)}
+                  onMouseEnter={() => setHoveredHotspotId(h.id)}
+                  onMouseLeave={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
                   className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xs ${
                     isActive
                       ? 'border-tesla-red ring-2 ring-tesla-red/15 shadow-md'
-                      : 'border-gray-200/90 hover:border-gray-300'
+                      : isHovered
+                        ? 'border-tesla-red/60 bg-red-50/40 ring-1 ring-red-100 shadow-sm'
+                        : 'border-gray-200/90 hover:border-gray-300'
                   }`}
                 >
                   {/* Top row of part item */}
@@ -409,7 +426,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                           handleSelectHotspot(h);
                         }}
                         className={`w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-bold text-xs shrink-0 cursor-pointer transition-all ${
-                          isActive
+                          isActive || isHovered
                             ? 'bg-tesla-red text-white ring-2 ring-red-200'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}

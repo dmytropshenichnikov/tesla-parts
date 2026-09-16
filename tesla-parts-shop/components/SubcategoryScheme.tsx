@@ -49,7 +49,7 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
         <Link
           key={scheme.id}
           to={`/schemes/${scheme.id}`}
-          className="group flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border border-gray-200 bg-white hover:border-tesla-red hover:shadow-md transition-all duration-200"
+          className="group flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl border-2 border-tesla-red/25 bg-white hover:border-tesla-red hover:shadow-lg transition-all duration-200"
         >
           <div className="w-full sm:w-28 h-24 sm:h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
             {scheme.image_url ? (
@@ -82,8 +82,8 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
               <MapPin size={11} />
               {scheme.hotspots_count} точок
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 group-hover:bg-tesla-red text-white rounded-xl text-xs font-montserrat font-bold transition-colors whitespace-nowrap">
-              Відкрити
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-tesla-red group-hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-colors whitespace-nowrap">
+              Переглянути на схемі
               <ArrowRight size={13} />
             </span>
           </div>
