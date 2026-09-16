@@ -40,6 +40,15 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Active highlighted hotspot pin / part
   const [activeHotspotId, setActiveHotspotId] = useState<number | null>(null);
+  // «1 деталь / 2 деталі / 5 деталей»
+  const pluralParts = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return `${n} деталь`;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} деталі`;
+    return `${n} деталей`;
+  };
+
   // Наведення працює в обидва боки: навів на номер на схемі — підсвітилась
   // деталь у списку; навів на деталь у списку — підсвітився номер на схемі.
   const [hoveredHotspotId, setHoveredHotspotId] = useState<number | null>(null);
@@ -313,7 +322,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         <div className="lg:col-span-6 xl:col-span-7 bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center justify-between mb-2 lg:hidden">
             <span className="font-montserrat font-bold text-xs text-gray-800">
-              Схема вузла ({schematic.hotspots.length} деталей)
+              Схема вузла ({pluralParts(schematic.hotspots.length)})
             </span>
             <span className="text-[11px] text-gray-400 font-manrope">
               Клікніть номер для вибору
@@ -364,10 +373,15 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           </div>
 
           <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
-            <span>
+            <span className="hidden sm:inline">
               Наведіть на номер — підсвітиться деталь у списку (і навпаки). Клік закріплює вибір
             </span>
-            <span className="font-semibold text-gray-600 hidden sm:inline">{schematic.hotspots.length} деталей на схемі</span>
+            <span className="sm:hidden">
+              Натисніть на червоний номер — деталь підсвітиться у списку
+            </span>
+            <span className="font-semibold text-gray-600 hidden sm:inline">
+              {pluralParts(schematic.hotspots.length)} на схемі
+            </span>
           </div>
         </div>
 
