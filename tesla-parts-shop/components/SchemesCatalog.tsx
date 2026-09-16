@@ -21,6 +21,15 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const ALL_MODELS = '__all__';
 const ALL_GENERATIONS = 'Всі покоління';
 
+/** «1 схема / 2 схеми / 5 схем» — для підпису під моделлю */
+const pluralSchemes = (n: number) => {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'схема';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'схеми';
+  return 'схем';
+};
+
 /**
  * Моделі та покоління більше не дублюються хардкодом — вони приходять
  * з категорій каталогу (`/schematics/model-options`), тож фільтр схем
@@ -68,18 +77,12 @@ export const SchemesCatalog: React.FC = () => {
   const [isGarageOpen, setIsGarageOpen] = useState(false);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
 
-  // Категорії каталогу — джерело моделей і поколінь для фільтрів
+  // Категорії каталогу — джерело моделей і поколінь для фільтрів.
+  // Нічого не підставляємо автоматично: спершу користувач має обрати своє авто,
+  // і лише потім ми показуємо вузли та схеми.
   useEffect(() => {
     api.getSchematicModelOptions().then((options) => {
       setModelOptions(options);
-      if (options.length === 0) return;
-      const hasUrlFilter = Boolean(searchParams.get('model') || searchParams.get('generation') || searchParams.get('vin'));
-      if (!hasUrlFilter) {
-        // Дефолт: категорія, під якою вже є схеми (щоб не відкривати порожній список)
-        const fallback =
-          options.find((o) => o.schematics_count > 0) || options[0];
-        setSelectedModel((current) => current || fallback.category);
-      }
     });
   }, []);
 
@@ -136,8 +139,10 @@ export const SchemesCatalog: React.FC = () => {
     return () => window.removeEventListener('garage-car-changed', handleGarageUpdate);
   }, [modelOptions]);
 
+  // Вантажимо схеми, коли обрано авто. Виняток — пошук за парт-номером:
+  // він має працювати й без вибору моделі (шукаємо по всьому каталогу схем).
   useEffect(() => {
-    if (!selectedModel) return;
+    if (!selectedModel && !activeSearch) return;
     loadSchematics();
   }, [selectedModel, selectedGen, activeSearch]);
 
@@ -174,6 +179,7 @@ export const SchemesCatalog: React.FC = () => {
 
       // Бекенд сам розуміє складені назви категорій («Model 3 Highland» →
       // Model 3 + покоління Highland), тому передаємо саме категорію.
+      // Без обраної моделі (пошук за номером) — шукаємо по всіх схемах.
       const apiModel = option
         ? option.category
         : (selectedModel === ALL_MODELS ? undefined : selectedModel || undefined);
@@ -211,6 +217,11 @@ export const SchemesCatalog: React.FC = () => {
   };
 
   const activeModelObj = modelOptions.find((o) => o.category === selectedModel) || null;
+
+  // Вибір авто: окремо реальні моделі й окремо аксесуари.
+  // «Всі моделі» прибрано навмисно — схеми завжди привʼязані до конкретного авто.
+  const carOptions = modelOptions.filter((o) => !o.is_accessory);
+  const accessoryOptions = modelOptions.filter((o) => o.is_accessory);
 
   // Покоління показуємо лише тоді, коли категорія справді має кілька варіантів.
   const availableGenerations =
@@ -308,38 +319,119 @@ export const SchemesCatalog: React.FC = () => {
         )}
       </div>
 
-      {/* Step 1: Model Selection Tabs */}
-      <div className="mb-6">
-        <div className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat mb-3">
-          1. Оберіть модель Tesla
+      {/* КРОК 1: вибір автомобіля. Поки авто не обрано — більше нічого не показуємо */}
+      {!selectedModel && !activeSearch && (
+        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-gray-100 shadow-sm mb-8">
+          <div className="flex items-center gap-2.5 mb-2">
+            <Car size={20} className="text-tesla-red" />
+            <h2 className="font-montserrat font-black text-lg sm:text-xl text-gray-900">
+              Оберіть ваш автомобіль
+            </h2>
+          </div>
+          <p className="text-sm text-gray-500 font-manrope mb-6 max-w-2xl">
+            Схеми вузлів (EPC) відрізняються для кожної моделі та покоління. Оберіть своє авто —
+            і ми покажемо лише сумісні вузли та деталі.
+          </p>
+
+          {modelOptions.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 font-manrope text-sm">
+              Завантаження моделей...
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {carOptions.map((o) => (
+                <button
+                  key={o.category}
+                  onClick={() => {
+                    setSelectedModel(o.category);
+                    setSelectedGen(ALL_GENERATIONS);
+                  }}
+                  className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center mb-3 transition-colors group-hover:bg-tesla-red group-hover:text-white">
+                    <Car size={18} />
+                  </div>
+                  <div className="font-montserrat font-bold text-sm text-gray-900">
+                    Tesla {o.category}
+                  </div>
+                  <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
+                    {o.schematics_count > 0
+                      ? `${o.schematics_count} ${pluralSchemes(o.schematics_count)}`
+                      : 'схем ще немає'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {accessoryOptions.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
+              <span className="text-[11px] uppercase tracking-wider font-montserrat font-bold text-gray-400">
+                Аксесуари та універсальні схеми
+              </span>
+              {accessoryOptions.map((o) => (
+                <button
+                  key={o.category}
+                  onClick={() => {
+                    setSelectedModel(o.category);
+                    setSelectedGen(ALL_GENERATIONS);
+                  }}
+                  className="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-montserrat font-semibold text-gray-700 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
+                >
+                  {o.category}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
-          {[
-            { category: ALL_MODELS, label: 'Всі моделі' },
-            ...modelOptions.map((o) => ({ category: o.category, label: o.category }))
-          ].map((m) => {
-            const isSelected = selectedModel === m.category;
-            return (
+      )}
+
+      {/* Обране авто + зміна */}
+      {(selectedModel || activeSearch) && (
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          {selectedModel ? (
+            <>
+              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
+                <Car size={16} className="text-tesla-red" />
+                <span className="font-montserrat font-bold text-sm text-gray-900">
+                  {activeModelObj && activeModelObj.is_accessory
+                    ? activeModelObj.category
+                    : `Tesla ${selectedModel}`}
+                </span>
+              </div>
               <button
-                key={m.category}
                 onClick={() => {
-                  setSelectedModel(m.category);
+                  setSelectedModel('');
                   setSelectedGen(ALL_GENERATIONS);
                 }}
-                className={`py-3 px-4 rounded-2xl font-montserrat font-bold text-xs sm:text-sm text-center transition-all cursor-pointer border ${
-                  isSelected
-                    ? 'border-tesla-red bg-red-50 text-tesla-red shadow-xs ring-2 ring-tesla-red/20'
-                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
               >
-                {m.label}
+                Змінити авто
               </button>
-            );
-          })}
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
+                <Search size={16} className="text-tesla-red" />
+                <span className="font-montserrat font-bold text-sm text-gray-900">
+                  Пошук: «{activeSearch}»
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveSearch('');
+                  setSearchInput('');
+                }}
+                className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
+              >
+                Скинути пошук
+              </button>
+            </>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Step 2: Generation Selector Pills (if model selected) */}
+      {/* КРОК 2: покоління (лише коли в категорії справді кілька варіантів) */}
       {availableGenerations.length > 0 && (
         <div className="mb-8">
           <div className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat mb-3">
@@ -366,7 +458,8 @@ export const SchemesCatalog: React.FC = () => {
         </div>
       )}
 
-      {/* Schematics Results Grid */}
+      {/* Список вузлів: показуємо лише коли обрано авто (або є пошук за номером) */}
+      {(selectedModel || activeSearch) && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-montserrat text-gray-900 flex items-center gap-2">
@@ -391,14 +484,15 @@ export const SchemesCatalog: React.FC = () => {
             </p>
             <button
               onClick={() => {
-                setSelectedModel('all');
-                setSelectedGen('Всі покоління');
+                // Повертаємось до кроку вибору автомобіля
+                setSelectedModel('');
+                setSelectedGen(ALL_GENERATIONS);
                 setActiveSearch('');
                 setSearchInput('');
               }}
               className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-tesla-red text-white rounded-xl text-xs font-montserrat font-bold cursor-pointer"
             >
-              Скинути фільтри
+              Обрати інше авто
             </button>
           </div>
         ) : (
@@ -457,6 +551,7 @@ export const SchemesCatalog: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Garage Modal */}
       <GarageModal
@@ -464,7 +559,13 @@ export const SchemesCatalog: React.FC = () => {
         onClose={() => setIsGarageOpen(false)}
         onCarSaved={(car) => {
           setActiveCar(car);
-          if (car?.model) setSelectedModel(car.model);
+          // Мапимо авто з гаража на категорію каталогу (напр. Model 3 + Highland
+          // → «Model 3 Highland»), щоб одразу показати правильні схеми
+          const option = car ? resolveOption(modelOptions, car.model, car.generation) : null;
+          if (option) {
+            setSelectedModel(option.category);
+            setSelectedGen(ALL_GENERATIONS);
+          }
         }}
       />
     </div>
