@@ -355,6 +355,7 @@ class VinDecodeResult(BaseModel):
     year: int
     plant: str
     drive: str
+    trim: str | None = None
     body_type: str
     description: str
 
