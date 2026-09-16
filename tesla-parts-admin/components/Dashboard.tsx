@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ApiService } from '../services/api';
-import { DashboardStats, Order, Product } from '../types';
+import { Category, DashboardStats, Order, Product } from '../types';
 import {
   BarChart,
   Bar,
@@ -42,14 +42,16 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [ordersData, productsData] = await Promise.all([
+        const [ordersData, productsData, categoriesData] = await Promise.all([
           ApiService.getOrders(),
           ApiService.getProducts(),
+          ApiService.getCategoriesBasic(),
         ]);
 
         const totalRevenue = ordersData.reduce(
@@ -74,6 +76,7 @@ export const Dashboard: React.FC = () => {
           )
         );
         setProducts(productsData);
+        setCatalogCategories(categoriesData);
       } catch (error) {
         console.error('Failed to load dashboard data');
       } finally {
@@ -91,21 +94,36 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // Calculate Sales by Category
-  const salesByCategories = Array.from(
+  // Продажі за категоріями.
+  // Перелік і порядок беремо з категорій каталогу (як у магазині), щоб графік
+  // не «плив» і не губив моделі. Товар може належати кільком моделям одразу —
+  // тоді його продаж враховується в кожній із них.
+  const productCategoryNames = Array.from(
     new Set(products.flatMap((p) => getProductCategories(p.category)))
-  ).map((categoryName: string) => {
-    const categoryProducts = products
-      .filter((p) => getProductCategories(p.category).includes(categoryName))
-      .map((p) => p.id);
-    const count = orders.reduce((acc, order) => {
-      const categoryItems = order.items.filter((item) =>
-        categoryProducts.includes(item.product_id)
-      );
-      return acc + categoryItems.reduce((sum, item) => sum + item.quantity, 0);
+  );
+  const catalogCategoryNames = catalogCategories.map((c) => c.name);
+  const chartCategoryNames = [
+    ...catalogCategoryNames,
+    ...productCategoryNames.filter((name) => !catalogCategoryNames.includes(name)),
+  ];
+
+  const salesByCategories = chartCategoryNames.map((categoryName: string) => {
+    const categoryProducts = new Set(
+      products
+        .filter((p) => getProductCategories(p.category).includes(categoryName))
+        .map((p) => p.id)
+    );
+    const value = orders.reduce((acc, order) => {
+      if (!order.items) return acc;
+      const units = order.items
+        .filter((item) => item.product_id && categoryProducts.has(item.product_id))
+        .reduce((sum, item) => sum + (item.quantity || 0), 0);
+      return acc + units;
     }, 0);
-    return { name: categoryName, value: count };
+    return { name: categoryName, value };
   });
+
+  const totalSold = salesByCategories.reduce((acc, row) => acc + row.value, 0);
 
   return (
     <div className="space-y-6">
@@ -144,15 +162,39 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart 1: Sales by Category */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">
-            Продажі за категоріями (шт)
-          </h3>
-          <div className="h-64">
+          <div className="flex items-baseline justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800">
+              Продажі за категоріями (шт)
+            </h3>
+            <span className="text-xs font-medium text-gray-400">
+              Всього: {totalSold} шт · {salesByCategories.length} категорій
+            </span>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesByCategories}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
+              {/* Горизонтальні бари — назви моделей довгі, вертикально вони обрізались */}
+              <BarChart
+                data={salesByCategories}
+                layout="vertical"
+                margin={{ top: 4, right: 32, bottom: 4, left: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  width={150}
+                  interval={0}
+                  tick={{ fontSize: 12, fill: '#4b5563' }}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#fff',
@@ -160,12 +202,14 @@ export const Dashboard: React.FC = () => {
                     border: '1px solid #e5e7eb',
                   }}
                   itemStyle={{ color: '#374151' }}
+                  formatter={(value: any) => [`${value} шт`, 'Продано']}
                 />
                 <Bar
                   dataKey="value"
                   fill="#ef4444"
-                  radius={[4, 4, 0, 0]}
-                  barSize={50}
+                  radius={[0, 4, 4, 0]}
+                  barSize={18}
+                  minPointSize={2}
                 />
               </BarChart>
             </ResponsiveContainer>

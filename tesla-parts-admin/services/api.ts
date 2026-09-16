@@ -398,6 +398,18 @@ export const ApiService = {
     if (!res.ok) throw new Error('Failed to update order status');
   },
 
+  /**
+   * Лише базовий список категорій (без підкатегорій і товарів).
+   * Використовується там, де потрібен порядок і повний перелік категорій каталогу.
+   */
+  getCategoriesBasic: async (): Promise<Category[]> => {
+    const res = await _authenticatedFetch(`${API_URL}/categories/`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch categories');
+    return res.json();
+  },
+
   getCategories: async (): Promise<Category[]> => {
     // 1. Fetch basic list to get IDs
     const res = await _authenticatedFetch(`${API_URL}/categories/`, {
