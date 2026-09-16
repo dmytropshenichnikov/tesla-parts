@@ -56,6 +56,10 @@ interface SubcategoryItemProps {
     subcategory: Subcategory,
     newSortOrder: number
   ) => Promise<void>;
+  /** Перетягування розділів: що тягнемо зараз і куди поклали */
+  draggedSubcategoryId?: number | null;
+  onSubcategoryDragStart?: (id: number) => void;
+  onReorderSubcategories?: (ordered: Subcategory[]) => Promise<void>;
 }
 
 const collectDescendantIds = (sub: Subcategory): number[] => {
@@ -140,6 +144,9 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
   onCopyProduct,
   onReorderProducts,
   onUpdateSubcategorySort,
+  draggedSubcategoryId,
+  onSubcategoryDragStart,
+  onReorderSubcategories,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAddingChild, setIsAddingChild] = useState(false);
@@ -275,7 +282,33 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
   return (
     <div className="border-l border-gray-100 ml-4">
       <div
-        className={`flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2 ${level > 0 ? 'ml-4' : ''}`}
+        draggable={!isEditing && Boolean(onReorderSubcategories) && siblingIndex >= 0}
+        onDragStart={(e) => {
+          onSubcategoryDragStart?.(subcategory.id);
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(subcategory.id));
+        }}
+        onDragOver={(e) => {
+          if (!draggedSubcategoryId || draggedSubcategoryId === subcategory.id) return;
+          // перетягуємо лише серед «сусідів» одного рівня
+          if (!siblings.some((sib) => sib.id === draggedSubcategoryId)) return;
+          e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const sourceId = draggedSubcategoryId ?? Number(e.dataTransfer.getData('text/plain'));
+          if (!sourceId || sourceId === subcategory.id) return;
+          const from = siblings.findIndex((sib) => sib.id === sourceId);
+          const to = siblings.findIndex((sib) => sib.id === subcategory.id);
+          if (from < 0 || to < 0) return;
+          const ordered = [...siblings];
+          const [moved] = ordered.splice(from, 1);
+          ordered.splice(to, 0, moved);
+          void onReorderSubcategories?.(ordered);
+        }}
+        className={`flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2 ${level > 0 ? 'ml-4' : ''} ${
+          draggedSubcategoryId === subcategory.id ? 'opacity-50' : ''
+        }`}
       >
         <div
           className={`flex items-center gap-2 text-gray-700 flex-1 ${canExpand ? 'cursor-pointer' : ''}`}
@@ -755,6 +788,10 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
 
 const CategoryList: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  // Перетягування «як конструктор»: що саме зараз тягнемо
+  const [dragCategoryId, setDragCategoryId] = useState<number | null>(null);
+  const [dragCategoryOverId, setDragCategoryOverId] = useState<number | null>(null);
+  const [dragSubcategoryId, setDragSubcategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
 
@@ -887,6 +924,50 @@ const CategoryList: React.FC = () => {
       loadCategories();
     } catch (e) {
       alert('Failed to update category sort order');
+    }
+  };
+
+  /** Новий порядок моделей після перетягування (один запит на весь список) */
+  const handleReorderCategories = async (sourceId: number, targetId: number) => {
+    setDragCategoryOverId(null);
+    setDragCategoryId(null);
+    if (!sourceId || sourceId === targetId) return;
+
+    const list = [...sortedCategories];
+    const from = list.findIndex((c) => c.id === sourceId);
+    const to = list.findIndex((c) => c.id === targetId);
+    if (from < 0 || to < 0) return;
+
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+
+    const total = list.length;
+    const payload = list.map((category, index) => ({
+      id: category.id,
+      sort_order: (total - index) * 10,
+    }));
+
+    try {
+      await ApiService.reorderCategories(payload);
+      loadCategories();
+    } catch {
+      alert('Не вдалося зберегти порядок моделей');
+    }
+  };
+
+  /** Новий порядок розділів усередині однієї моделі */
+  const handleReorderSubcategories = async (ordered: Subcategory[]) => {
+    setDragSubcategoryId(null);
+    const total = ordered.length;
+    const payload = ordered.map((subcategory, index) => ({
+      id: subcategory.id,
+      sort_order: (total - index) * 10,
+    }));
+    try {
+      await ApiService.reorderSubcategories(payload);
+      loadCategories();
+    } catch {
+      alert('Не вдалося зберегти порядок розділів');
     }
   };
 
@@ -1136,7 +1217,34 @@ const CategoryList: React.FC = () => {
         {sortedCategories.map((category, idx) => (
           <div
             key={category.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+            draggable={editingCategory !== category.id}
+            onDragStart={(e) => {
+              setDragCategoryId(category.id);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', String(category.id));
+            }}
+            onDragOver={(e) => {
+              if (dragCategoryId === null || dragCategoryId === category.id) return;
+              e.preventDefault();
+              setDragCategoryOverId(category.id);
+            }}
+            onDragLeave={() => {
+              setDragCategoryOverId((prev) => (prev === category.id ? null : prev));
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const sourceId = dragCategoryId ?? Number(e.dataTransfer.getData('text/plain'));
+              void handleReorderCategories(sourceId, category.id);
+            }}
+            onDragEnd={() => {
+              setDragCategoryId(null);
+              setDragCategoryOverId(null);
+            }}
+            className={`bg-white rounded-lg shadow-sm border overflow-hidden transition-all ${
+              dragCategoryOverId === category.id
+                ? 'border-tesla-red ring-2 ring-tesla-red/25'
+                : 'border-gray-200'
+            } ${dragCategoryId === category.id ? 'opacity-50' : ''}`}
           >
             <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-100">
               {editingCategory === category.id ? (
@@ -1489,6 +1597,9 @@ const CategoryList: React.FC = () => {
                       onCopyProduct={handleCopyProduct}
                       onReorderProducts={handleReorderProducts}
                       onUpdateSubcategorySort={handleUpdateSubcategorySort}
+                      draggedSubcategoryId={dragSubcategoryId}
+                      onSubcategoryDragStart={setDragSubcategoryId}
+                      onReorderSubcategories={handleReorderSubcategories}
                     />
                   ))}
                   {category.subcategories.length === 0 && (

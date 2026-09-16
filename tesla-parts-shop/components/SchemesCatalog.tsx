@@ -429,8 +429,18 @@ export const SchemesCatalog: React.FC = () => {
                   }}
                   className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center mb-3 transition-colors group-hover:bg-tesla-red group-hover:text-white">
-                    <Car size={18} />
+                  <div className="w-full h-24 mb-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                    {o.image ? (
+                      <img
+                        src={o.image}
+                        alt={o.category}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span className="w-10 h-10 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center transition-colors group-hover:bg-tesla-red group-hover:text-white">
+                        <Car size={20} />
+                      </span>
+                    )}
                   </div>
                   <div className="font-montserrat font-bold text-sm text-gray-900">
                     Tesla {o.category}
@@ -581,8 +591,16 @@ export const SchemesCatalog: React.FC = () => {
                   }}
                   className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center shrink-0 transition-colors group-hover:bg-tesla-red group-hover:text-white">
-                    <Layers size={18} />
+                  <div className="w-12 h-12 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center shrink-0 overflow-hidden transition-colors group-hover:bg-tesla-red group-hover:text-white">
+                    {group.image ? (
+                      <img
+                        src={group.image}
+                        alt={group.section}
+                        className="w-full h-full object-contain bg-white"
+                      />
+                    ) : (
+                      <Layers size={18} />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">

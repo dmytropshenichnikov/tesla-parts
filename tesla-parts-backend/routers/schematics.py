@@ -190,10 +190,17 @@ def get_schematic_sections(
         bucket["count"] += 1
         bucket["subsystems"][subsystem_name] = bucket["subsystems"].get(subsystem_name, 0) + 1
 
+    # Картинку розділу беремо з однойменної підкатегорії каталогу
+    section_images: dict = {}
+    for sub in session.exec(select(Subcategory)).all():
+        if sub.image:
+            section_images.setdefault(sub.name.strip().lower(), sub.image)
+
     sections = []
     for bucket in grouped.values():
         sections.append({
             "section": bucket["section"],
+            "image": section_images.get(bucket["section"].strip().lower()),
             "count": bucket["count"],
             "subsystems": [
                 {"subsystem": name, "count": count}
@@ -507,6 +514,7 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
             option = {
                 "category": name,
                 "category_id": category.id,
+                "image": category.image,
                 "model": base,
                 "generation": generations[0],
                 "generations": generations,
@@ -523,6 +531,7 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
             option = {
                 "category": name,
                 "category_id": category.id,
+                "image": category.image,
                 "model": name,
                 "generation": ACCESSORY_GENERATION,
                 "generations": [ACCESSORY_GENERATION],
@@ -540,6 +549,7 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
             option = {
                 "category": name,
                 "category_id": category.id,
+                "image": category.image,
                 "model": name,
                 "generation": generations[0],
                 "generations": generations,

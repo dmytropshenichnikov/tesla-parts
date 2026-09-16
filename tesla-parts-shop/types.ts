@@ -139,6 +139,8 @@ export interface SchematicHotspot {
 export interface SchematicModelOption {
   /** Назва категорії каталогу. */
   category: string;
+  /** Картинка категорії (фото або SVG), яку адміністратор завантажив у каталозі. */
+  image?: string | null;
   category_id: number;
   /** Значення, що зберігається у `schematic.model`. */
   model: string;
@@ -159,6 +161,8 @@ export interface SchematicSubsystem {
 /** Розділ схем (напр. «НАРУЖНЫЕ КРЕПЛЕНИЯ») зі своїми підсистемами. */
 export interface SchematicSectionGroup {
   section: string;
+  /** Картинка розділу — з однойменної підкатегорії каталогу. */
+  image?: string | null;
   count: number;
   subsystems: SchematicSubsystem[];
 }

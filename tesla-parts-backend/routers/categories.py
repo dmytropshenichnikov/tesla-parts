@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlmodel import Session, select, delete
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func
+from pydantic import BaseModel
 from database import get_session
 from models import Category, Subcategory, Product, ProductSubcategoryLink
 from schemas import (
@@ -175,6 +176,47 @@ def get_categories(session: Session = Depends(get_session)):
         .order_by(Category.sort_order.desc(), Category.id)
     ).all()
     return categories
+
+class ReorderItem(BaseModel):
+    id: int
+    sort_order: int
+
+
+@router.post("/reorder", dependencies=[Depends(get_current_admin)])
+def reorder_categories(
+    payload: List[ReorderItem],
+    session: Session = Depends(get_session)
+):
+    """Зберігає новий порядок категорій після перетягування в адмінці."""
+    updated = 0
+    for item in payload:
+        category = session.get(Category, item.id)
+        if not category:
+            continue
+        category.sort_order = item.sort_order
+        session.add(category)
+        updated += 1
+    session.commit()
+    return {"updated": updated}
+
+
+@router.post("/subcategories/reorder", dependencies=[Depends(get_current_admin)])
+def reorder_subcategories(
+    payload: List[ReorderItem],
+    session: Session = Depends(get_session)
+):
+    """Новий порядок підкатегорій (розділів) після перетягування."""
+    updated = 0
+    for item in payload:
+        subcategory = session.get(Subcategory, item.id)
+        if not subcategory:
+            continue
+        subcategory.sort_order = item.sort_order
+        session.add(subcategory)
+        updated += 1
+    session.commit()
+    return {"updated": updated}
+
 
 @router.get("/tree")
 def get_categories_tree(session: Session = Depends(get_session)):

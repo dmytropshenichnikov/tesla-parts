@@ -462,6 +462,30 @@ export const ApiService = {
    * Лише базовий список категорій (без підкатегорій і товарів).
    * Використовується там, де потрібен порядок і повний перелік категорій каталогу.
    */
+  /** Зберігає новий порядок категорій (моделей) після перетягування. */
+  reorderCategories: async (
+    items: { id: number; sort_order: number }[]
+  ): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/categories/reorder`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(items),
+    });
+    if (!res.ok) throw new Error('Failed to reorder categories');
+  },
+
+  /** Зберігає новий порядок підкатегорій (розділів) після перетягування. */
+  reorderSubcategories: async (
+    items: { id: number; sort_order: number }[]
+  ): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/categories/subcategories/reorder`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(items),
+    });
+    if (!res.ok) throw new Error('Failed to reorder subcategories');
+  },
+
   getCategoriesBasic: async (): Promise<Category[]> => {
     const res = await _authenticatedFetch(`${API_URL}/categories/`, {
       headers: getHeaders(),
