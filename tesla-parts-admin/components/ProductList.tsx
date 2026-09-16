@@ -55,20 +55,34 @@ export const ProductList: React.FC = () => {
       );
     }
     if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      const cleanSearch = lower.replace(/-/g, '');
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(lower) ||
-          (p.detail_number &&
-            p.detail_number
-              .toLowerCase()
-              .replace(/-/g, '')
-              .includes(cleanSearch)) ||
-          (p.cross_number &&
-            p.cross_number.toLowerCase().includes(cleanSearch)) ||
-          (p.description && p.description.toLowerCase().includes(cleanSearch))
-      );
+      const lower = searchTerm.toLowerCase().trim();
+      // Порядок слів не важливий: усі слова мають бути присутні в будь-якому
+      // місці. «захист переднього бампера» знайде «Захист нижній переднього...»
+      const tokens = lower.split(/\s+/).filter(Boolean);
+      const cleanSearch = lower.replace(/[^a-z0-9]/g, '');
+
+      result = result.filter((p) => {
+        const haystack = [
+          p.name,
+          p.description,
+          p.search_keywords,
+          p.detail_number,
+          p.cross_number,
+          p.id,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        if (tokens.length > 0 && tokens.every((token) => haystack.includes(token))) {
+          return true;
+        }
+        if (!cleanSearch) return false;
+        const codes = [p.detail_number, p.cross_number, p.id]
+          .filter(Boolean)
+          .map((value) => String(value).toLowerCase().replace(/[^a-z0-9]/g, ''));
+        return codes.some((value) => value.includes(cleanSearch));
+      });
     }
 
     // Sorting

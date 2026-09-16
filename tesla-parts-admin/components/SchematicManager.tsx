@@ -322,6 +322,10 @@ export const SchematicManager: React.FC = () => {
     const modelScope = [formCategory, editingSchematic.model].filter(Boolean);
 
     const raw = productSearchQuery.trim().toLowerCase();
+    // Пошук не залежить від порядку слів: «захист переднього бампера»
+    // знаходить «Захист нижній переднього бампера» — усі слова мають бути
+    // присутні, але в будь-якому місці й порядку.
+    const tokens = raw.split(/\s+/).filter(Boolean);
     const code = normalizeCode(productSearchQuery);
 
     return catalogProducts.filter((product) => {
@@ -334,12 +338,23 @@ export const SchematicManager: React.FC = () => {
           : productMatchesModel(product, modelScope);
         if (!matches) return false;
       }
-      if (!raw) return true;
+      if (tokens.length === 0) return true;
 
-      const name = (product.name || '').toLowerCase();
-      if (name.includes(raw)) return true;
+      const haystack = [
+        product.name,
+        product.description,
+        product.search_keywords,
+        product.detail_number,
+        product.cross_number,
+        product.id,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
 
-      // Номери порівнюємо без дефісів, пробілів і регістру
+      if (tokens.every((token) => haystack.includes(token))) return true;
+
+      // Артикули порівнюємо ще й без дефісів: «1771474-00-K» → «177147400k»
       if (!code) return false;
       const codes = [product.detail_number, product.cross_number, product.id].map(normalizeCode);
       return codes.some((value) => value.includes(code)) || normalizeCode(product.name).includes(code);
