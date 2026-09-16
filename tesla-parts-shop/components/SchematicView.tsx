@@ -111,6 +111,15 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     }));
   };
 
+  /** «1 варіант / 2 варіанти / 5 варіантів» */
+  const pluralVariants = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'варіант';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'варіанти';
+    return 'варіантів';
+  };
+
   /**
    * Позиція продається лише тоді, коли вона привʼязана до товару каталогу і той
    * є в наявності. Якщо деталь на схемі є, а товару в каталозі немає — показуємо
@@ -393,7 +402,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                             }`}
                           ></span>
                           <span className="text-xs text-gray-500 font-manrope">
-                            {variants.length > 0 ? `${variants.length} варіанти` : '1 варіант'}
+                            {variants.length > 0
+                              ? `${variants.length} ${pluralVariants(variants.length)}`
+                              : '1 варіант'}
                           </span>
                         </div>
                       </div>
