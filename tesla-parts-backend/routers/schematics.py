@@ -104,6 +104,17 @@ def list_schematics(
             clean_model = base_category
             if not generation or generation == "Всі покоління":
                 generation = variant
+        else:
+            # Це БАЗОВА категорія, під якою є окремі категорії-варіанти
+            # («Model 3 Highland», «Model Y Juniper»). Категорії не змішуємо:
+            # під «Model 3» показуємо лише те, що не належить варіантам.
+            for name in category_names:
+                if name.lower().startswith(clean_model.lower() + " "):
+                    variant_keyword = name[len(clean_model):].strip().lower()
+                    if variant_keyword:
+                        query = query.where(
+                            ~func.lower(Schematic.generation).like(f"%{variant_keyword}%")
+                        )
 
         query = query.where(func.lower(Schematic.model) == clean_model.lower())
 

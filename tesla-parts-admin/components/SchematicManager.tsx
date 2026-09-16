@@ -317,9 +317,10 @@ export const SchematicManager: React.FC = () => {
   const filteredCatalogProducts = useMemo(() => {
     if (!editingSchematic) return [];
 
-    // Фільтруємо за категорією схеми («Model 3 Highland») І за базовою моделлю
-    // («Model 3») — інакше зникали товари, позначені лише як «Model 3 Highland»
-    const modelScope = [formCategory, editingSchematic.model].filter(Boolean);
+    // Фільтруємо СТРОГО за категорією схеми: якщо схема для «Model 3 Highland»,
+    // показуємо лише товари цієї категорії — товари «Model 3» НЕ домішуємо.
+    // Так само й навпаки: категорії не змішуються.
+    const modelScope = [formCategory || editingSchematic.model].filter(Boolean);
 
     const raw = productSearchQuery.trim().toLowerCase();
     // Пошук не залежить від порядку слів: «захист переднього бампера»
@@ -1923,11 +1924,8 @@ export const SchematicManager: React.FC = () => {
                         className="rounded text-red-600 focus:ring-red-500"
                       />
                       <span>
-                        Фільтрувати для{' '}
+                        Фільтрувати тільки для{' '}
                         <strong>{formCategory || editingSchematic.model}</strong>
-                        {formCategory && formCategory !== editingSchematic.model && (
-                          <span className="text-gray-400"> (і {editingSchematic.model})</span>
-                        )}
                       </span>
                     </label>
                     <span className="text-gray-400">
