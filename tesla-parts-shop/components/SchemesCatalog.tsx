@@ -13,13 +13,15 @@ import {
   Check
 } from 'lucide-react';
 import { api } from '../services/api';
-import { SchematicSummary, SavedCar, SchematicModelOption } from '../types';
+import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup } from '../types';
 import { GarageModal } from './GarageModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const ALL_MODELS = '__all__';
 const ALL_GENERATIONS = 'Всі покоління';
+/** «Усі підсистеми розділу» */
+const ALL_SUBSYSTEMS = '__all_subsystems__';
 
 /** «1 схема / 2 схеми / 5 схем» — для підпису під моделлю */
 const pluralSchemes = (n: number) => {
@@ -69,6 +71,11 @@ export const SchemesCatalog: React.FC = () => {
   const [modelOptions, setModelOptions] = useState<SchematicModelOption[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [selectedGen, setSelectedGen] = useState<string>(ALL_GENERATIONS);
+  // Шлях до схеми як у каталозі: розділ → підсистема → схема
+  const [sections, setSections] = useState<SchematicSectionGroup[]>([]);
+  const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedSubsystem, setSelectedSubsystem] = useState<string>('');
+  const [showAllSchematics, setShowAllSchematics] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [activeSearch, setActiveSearch] = useState<string>('');
   const [vinBanner, setVinBanner] = useState<string | null>(null);
@@ -76,6 +83,17 @@ export const SchemesCatalog: React.FC = () => {
   // Garage state
   const [isGarageOpen, setIsGarageOpen] = useState(false);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
+
+  // Поточний розділ і його підсистеми
+  const activeSection = sections.find((s) => s.section === selectedSection) || null;
+  const activeSectionSubsystems = activeSection ? activeSection.subsystems : [];
+  // Крок «підсистема» показуємо лише коли в розділі справді кілька підсистем
+  const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 1;
+  // Список схем показуємо, коли шлях пройдено або користувач попросив усі схеми
+  const canShowSchemes =
+    Boolean(selectedModel) &&
+    (showAllSchematics ||
+      (Boolean(selectedSection) && (!needsSubsystemStep || Boolean(selectedSubsystem))));
 
   // Категорії каталогу — джерело моделей і поколінь для фільтрів.
   // Нічого не підставляємо автоматично: спершу користувач має обрати своє авто,
@@ -139,12 +157,29 @@ export const SchemesCatalog: React.FC = () => {
     return () => window.removeEventListener('garage-car-changed', handleGarageUpdate);
   }, [modelOptions]);
 
+  // Дерево розділів для обраного авто — шлях до схеми як у каталозі
+  useEffect(() => {
+    if (!selectedModel) {
+      setSections([]);
+      return;
+    }
+    api.getSchematicSections({ model: selectedModel }).then(setSections);
+  }, [selectedModel]);
+
+  // Зміна авто скидає обраний шлях
+  useEffect(() => {
+    setSelectedSection('');
+    setSelectedSubsystem('');
+  }, [selectedModel]);
+
   // Вантажимо схеми, коли обрано авто. Виняток — пошук за парт-номером:
   // він має працювати й без вибору моделі (шукаємо по всьому каталогу схем).
   useEffect(() => {
     if (!selectedModel && !activeSearch) return;
+    // Поки користувач обирає розділ/підсистему, список схем не вантажимо
+    if (selectedModel && !activeSearch && !canShowSchemes) return;
     loadSchematics();
-  }, [selectedModel, selectedGen, activeSearch]);
+  }, [selectedModel, selectedGen, activeSearch, selectedSection, selectedSubsystem, showAllSchematics]);
 
   const loadActiveCar = () => {
     try {
@@ -189,6 +224,11 @@ export const SchemesCatalog: React.FC = () => {
       const data = await api.getSchematics({
         model: apiModel,
         generation: apiGen,
+        section: selectedSection || undefined,
+        subsystem:
+          selectedSubsystem && selectedSubsystem !== ALL_SUBSYSTEMS
+            ? selectedSubsystem
+            : undefined,
         q: activeSearch || undefined
       });
       setSchematics(data);
@@ -217,6 +257,7 @@ export const SchemesCatalog: React.FC = () => {
   };
 
   const activeModelObj = modelOptions.find((o) => o.category === selectedModel) || null;
+
 
   // Вибір авто: окремо реальні моделі й окремо аксесуари.
   // «Всі моделі» прибрано навмисно — схеми завжди привʼязані до конкретного авто.
@@ -386,9 +427,9 @@ export const SchemesCatalog: React.FC = () => {
         </div>
       )}
 
-      {/* Обране авто + зміна */}
+      {/* Шлях до схеми — як у каталозі: авто › розділ › підсистема */}
       {(selectedModel || activeSearch) && (
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-2 mb-6">
           {selectedModel ? (
             <>
               <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
@@ -399,12 +440,41 @@ export const SchemesCatalog: React.FC = () => {
                     : `Tesla ${selectedModel}`}
                 </span>
               </div>
+
+              {selectedSection && (
+                <>
+                  <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                  <button
+                    onClick={() => {
+                      setSelectedSection('');
+                      setSelectedSubsystem('');
+                      setShowAllSchematics(false);
+                    }}
+                    className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
+                  >
+                    {selectedSection}
+                  </button>
+                </>
+              )}
+
+              {selectedSubsystem && selectedSubsystem !== ALL_SUBSYSTEMS && (
+                <>
+                  <ChevronRight size={14} className="text-gray-300 shrink-0" />
+                  <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-red-50 border border-red-200 font-montserrat font-bold text-sm text-tesla-red">
+                    {selectedSubsystem}
+                  </span>
+                </>
+              )}
+
               <button
                 onClick={() => {
                   setSelectedModel('');
                   setSelectedGen(ALL_GENERATIONS);
+                  setSelectedSection('');
+                  setSelectedSubsystem('');
+                  setShowAllSchematics(false);
                 }}
-                className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
+                className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer ml-1"
               >
                 Змінити авто
               </button>
@@ -428,6 +498,94 @@ export const SchemesCatalog: React.FC = () => {
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* КРОК 2: розділ (шлях до схеми як у каталозі) */}
+      {selectedModel && !activeSearch && !showAllSchematics && !selectedSection && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+              2. Оберіть розділ
+            </span>
+            {sections.length > 0 && (
+              <button
+                onClick={() => setShowAllSchematics(true)}
+                className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
+              >
+                Показати всі схеми
+              </button>
+            )}
+          </div>
+
+          {sections.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-dashed border-gray-300 p-10 text-center">
+              <Layers size={40} className="mx-auto text-gray-300 mb-3" />
+              <h3 className="font-montserrat font-bold text-gray-700">Для цієї моделі схем ще немає</h3>
+              <p className="text-gray-400 font-manrope text-sm mt-1">
+                Оберіть іншу модель або скористайтесь пошуком за парт-номером.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {sections.map((group) => (
+                <button
+                  key={group.section}
+                  onClick={() => {
+                    setSelectedSection(group.section);
+                    setSelectedSubsystem('');
+                  }}
+                  className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center shrink-0 transition-colors group-hover:bg-tesla-red group-hover:text-white">
+                    <Layers size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">
+                      {group.section}
+                    </div>
+                    <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
+                      {group.count} {pluralSchemes(group.count)}
+                      {group.subsystems.length > 1 && ` • ${group.subsystems.length} підсистем`}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* КРОК 3: підсистема */}
+      {selectedModel && !activeSearch && !showAllSchematics && needsSubsystemStep && !selectedSubsystem && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+              3. Оберіть підсистему
+            </span>
+            <button
+              onClick={() => setSelectedSubsystem(ALL_SUBSYSTEMS)}
+              className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
+            >
+              Усі підсистеми розділу
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {activeSectionSubsystems.map((sub) => (
+              <button
+                key={sub.subsystem}
+                onClick={() => setSelectedSubsystem(sub.subsystem)}
+                className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
+              >
+                <div className="font-montserrat font-bold text-sm text-gray-900 leading-tight">
+                  {sub.subsystem}
+                </div>
+                <div className="text-[11px] text-gray-400 font-manrope mt-0.5">
+                  {sub.count} {pluralSchemes(sub.count)}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -459,7 +617,7 @@ export const SchemesCatalog: React.FC = () => {
       )}
 
       {/* Список вузлів: показуємо лише коли обрано авто (або є пошук за номером) */}
-      {(selectedModel || activeSearch) && (
+      {(activeSearch || canShowSchemes) && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-montserrat text-gray-900 flex items-center gap-2">
@@ -487,6 +645,9 @@ export const SchemesCatalog: React.FC = () => {
                 // Повертаємось до кроку вибору автомобіля
                 setSelectedModel('');
                 setSelectedGen(ALL_GENERATIONS);
+                setSelectedSection('');
+                setSelectedSubsystem('');
+                setShowAllSchematics(false);
                 setActiveSearch('');
                 setSearchInput('');
               }}

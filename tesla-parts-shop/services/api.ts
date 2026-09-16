@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, VinDecodeResult, PlateLookupResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, VinDecodeResult, PlateLookupResult } from '../types';
 
 /**
  * Абсолютна адреса бекенду (api.teslapartscenter.com.ua).
@@ -331,12 +331,14 @@ export const api = {
     model?: string;
     generation?: string;
     section?: string;
+    subsystem?: string;
     q?: string;
   }): Promise<SchematicSummary[]> => {
     const searchParams = new URLSearchParams();
     if (params?.model) searchParams.append('model', params.model);
     if (params?.generation) searchParams.append('generation', params.generation);
     if (params?.section) searchParams.append('section', params.section);
+    if (params?.subsystem) searchParams.append('subsystem', params.subsystem);
     if (params?.q) searchParams.append('q', params.q);
     const queryString = searchParams.toString();
     const res = await apiFetch(`/schematics${queryString ? `?${queryString}` : ''}`);
@@ -353,6 +355,28 @@ export const api = {
       return data.options || [];
     } catch (e) {
       console.warn('Failed to load schematic model options', e);
+      return [];
+    }
+  },
+
+  /**
+   * Дерево «розділ → підсистеми» для схем обраної моделі.
+   * Дає той самий шлях до схеми, що й у каталозі: авто → розділ → підсистема.
+   */
+  getSchematicSections: async (
+    params?: { model?: string; generation?: string }
+  ): Promise<SchematicSectionGroup[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.model) searchParams.append('model', params.model);
+    if (params?.generation) searchParams.append('generation', params.generation);
+    const queryString = searchParams.toString();
+    try {
+      const res = await apiFetch(`/schematics/sections${queryString ? `?${queryString}` : ''}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.sections || [];
+    } catch (e) {
+      console.warn('Failed to load schematic sections', e);
       return [];
     }
   },

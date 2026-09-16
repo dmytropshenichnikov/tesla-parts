@@ -85,6 +85,7 @@ def list_schematics(
     model: Optional[str] = None,
     generation: Optional[str] = None,
     section: Optional[str] = None,
+    subsystem: Optional[str] = None,
     q: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
@@ -118,6 +119,8 @@ def list_schematics(
             query = query.where(func.lower(Schematic.generation).like(f"%{gen_clean}%"))
     if section:
         query = query.where(Schematic.section == section)
+    if subsystem:
+        query = query.where(Schematic.subsystem == subsystem)
     if q:
         search_pattern = f"%{q.strip().lower()}%"
         query = query.where(
@@ -148,6 +151,59 @@ def list_schematics(
             )
         )
     return results
+
+@router.get("/sections")
+def get_schematic_sections(
+    model: Optional[str] = None,
+    generation: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """Дерево «розділ → підсистеми» для схем обраної моделі.
+
+    Потрібне, щоб у магазині шлях до схеми був як у каталозі:
+    авто → розділ (КУЗОВ, НАРУЖНЫЕ КРЕПЛЕНИЯ...) → підсистема → схема.
+    """
+    query = select(Schematic)
+    if model and model != "all" and model != "Всі моделі":
+        clean_model = model.strip()
+        category_names = [
+            c.name for c in session.exec(select(Category)).all() if c.name
+        ]
+        base_category = _base_category_name(clean_model, category_names)
+        if base_category:
+            variant = clean_model[len(base_category):].strip()
+            clean_model = base_category
+            if not generation or generation == "Всі покоління":
+                generation = variant
+        query = query.where(func.lower(Schematic.model) == clean_model.lower())
+
+    if generation and generation != "Всі покоління":
+        query = query.where(func.lower(Schematic.generation).like(f"%{generation.strip().lower()}%"))
+
+    schematics = session.exec(query.order_by(Schematic.sort_order, Schematic.id)).all()
+
+    grouped: dict = {}
+    for item in schematics:
+        section_name = (item.section or "Інше").strip()
+        subsystem_name = (item.subsystem or "Інше").strip()
+        bucket = grouped.setdefault(section_name, {"section": section_name, "count": 0, "subsystems": {}})
+        bucket["count"] += 1
+        bucket["subsystems"][subsystem_name] = bucket["subsystems"].get(subsystem_name, 0) + 1
+
+    sections = []
+    for bucket in grouped.values():
+        sections.append({
+            "section": bucket["section"],
+            "count": bucket["count"],
+            "subsystems": [
+                {"subsystem": name, "count": count}
+                for name, count in sorted(bucket["subsystems"].items())
+            ],
+        })
+
+    sections.sort(key=lambda item: (-item["count"], item["section"]))
+    return {"sections": sections, "total": len(schematics)}
+
 
 @router.get("/meta/filters")
 def get_schematic_filters(session: Session = Depends(get_session)):

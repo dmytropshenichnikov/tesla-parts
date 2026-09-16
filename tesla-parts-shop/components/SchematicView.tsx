@@ -239,7 +239,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         <ChevronRight size={12} className="text-gray-400 shrink-0" />
         <span className="text-gray-700">{schematic.model} {schematic.generation}</span>
         <ChevronRight size={12} className="text-gray-400 shrink-0" />
-        <span className="text-gray-700">{schematic.section}</span>
+        <Link
+          to={`/schemes?model=${encodeURIComponent(schematic.model)}`}
+          className="hover:text-tesla-red transition-colors"
+        >
+          {schematic.section}
+        </Link>
+        {schematic.subsystem && (
+          <>
+            <ChevronRight size={12} className="text-gray-400 shrink-0" />
+            <span className="text-gray-700">{schematic.subsystem}</span>
+          </>
+        )}
         <ChevronRight size={12} className="text-gray-400 shrink-0" />
         <span className="text-gray-900 font-semibold">{schematic.title}</span>
       </nav>

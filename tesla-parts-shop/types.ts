@@ -150,6 +150,19 @@ export interface SchematicModelOption {
   schematics_count: number;
 }
 
+/** Підсистема всередині розділу схем (напр. «Защита днища и диффузор»). */
+export interface SchematicSubsystem {
+  subsystem: string;
+  count: number;
+}
+
+/** Розділ схем (напр. «НАРУЖНЫЕ КРЕПЛЕНИЯ») зі своїми підсистемами. */
+export interface SchematicSectionGroup {
+  section: string;
+  count: number;
+  subsystems: SchematicSubsystem[];
+}
+
 export interface SchematicSummary {
   id: number;
   title: string;
