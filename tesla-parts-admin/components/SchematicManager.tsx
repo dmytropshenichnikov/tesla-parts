@@ -110,6 +110,11 @@ export const SchematicManager: React.FC = () => {
 
   // Filter state for list
   const [filterModel, setFilterModel] = useState<string>('');
+  // Шлях до схеми такий самий, як у каталозі: авто → розділ → підсистема → схема.
+  // Розділи й підсистеми беремо з підкатегорій каталогу обраної категорії.
+  const [filterSection, setFilterSection] = useState<string>('');
+  const [filterSubsystem, setFilterSubsystem] = useState<string>('');
+  const [filterSections, setFilterSections] = useState<SchematicSectionOption[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Моделі/покоління — з категорій каталогу (єдине джерело істини)
@@ -256,7 +261,26 @@ export const SchematicManager: React.FC = () => {
 
   useEffect(() => {
     loadSchematics();
-  }, [filterModel, searchQuery]);
+  }, [filterModel, filterSection, filterSubsystem, searchQuery]);
+
+  // Розділи беремо з підкатегорій каталогу обраної категорії.
+  // Зміна авто скидає глибші кроки, щоб не було стану «авто одне, розділ інший».
+  useEffect(() => {
+    setFilterSection('');
+    setFilterSubsystem('');
+    const category = modelOptions.find((o) => o.category === filterModel);
+    if (!filterModel || !category || category.is_accessory) {
+      setFilterSections([]);
+      return;
+    }
+    let cancelled = false;
+    api.getSchematicSectionOptions(category.category_id).then((sections) => {
+      if (!cancelled) setFilterSections(sections);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterModel, modelOptions]);
 
   // Каталог товарів вантажимо один раз: раніше він перезавантажувався на кожен
   // символ у пошуку списку схем, через що модалка «прив'язати товар» висла.
@@ -281,9 +305,14 @@ export const SchematicManager: React.FC = () => {
       setLoading(true);
       const data = await api.getSchematics({
         model: filterModel || undefined,
+        section: filterSection || undefined,
         q: searchQuery || undefined
       });
-      setSchematics(data);
+      setSchematics(
+        filterSubsystem
+          ? data.filter((item) => item.subsystem === filterSubsystem)
+          : data
+      );
     } catch (err: any) {
       setError(err.message || 'Помилка завантаження схем');
     } finally {
@@ -1067,6 +1096,101 @@ export const SchematicManager: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {/* Крок «розділ» — як у каталозі: після авто обираємо розділ */}
+        {filterModel && filterSections.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-3">
+                {filterSection && (
+                  <button
+                    onClick={() => {
+                      setFilterSection('');
+                      setFilterSubsystem('');
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold font-montserrat text-gray-400 hover:text-red-600 transition-colors"
+                  >
+                    <ArrowLeft size={13} /> Назад
+                  </button>
+                )}
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                  2. Оберіть розділ
+                </span>
+              </div>
+              {filterSection && (
+                <button
+                  onClick={() => setFilterSubsystem('')}
+                  className="text-xs font-bold font-montserrat text-red-600 hover:underline"
+                >
+                  Усі підсистеми розділу
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {filterSections.map((group) => {
+                const active = filterSection === group.section;
+                return (
+                  <button
+                    key={group.section}
+                    onClick={() => {
+                      setFilterSection(active ? '' : group.section);
+                      setFilterSubsystem('');
+                    }}
+                    className={`px-3.5 py-2 rounded-xl border text-xs font-montserrat font-bold transition-all ${
+                      active
+                        ? 'bg-red-600 border-red-600 text-white shadow-sm'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-red-300 hover:text-red-600'
+                    }`}
+                  >
+                    {group.section}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Крок «підсистема» — той самий рівень, що й підкатегорія каталогу */}
+        {filterModel && filterSection && (() => {
+          const group = filterSections.find((item) => item.section === filterSection);
+          const subsystems = group?.subsystems || [];
+          if (subsystems.length === 0) return null;
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                {filterSubsystem && (
+                  <button
+                    onClick={() => setFilterSubsystem('')}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold font-montserrat text-gray-400 hover:text-red-600 transition-colors"
+                  >
+                    <ArrowLeft size={13} /> Назад
+                  </button>
+                )}
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                  3. Оберіть підсистему
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {subsystems.map((name) => {
+                  const active = filterSubsystem === name;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setFilterSubsystem(active ? '' : name)}
+                      className={`px-3.5 py-2 rounded-xl border text-xs font-montserrat font-bold transition-all ${
+                        active
+                          ? 'bg-red-600 border-red-600 text-white shadow-sm'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-red-300 hover:text-red-600'
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Grid of Schematics */}
         {loading ? (
