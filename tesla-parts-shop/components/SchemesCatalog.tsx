@@ -573,7 +573,11 @@ export const SchemesCatalog: React.FC = () => {
                   key={group.section}
                   onClick={() => {
                     setSelectedSection(group.section);
-                    setSelectedSubsystem('');
+                    // Якщо підсистема в розділі одна — одразу її й беремо,
+                    // щоб не змушувати клікати зайвий раз
+                    setSelectedSubsystem(
+                      group.subsystems.length === 1 ? group.subsystems[0].subsystem : ''
+                    );
                   }}
                   className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
                 >
