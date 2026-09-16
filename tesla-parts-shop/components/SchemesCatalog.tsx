@@ -305,8 +305,13 @@ export const SchemesCatalog: React.FC = () => {
   const accessoryOptions = modelOptions.filter((o) => o.is_accessory);
 
   // Покоління показуємо лише тоді, коли категорія справді має кілька варіантів.
+  // Покоління показуємо лише коли категорія його НЕ визначає.
+  // «Model 3 Highland» уже означає покоління Highland — окремий крок зайвий.
   const availableGenerations =
-    activeModelObj && !activeModelObj.is_accessory && activeModelObj.generations.length > 1
+    activeModelObj &&
+    !activeModelObj.is_accessory &&
+    !activeModelObj.pinned_generation &&
+    activeModelObj.generations.length > 1
       ? [ALL_GENERATIONS, ...activeModelObj.generations]
       : [];
 
@@ -552,12 +557,39 @@ export const SchemesCatalog: React.FC = () => {
         </div>
       )}
 
-      {/* КРОК 2: розділ (шлях до схеми як у каталозі) */}
+      {/* КРОК 2: покоління (лише коли в категорії справді кілька варіантів) */}
+      {availableGenerations.length > 0 && (
+        <div className="mb-8">
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat mb-3">
+            2. Оберіть покоління
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availableGenerations.map((gen) => {
+              const isSelected = selectedGen === gen;
+              return (
+                <button
+                  key={gen}
+                  onClick={() => setSelectedGen(gen)}
+                  className={`py-2 px-4 rounded-full text-xs font-montserrat font-semibold transition-all cursor-pointer border ${
+                    isSelected
+                      ? 'border-tesla-red bg-tesla-red text-white shadow-xs'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {gen}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* КРОК 3: розділ (шлях до схеми як у каталозі) */}
       {selectedModel && !activeSearch && !showAllSchematics && !selectedSection && (
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              2. Оберіть розділ
+              3. Оберіть розділ
             </span>
             {sections.length > 0 && (
               <button
@@ -619,12 +651,12 @@ export const SchemesCatalog: React.FC = () => {
         </div>
       )}
 
-      {/* КРОК 3: підсистема */}
+      {/* КРОК 4: підсистема */}
       {selectedModel && !activeSearch && !showAllSchematics && needsSubsystemStep && !selectedSubsystem && (
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              3. Оберіть підсистему
+              4. Оберіть підсистему
             </span>
             <button
               onClick={() => setSelectedSubsystem(ALL_SUBSYSTEMS)}
@@ -658,33 +690,6 @@ export const SchemesCatalog: React.FC = () => {
                 </div>
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* КРОК 2: покоління (лише коли в категорії справді кілька варіантів) */}
-      {availableGenerations.length > 0 && (
-        <div className="mb-8">
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat mb-3">
-            2. Оберіть покоління
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableGenerations.map((gen) => {
-              const isSelected = selectedGen === gen;
-              return (
-                <button
-                  key={gen}
-                  onClick={() => setSelectedGen(gen)}
-                  className={`py-2 px-4 rounded-full text-xs font-montserrat font-semibold transition-all cursor-pointer border ${
-                    isSelected
-                      ? 'border-tesla-red bg-tesla-red text-white shadow-xs'
-                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {gen}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}
