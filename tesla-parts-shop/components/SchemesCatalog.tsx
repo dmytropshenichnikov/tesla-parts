@@ -429,12 +429,13 @@ export const SchemesCatalog: React.FC = () => {
                   }}
                   className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-full h-24 mb-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="w-full h-28 mb-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
                     {o.image ? (
                       <img
                         src={o.image}
                         alt={o.category}
-                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <span className="w-10 h-10 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center transition-colors group-hover:bg-tesla-red group-hover:text-white">
