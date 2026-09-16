@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   ArrowRight,
+  ArrowLeft,
   Filter,
   Check,
   Package
@@ -64,7 +65,22 @@ const resolveOption = (
 
 export const SchemesCatalog: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  /**
+   * Шлях до схеми живе в URL: авто → розділ → підсистема → схема.
+   * Кожен крок — новий запис в історії, тому кнопка «Назад» (у браузері чи на
+   * сторінці) повертає рівно на попередній крок, а не викидає на початок.
+   */
+  const goToStep = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(window.location.search);
+    Object.entries(patch).forEach(([key, value]) => {
+      if (!value) next.delete(key);
+      else next.set(key, value);
+    });
+    setSearchParams(next, { replace: false });
+  };
+  const stepBack = () => navigate(-1);
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,10 +106,23 @@ export const SchemesCatalog: React.FC = () => {
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
 
   // Поточний розділ і його підсистеми
+  const BackButton = (
+    <button
+      type="button"
+      onClick={stepBack}
+      title="Назад до попереднього кроку"
+      className="inline-flex items-center gap-1 text-[11px] font-bold font-montserrat text-gray-400 hover:text-tesla-red transition-colors cursor-pointer shrink-0"
+    >
+      <ArrowLeft size={13} />
+      Назад
+    </button>
+  );
+
   const activeSection = sections.find((s) => s.section === selectedSection) || null;
   const activeSectionSubsystems = activeSection ? activeSection.subsystems : [];
-  // Крок «підсистема» показуємо лише коли в розділі справді кілька підсистем
-  const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 1;
+  // Крок «підсистема» показуємо завжди, якщо в розділі є підсистеми:
+  // шлях такий самий, як у каталозі — авто → розділ → підсистема → схема
+  const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 0;
   // Список схем показуємо, коли шлях пройдено або користувач попросив усі схеми
   const canShowSchemes =
     Boolean(selectedModel) &&
@@ -126,6 +155,15 @@ export const SchemesCatalog: React.FC = () => {
             : ALL_GENERATIONS
         );
       }
+    }
+
+    // Кроки шляху теж читаємо з URL — «Назад» працює покроково
+    setSelectedSection(searchParams.get('section') || '');
+    setSelectedSubsystem(searchParams.get('subsystem') || '');
+    setShowAllSchematics(searchParams.get('all') === '1');
+    if (!modelParam && !genParam) {
+      setSelectedModel('');
+      setSelectedGen(ALL_GENERATIONS);
     }
 
     if (vinParam && vinParam.length === 17) {
@@ -431,10 +469,15 @@ export const SchemesCatalog: React.FC = () => {
               {carOptions.map((o) => (
                 <button
                   key={o.category}
-                  onClick={() => {
-                    setSelectedModel(o.category);
-                    setSelectedGen(ALL_GENERATIONS);
-                  }}
+                  onClick={() =>
+                    goToStep({
+                      model: o.category,
+                      generation: null,
+                      section: null,
+                      subsystem: null,
+                      all: null,
+                    })
+                  }
                   className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98] text-left"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
@@ -488,10 +531,15 @@ export const SchemesCatalog: React.FC = () => {
                 {accessoryOptions.map((o) => (
                   <button
                     key={o.category}
-                    onClick={() => {
-                      setSelectedModel(o.category);
-                      setSelectedGen(ALL_GENERATIONS);
-                    }}
+                    onClick={() =>
+                      goToStep({
+                        model: o.category,
+                        generation: null,
+                        section: null,
+                        subsystem: null,
+                        all: null,
+                      })
+                    }
                     className="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-montserrat font-semibold text-gray-700 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
                   >
                     {o.category}
@@ -521,11 +569,7 @@ export const SchemesCatalog: React.FC = () => {
                 <>
                   <ChevronRight size={14} className="text-gray-300 shrink-0" />
                   <button
-                    onClick={() => {
-                      setSelectedSection('');
-                      setSelectedSubsystem('');
-                      setShowAllSchematics(false);
-                    }}
+                    onClick={() => goToStep({ section: null, subsystem: null, all: null })}
                     className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
                   >
                     {selectedSection}
@@ -543,13 +587,15 @@ export const SchemesCatalog: React.FC = () => {
               )}
 
               <button
-                onClick={() => {
-                  setSelectedModel('');
-                  setSelectedGen(ALL_GENERATIONS);
-                  setSelectedSection('');
-                  setSelectedSubsystem('');
-                  setShowAllSchematics(false);
-                }}
+                onClick={() =>
+                  goToStep({
+                    model: null,
+                    generation: null,
+                    section: null,
+                    subsystem: null,
+                    all: null,
+                  })
+                }
                 className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer ml-1"
               >
                 Змінити авто
@@ -608,12 +654,15 @@ export const SchemesCatalog: React.FC = () => {
       {selectedModel && !activeSearch && !showAllSchematics && !selectedSection && (
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              {sectionStepNumber}. Оберіть розділ
-            </span>
+            <div className="flex items-center gap-3">
+              {BackButton}
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                {sectionStepNumber}. Оберіть розділ
+              </span>
+            </div>
             {sections.length > 0 && (
               <button
-                onClick={() => setShowAllSchematics(true)}
+                onClick={() => goToStep({ all: '1' })}
                 className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
               >
                 Показати всі схеми
@@ -634,14 +683,9 @@ export const SchemesCatalog: React.FC = () => {
               {sections.map((group) => (
                 <button
                   key={group.section}
-                  onClick={() => {
-                    setSelectedSection(group.section);
-                    // Якщо підсистема в розділі одна — одразу її й беремо,
-                    // щоб не змушувати клікати зайвий раз
-                    setSelectedSubsystem(
-                      group.subsystems.length === 1 ? group.subsystems[0].subsystem : ''
-                    );
-                  }}
+                  onClick={() =>
+                    goToStep({ section: group.section, subsystem: null, all: null })
+                  }
                   className="group flex items-start gap-3 p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
                 >
                   <div className="w-12 h-12 rounded-xl bg-red-50 text-tesla-red flex items-center justify-center shrink-0 overflow-hidden transition-colors group-hover:bg-tesla-red group-hover:text-white">
@@ -675,11 +719,14 @@ export const SchemesCatalog: React.FC = () => {
       {selectedModel && !activeSearch && !showAllSchematics && needsSubsystemStep && !selectedSubsystem && (
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
-              {subsystemStepNumber}. Оберіть підсистему
-            </span>
+            <div className="flex items-center gap-3">
+              {BackButton}
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
+                {subsystemStepNumber}. Оберіть підсистему
+              </span>
+            </div>
             <button
-              onClick={() => setSelectedSubsystem(ALL_SUBSYSTEMS)}
+              onClick={() => goToStep({ subsystem: ALL_SUBSYSTEMS })}
               className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
             >
               Усі підсистеми розділу
@@ -689,7 +736,7 @@ export const SchemesCatalog: React.FC = () => {
             {activeSectionSubsystems.map((sub) => (
               <button
                 key={sub.subsystem}
-                onClick={() => setSelectedSubsystem(sub.subsystem)}
+                onClick={() => goToStep({ subsystem: sub.subsystem })}
                 className="group p-4 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-md active:scale-[0.98] cursor-pointer"
               >
                 {sub.image && (
@@ -719,6 +766,7 @@ export const SchemesCatalog: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold font-montserrat text-gray-900 flex items-center gap-2">
+            {selectedModel && !activeSearch && BackButton}
             <Layers size={18} className="text-tesla-red" />
             Вузли та схеми
             <span className="text-xs font-normal text-gray-400 font-manrope">
@@ -741,11 +789,13 @@ export const SchemesCatalog: React.FC = () => {
             <button
               onClick={() => {
                 // Повертаємось до кроку вибору автомобіля
-                setSelectedModel('');
-                setSelectedGen(ALL_GENERATIONS);
-                setSelectedSection('');
-                setSelectedSubsystem('');
-                setShowAllSchematics(false);
+                goToStep({
+                  model: null,
+                  generation: null,
+                  section: null,
+                  subsystem: null,
+                  all: null,
+                });
                 setActiveSearch('');
                 setSearchInput('');
               }}
@@ -882,8 +932,13 @@ export const SchemesCatalog: React.FC = () => {
           // → «Model 3 Highland»), щоб одразу показати правильні схеми
           const option = car ? resolveOption(modelOptions, car.model, car.generation) : null;
           if (option) {
-            setSelectedModel(option.category);
-            setSelectedGen(ALL_GENERATIONS);
+            goToStep({
+              model: option.category,
+              generation: null,
+              section: null,
+              subsystem: null,
+              all: null,
+            });
           }
         }}
       />
