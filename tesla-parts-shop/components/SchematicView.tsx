@@ -117,7 +117,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
    * «Немає в наявності», без ціни й без кнопки «В кошик».
    */
   const isVariantAvailable = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
-    const linkedProductId = variant?.product_id || hotspot.product_id;
+    // Привʼязка живе на конкретному варіанті — у кожного своя ціна й наявність.
+    // Посилання на рівні ТОЧКИ — це застаріле поле (у нинішній адмінці його
+    // вже не виставляють), тому воно має силу лише коли варіант у точки один.
+    const variantCount = (hotspot.variants || []).length;
+    const linkedProductId =
+      variant?.product_id || (variantCount <= 1 ? hotspot.product_id : null);
     if (!linkedProductId) return false;
     if (!variant) return true;
     return variant.inStock !== false;
@@ -318,7 +323,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             </h2>
             <span className="text-xs font-manrope text-gray-500">
               <strong className="text-gray-800">{inStockCount}</strong> в наявності •{' '}
-              <strong className="text-gray-800">{totalVariantsCount - inStockCount}</strong> під замовлення
+              <strong className="text-gray-800">{totalVariantsCount - inStockCount}</strong> немає в наявності
             </span>
           </div>
 
