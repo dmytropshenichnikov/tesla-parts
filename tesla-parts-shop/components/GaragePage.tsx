@@ -223,7 +223,11 @@ export const GaragePage: React.FC = () => {
       const res = await api.lookupByPlate(clean);
       setPlateResult(res);
     } catch (err: any) {
-      setPlateError(err.message || 'Не вдалося знайти авто за номером');
+      const msg =
+        err?.message === 'Load failed' || err?.message === 'Failed to fetch'
+          ? 'Не вдалося звʼязатися із сервером. Перевірте зʼєднання або скористайтесь ручним вибором моделі.'
+          : (err?.message || 'Не вдалося знайти авто за номером');
+      setPlateError(msg);
       setPlateResult(null);
     } finally {
       setPlateLoading(false);

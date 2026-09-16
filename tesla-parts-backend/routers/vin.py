@@ -99,14 +99,18 @@ def lookup_by_plate(plate: str = Query(..., min_length=2, max_length=15, descrip
             detail="Автомобіль за цим номером не є Tesla. Пошук за номером підтримує виключно автомобілі Tesla."
         )
 
-    tesla_specs = decode_tesla_vin(vin)
+    tesla_specs_dict = decode_tesla_vin(vin)
+    tesla_specs = VinDecodeResult(**tesla_specs_dict) if tesla_specs_dict else None
+
+    resolved_model = (tesla_specs.model if tesla_specs else None) or model or "Tesla"
+    resolved_year = (tesla_specs.year if tesla_specs else None) or year or 2024
 
     return PlateLookupResult(
         plate=formatted_plate,
         vin=vin,
         mark="TESLA",
-        model=tesla_specs.model if tesla_specs else (model or "Tesla"),
-        year=year,
+        model=resolved_model,
+        year=resolved_year,
         is_tesla=True,
         tesla_specs=tesla_specs,
         message=None

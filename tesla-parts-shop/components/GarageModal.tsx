@@ -111,7 +111,11 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         setError(res.message || 'Знайдено авто іншої марки. Оберіть модель Tesla вручну.');
       }
     } catch (err: any) {
-      setError(err.message || 'Не вдалося знайти авто за номером');
+      const msg =
+        err?.message === 'Load failed' || err?.message === 'Failed to fetch'
+          ? 'Не вдалося звʼязатися із сервером. Перевірте зʼєднання або скористайтесь вибором вручну.'
+          : (err?.message || 'Не вдалося знайти авто за номером');
+      setError(msg);
       setPlateResult(null);
     } finally {
       setLoading(false);
