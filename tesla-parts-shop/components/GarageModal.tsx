@@ -271,11 +271,12 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                   <div className="text-[10px] font-bold uppercase tracking-wider text-green-600 font-montserrat flex items-center gap-1">
                     <CheckCircle2 size={11} /> Активне авто в гаражі
                   </div>
-                  <div className="font-montserrat font-bold text-gray-900 text-sm truncate">
-                    {target.fullTitle} • {currentCar.year}
+                  <div className="font-montserrat font-bold text-gray-900 text-sm leading-tight">
+                    {target.fullTitle}
                   </div>
                   <div className="text-[11px] text-gray-500 font-manrope truncate">
-                    {currentCar.generation} {currentCar.drive ? `• ${currentCar.drive}` : ''}
+                    {currentCar.year} • {currentCar.generation}
+                    {currentCar.drive ? ` • ${currentCar.drive}` : ''}
                   </div>
                 </div>
 

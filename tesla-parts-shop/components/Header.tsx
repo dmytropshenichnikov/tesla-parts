@@ -290,9 +290,11 @@ const Header: React.FC<HeaderProps> = ({
                           <div className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-tesla-red transition-colors leading-tight truncate">
                             {cat.name}
                           </div>
-                          <div className="text-[10px] text-gray-400 font-manrope truncate">
-                            {cat.name === 'Аксесуари' ? 'килимки, чохли, дрібниці' : 'запчастини та вузли'}
-                          </div>
+                          {cat.name === 'Аксесуари' && (
+                            <div className="text-[10px] text-gray-400 font-manrope truncate">
+                              для всіх моделей
+                            </div>
+                          )}
                         </div>
                       </Link>
                     ))}
