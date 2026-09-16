@@ -158,17 +158,20 @@ def get_schematic_sections(
     Потрібне, щоб у магазині шлях до схеми був як у каталозі:
     авто → розділ (КУЗОВ, НАРУЖНЫЕ КРЕПЛЕНИЯ...) → підсистема → схема.
     """
+    category_names_for_order = [
+        c.name for c in session.exec(select(Category)).all() if c.name
+    ]
+
     query = select(Schematic)
     if model and model != "all" and model != "Всі моделі":
         clean_model = model.strip()
-        category_names = [
-            c.name for c in session.exec(select(Category)).all() if c.name
-        ]
-        base_category = _base_category_name(clean_model, category_names)
+        base_category = _base_category_name(clean_model, category_names_for_order)
         target_model = base_category or clean_model
         if base_category and (not generation or generation == "Всі покоління"):
             generation = clean_model[len(base_category):].strip()
-        for condition in _owns_name_conditions(target_model, generation, category_names):
+        for condition in _owns_name_conditions(
+            target_model, generation, category_names_for_order
+        ):
             query = query.where(condition)
 
     if generation and generation != "Всі покоління":
@@ -191,6 +194,30 @@ def get_schematic_sections(
         if sub.image:
             images_by_name.setdefault(sub.name.strip().lower(), sub.image)
 
+    # Порядок розділів і підсистем задає адміністратор у каталозі
+    # (перетягуванням підкатегорій), тому сортуємо саме за ним.
+    catalog_order: dict = {}
+    if model and model != "all" and model != "Всі моделі":
+        clean = model.strip()
+        base = _base_category_name(clean, category_names_for_order)
+        target = (base or clean).strip()
+        category = session.exec(
+            select(Category).where(func.lower(Category.name) == target.lower())
+        ).first()
+        if category:
+            rows = session.exec(
+                select(Subcategory)
+                .where(Subcategory.category_id == category.id)
+                .order_by(Subcategory.sort_order.desc(), Subcategory.id)
+            ).all()
+            position = 0
+            for top in [r for r in rows if r.parent_id is None]:
+                catalog_order.setdefault(top.name.strip().lower(), position)
+                position += 1
+                for child in [r for r in rows if r.parent_id == top.id]:
+                    catalog_order.setdefault(child.name.strip().lower(), position)
+                    position += 1
+
     sections = []
     for bucket in grouped.values():
         sections.append({
@@ -207,7 +234,20 @@ def get_schematic_sections(
             ],
         })
 
-    sections.sort(key=lambda item: (-item["count"], item["section"]))
+    for section in sections:
+        section["subsystems"].sort(
+            key=lambda sub: (
+                catalog_order.get(sub["subsystem"].strip().lower(), 10 ** 6),
+                sub["subsystem"],
+            )
+        )
+    sections.sort(
+        key=lambda item: (
+            catalog_order.get(item["section"].strip().lower(), 10 ** 6),
+            -item["count"],
+            item["section"],
+        )
+    )
     return {"sections": sections, "total": len(schematics)}
 
 
@@ -548,8 +588,10 @@ def _owns_name_conditions(model_name: str, generation: Optional[str], all_names:
 @router.get("/model-options")
 def get_schematic_model_options(session: Session = Depends(get_session)):
     """Опції моделей і поколінь для редактора схем — побудовані з категорій."""
+    # Той самий порядок, що і в каталозі/адмінці (sort_order DESC) — щоб
+    # перетягування категорій в адмінці одразу міняло порядок карток у магазині
     categories = session.exec(
-        select(Category).order_by(Category.sort_order, Category.id)
+        select(Category).order_by(Category.sort_order.desc(), Category.id)
     ).all()
     names = [c.name for c in categories if c.name]
 
