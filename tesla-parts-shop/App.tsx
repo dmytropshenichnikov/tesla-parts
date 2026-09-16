@@ -185,7 +185,10 @@ const preloadImages = async (imageUrls: (string | undefined)[]) => {
 };
 
 const ScrollToTop = () => {
-  const { pathname } = useLocation();
+  // Реагуємо і на зміну шляху, і на зміну параметрів: кроки в схемах
+  // (авто → розділ → підсистема) живуть саме в query, і без цього сторінка
+  // «відкривалась знизу», бо браузер зберігав стару позицію прокрутки.
+  const { pathname, search } = useLocation();
 
   useEffect(() => {
     if ('scrollRestoration' in window.history) {
@@ -194,8 +197,16 @@ const ScrollToTop = () => {
   }, []);
 
   useLayoutEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [pathname]);
+    const toTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    toTop();
+    // Контент нового кроку може дорендеритись (картки, схеми) — підстраховуємось
+    const raf = requestAnimationFrame(toTop);
+    const timer = window.setTimeout(toTop, 150);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
+    };
+  }, [pathname, search]);
 
   return null;
 };
