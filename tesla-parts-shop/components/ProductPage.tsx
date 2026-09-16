@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
-import { Product, Currency } from '../types';
+import { Product, Currency, SchematicUsage } from '../types';
 import {
   ShoppingCart,
   ArrowLeft,
@@ -19,9 +19,11 @@ import {
   Sparkles,
   CheckCircle2,
   Layers,
+  ArrowRight,
 } from 'lucide-react';
 import ViberIcon from './ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
+import { Link } from 'react-router-dom';
 import SeoHead from './SeoHead';
 import { formatCurrency } from '../utils/currency';
 import { api } from '../services/api';
@@ -70,6 +72,27 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [deliveryInfo, setDeliveryInfo] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
+  const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!product?.id) {
+      setProductSchematics([]);
+      return;
+    }
+    api
+      .getSchematicsByProduct(product.id)
+      .then((list) => {
+        if (!cancelled) setProductSchematics(list);
+      })
+      .catch(() => {
+        if (!cancelled) setProductSchematics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.id]);
   const effectiveRate =
     uahPerUsd > 0 ? uahPerUsd : DEFAULT_EXCHANGE_RATE_UAH_PER_USD;
 
@@ -679,6 +702,46 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <h3 className="text-base font-bold text-gray-900 mb-3">Опис деталі</h3>
               <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
                 {product.description}
+              </div>
+            </div>
+          )}
+
+          {/* Схеми, де стоїть ця деталь — шлях «від деталі до вузла» */}
+          {productSchematics.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 mb-1 flex items-center gap-2">
+                <Layers size={18} className="text-tesla-red" />
+                Є на схемах
+              </h3>
+              <p className="text-xs text-gray-500 font-manrope mb-3">
+                Подивіться, у якому вузлі стоїть ця деталь — зі схемою та іншими
+                суміжними позиціями.
+              </p>
+              <div className="space-y-2">
+                {productSchematics.map((usage, index) => (
+                  <Link
+                    key={`${usage.schematic_id}-${usage.number}-${index}`}
+                    to={`/schemes/${usage.schematic_id}`}
+                    className="group flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:border-tesla-red hover:shadow-sm transition-all"
+                  >
+                    <span className="w-7 h-7 rounded-full bg-red-50 text-tesla-red font-montserrat font-bold text-xs flex items-center justify-center shrink-0">
+                      {usage.number}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-montserrat font-bold text-sm text-gray-900 group-hover:text-tesla-red transition-colors">
+                        {usage.title}
+                      </span>
+                      <span className="block text-[11px] text-gray-400 font-manrope mt-0.5">
+                        {usage.model} {usage.generation} • {usage.section}
+                        {usage.subsystem ? ` • ${usage.subsystem}` : ''}
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="text-gray-300 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all shrink-0 mt-1"
+                    />
+                  </Link>
+                ))}
               </div>
             </div>
           )}

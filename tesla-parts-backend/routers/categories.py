@@ -176,6 +176,44 @@ def get_categories(session: Session = Depends(get_session)):
     ).all()
     return categories
 
+@router.get("/tree")
+def get_categories_tree(session: Session = Depends(get_session)):
+    """Уся структура каталогу одним легким запитом.
+
+    Категорії (моделі) + усі їхні підкатегорії з `parent_id`. Потрібно, щоб
+    адмінка могла мапити товар → модель і → розділ схеми без десяти запитів
+    і без здогадок по вільному тексту.
+    """
+    categories = session.exec(
+        select(Category).order_by(Category.sort_order.desc(), Category.id)
+    ).all()
+    subcategories = session.exec(
+        select(Subcategory).order_by(Subcategory.sort_order.desc(), Subcategory.id)
+    ).all()
+
+    by_category: dict = {}
+    for sub in subcategories:
+        by_category.setdefault(sub.category_id, []).append({
+            "id": sub.id,
+            "name": sub.name,
+            "parent_id": sub.parent_id,
+            "category_id": sub.category_id,
+            "sort_order": sub.sort_order,
+        })
+
+    return {
+        "categories": [
+            {
+                "id": category.id,
+                "name": category.name,
+                "sort_order": category.sort_order,
+                "subcategories": by_category.get(category.id, []),
+            }
+            for category in categories
+        ]
+    }
+
+
 @router.get("/{category_id}", response_model=CategoryDetailSchema)
 def get_category_details(category_id: int, session: Session = Depends(get_session)):
     category = session.get(Category, category_id)

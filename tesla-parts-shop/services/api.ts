@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, VinDecodeResult, PlateLookupResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, VinDecodeResult, PlateLookupResult } from '../types';
 
 /**
  * Абсолютна адреса бекенду (api.teslapartscenter.com.ua).
@@ -377,6 +377,23 @@ export const api = {
       return data.sections || [];
     } catch (e) {
       console.warn('Failed to load schematic sections', e);
+      return [];
+    }
+  },
+
+  /**
+   * Схеми, у яких стоїть ця деталь — зворотний звʼязок «товар → схема».
+   * Екосистема працює в обидва боки: зі схеми можна прийти в товар, з товару — на схему.
+   */
+  getSchematicsByProduct: async (productId: string): Promise<SchematicUsage[]> => {
+    if (!productId) return [];
+    try {
+      const res = await apiFetch(`/schematics/by-product/${encodeURIComponent(productId)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.schematics || [];
+    } catch (e) {
+      console.warn('Failed to load schematics for product', e);
       return [];
     }
   },

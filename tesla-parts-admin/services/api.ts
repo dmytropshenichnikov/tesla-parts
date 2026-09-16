@@ -470,6 +470,21 @@ export const ApiService = {
     return res.json();
   },
 
+  /**
+   * Уся структура каталогу одним запитом: категорії (моделі) + їхні
+   * підкатегорії. Потрібно, щоб мапити товар → модель і → розділ схеми.
+   */
+  getCategoriesTree: async (): Promise<
+    { id: number; name: string; sort_order: number; subcategories: Subcategory[] }[]
+  > => {
+    const res = await _authenticatedFetch(`${API_URL}/categories/tree`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch categories tree');
+    const data = await res.json();
+    return data.categories || [];
+  },
+
   getCategories: async (): Promise<Category[]> => {
     // 1. Fetch basic list to get IDs
     const res = await _authenticatedFetch(`${API_URL}/categories/`, {

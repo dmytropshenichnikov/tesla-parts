@@ -163,6 +163,20 @@ export interface SchematicSectionGroup {
   subsystems: SchematicSubsystem[];
 }
 
+/**
+ * Використання деталі на схемі — для блоку «Є на схемах» на сторінці товару.
+ */
+export interface SchematicUsage {
+  schematic_id: number;
+  title: string;
+  model: string;
+  generation: string;
+  section: string;
+  subsystem: string;
+  number: number;
+  part_number?: string | null;
+}
+
 export interface SchematicSummary {
   id: number;
   title: string;

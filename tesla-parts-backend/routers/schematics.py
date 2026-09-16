@@ -205,6 +205,66 @@ def get_schematic_sections(
     return {"sections": sections, "total": len(schematics)}
 
 
+@router.get("/by-product/{product_id}")
+def get_schematics_by_product(
+    product_id: str,
+    session: Session = Depends(get_session)
+):
+    """Схеми, у яких використовується ця деталь.
+
+    Зворотний бік екосистеми: на сторінці товару показуємо, у яких вузлах
+    він стоїть, щоб клієнт міг піти від деталі до схеми.
+    """
+    # Префільтр по БД, далі точна перевірка JSON — так не тягнемо всі схеми
+    hotspots = session.exec(
+        select(SchematicHotspot).where(
+            (SchematicHotspot.product_id == product_id)
+            | (func.coalesce(SchematicHotspot.variants_json, "").like(f"%{product_id}%"))
+        )
+    ).all()
+
+    def matches(hotspot: SchematicHotspot) -> bool:
+        if hotspot.product_id == product_id:
+            return True
+        if not hotspot.variants_json:
+            return False
+        try:
+            for raw in json.loads(hotspot.variants_json):
+                if isinstance(raw, dict) and raw.get("product_id") == product_id:
+                    return True
+        except Exception:
+            return False
+        return False
+
+    hits = [h for h in hotspots if matches(h)]
+    if not hits:
+        return {"schematics": []}
+
+    schematic_ids = {h.schematic_id for h in hits}
+    schematics = session.exec(
+        select(Schematic).where(Schematic.id.in_(schematic_ids))
+    ).all()
+    by_id = {s.id: s for s in schematics}
+
+    results = []
+    for hotspot in sorted(hits, key=lambda h: (h.schematic_id, h.number, h.sort_order)):
+        schematic = by_id.get(hotspot.schematic_id)
+        if not schematic:
+            continue
+        results.append({
+            "schematic_id": schematic.id,
+            "title": schematic.title,
+            "model": schematic.model,
+            "generation": schematic.generation,
+            "section": schematic.section,
+            "subsystem": schematic.subsystem,
+            "number": hotspot.number,
+            "part_number": hotspot.part_number,
+        })
+
+    return {"schematics": results}
+
+
 @router.get("/section-options")
 def get_section_options(
     category_id: Optional[int] = None,

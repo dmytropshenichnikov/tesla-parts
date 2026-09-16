@@ -24,7 +24,7 @@ import {
   Copy
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption, SchematicSectionOption } from '../types';
+import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption, SchematicSectionOption, CatalogTreeCategory } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -135,6 +135,10 @@ export const SchematicManager: React.FC = () => {
   // Зсув курсора відносно центру піна на момент натискання
   const pinDragOffset = useRef<{ dx: number; dy: number } | null>(null);
 
+  // Структура каталогу: id підкатегорії → id категорії (моделі) і назад.
+  // Саме вона робить фільтр товарів точним, а не по вільному тексту `category`.
+  const [catalogTree, setCatalogTree] = useState<CatalogTreeCategory[]>([]);
+
   // Розділи/підсистеми з каталогу для обраної моделі
   const [sectionOptions, setSectionOptions] = useState<SchematicSectionOption[]>([]);
   const [sectionMode, setSectionMode] = useState<'catalog' | 'custom'>('catalog');
@@ -165,6 +169,7 @@ export const SchematicManager: React.FC = () => {
 
   useEffect(() => {
     loadModelOptions();
+    api.getCategoriesTree().then(setCatalogTree).catch(() => setCatalogTree([]));
   }, []);
 
   // Після повторного входу (сесія протухла) підтягуємо дані заново —
@@ -246,6 +251,19 @@ export const SchematicManager: React.FC = () => {
   };
 
   /**
+   * Точна перевірка за КАТАЛОГОМ: товар лежить у підкатегорії, підкатегорія —
+   * у категорії-моделі. Це надійніше за вільний текст `product.category`,
+   * який міг розходитись із реальним деревом каталогу.
+   */
+  const productMatchesModelExact = (product: Product, models: string[]) => {
+    const wanted = models.map((m) => (m || '').trim().toLowerCase()).filter(Boolean);
+    if (wanted.length === 0) return true;
+    const placement = resolveProductPlacement(product);
+    if (!placement) return false;
+    return wanted.includes(placement.categoryName.toLowerCase());
+  };
+
+  /**
    * Прибирає всі розділювачі з артикулів: «1771474-00-K» → «177147400k».
    * У каталозі номери часто без дефісів, тому пошук має бути нечутливим до них.
    */
@@ -264,8 +282,14 @@ export const SchematicManager: React.FC = () => {
     const code = normalizeCode(productSearchQuery);
 
     return catalogProducts.filter((product) => {
-      if (filterBySchematicModel && !productMatchesModel(product, modelScope)) {
-        return false;
+      if (filterBySchematicModel) {
+        // Каталог — джерело істини. Вільний текст лишаємо запасним варіантом
+        // лише для товарів, які ще не розкладені по підкатегоріях.
+        const placement = resolveProductPlacement(product);
+        const matches = placement
+          ? productMatchesModelExact(product, modelScope)
+          : productMatchesModel(product, modelScope);
+        if (!matches) return false;
       }
       if (!raw) return true;
 
@@ -584,6 +608,48 @@ export const SchematicManager: React.FC = () => {
   const focusCanvas = () => {
     (document.activeElement as HTMLElement | null)?.blur();
     imageContainerRef.current?.focus({ preventScroll: true });
+  };
+
+  /** id підкатегорії → місце в каталозі (модель, розділ, підсистема) */
+  const subcategoryIndex = useMemo(() => {
+    const byId = new Map<
+      number,
+      { categoryId: number; categoryName: string; name: string; parentId: number | null }
+    >();
+    for (const category of catalogTree) {
+      for (const sub of category.subcategories || []) {
+        byId.set(sub.id, {
+          categoryId: category.id,
+          categoryName: category.name,
+          name: sub.name,
+          parentId: sub.parent_id ?? null,
+        });
+      }
+    }
+    return byId;
+  }, [catalogTree]);
+
+  /**
+   * Де товар лежить у каталозі: модель, розділ і підсистема.
+   * Це і є «тягнеться з каталогу» — і для фільтра, і для розділу схеми.
+   */
+  const resolveProductPlacement = (product: Product) => {
+    const ids = [
+      ...(product.subcategory_ids || []),
+      ...(product.subcategory_id ? [product.subcategory_id] : []),
+    ];
+    for (const id of ids) {
+      const entry = subcategoryIndex.get(id);
+      if (!entry) continue;
+      const parent = entry.parentId ? subcategoryIndex.get(entry.parentId) : null;
+      return {
+        categoryName: entry.categoryName,
+        section: parent ? parent.name : entry.name,
+        subsystem: parent ? entry.name : '',
+        subcategoryName: entry.name,
+      };
+    }
+    return null;
   };
 
   // Підсистеми обраного розділу (з каталогу)
@@ -1901,7 +1967,30 @@ export const SchematicManager: React.FC = () => {
                               }
 
                               setIsVariantModalOpen(false);
-                              setSuccessMsg(`Товар "${p.name}" успішно прив'язано!`);
+
+                              // Екосистема: розділ і підсистему схеми беремо з
+                              // каталогу за товаром — не треба вписувати вручну
+                              const placement = resolveProductPlacement(p);
+                              if (placement && !editingSchematic.section) {
+                                setEditingSchematic((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        section: placement.section,
+                                        subsystem: placement.subsystem || prev.subsystem,
+                                      }
+                                    : prev
+                                );
+                                setSectionMode('catalog');
+                                setSubsystemMode('catalog');
+                                setSuccessMsg(
+                                  `Товар "${p.name}" прив'язано. Розділ «${placement.section}»` +
+                                    (placement.subsystem ? ` / ${placement.subsystem}` : '') +
+                                    ' підставлено з каталогу.'
+                                );
+                              } else {
+                                setSuccessMsg(`Товар "${p.name}" успішно прив'язано!`);
+                              }
                             }}
                             className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-montserrat font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
                           >

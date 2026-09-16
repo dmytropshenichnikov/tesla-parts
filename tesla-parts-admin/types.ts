@@ -146,6 +146,14 @@ export interface SchematicSectionOption {
   subsystems: string[];
 }
 
+/** Категорія каталогу з її підкатегоріями — легке дерево одним запитом. */
+export interface CatalogTreeCategory {
+  id: number;
+  name: string;
+  sort_order: number;
+  subcategories: Subcategory[];
+}
+
 export interface Schematic {
   id: number;
   title: string;
