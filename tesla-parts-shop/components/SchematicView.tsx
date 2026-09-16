@@ -217,6 +217,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     activeCar.model.toLowerCase() === schematic.model.toLowerCase()
   );
 
+  // Крихти не мають повторювати одне й те саме: у схемах назва вузла часто
+  // збігається з назвою підсистеми чи розділу — тоді останній пункт зайвий.
+  const crumbKey = (value?: string | null) =>
+    (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const titleKey = crumbKey(schematic.title);
+  const sectionKey = crumbKey(schematic.section);
+  const subsystemKey = crumbKey(schematic.subsystem);
+  const showSectionCrumb = Boolean(schematic.section) && sectionKey !== titleKey;
+  const showSubsystemCrumb =
+    Boolean(schematic.subsystem) && subsystemKey !== titleKey && subsystemKey !== sectionKey;
+  const showTitleCrumb = titleKey !== sectionKey && titleKey !== subsystemKey;
+
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 max-w-7xl">
       {/* Toast Notification */}
@@ -237,22 +249,40 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           Схеми запчастин Tesla
         </Link>
         <ChevronRight size={12} className="text-gray-400 shrink-0" />
-        <span className="text-gray-700">{schematic.model} {schematic.generation}</span>
-        <ChevronRight size={12} className="text-gray-400 shrink-0" />
         <Link
-          to={`/schemes?model=${encodeURIComponent(schematic.model)}`}
+          to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}`}
           className="hover:text-tesla-red transition-colors"
         >
-          {schematic.section}
+          {schematic.model} {schematic.generation}
         </Link>
-        {schematic.subsystem && (
+        {showSectionCrumb && (
           <>
             <ChevronRight size={12} className="text-gray-400 shrink-0" />
-            <span className="text-gray-700">{schematic.subsystem}</span>
+            <Link
+              to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}&section=${encodeURIComponent(schematic.section)}`}
+              className="hover:text-tesla-red transition-colors"
+            >
+              {schematic.section}
+            </Link>
           </>
         )}
-        <ChevronRight size={12} className="text-gray-400 shrink-0" />
-        <span className="text-gray-900 font-semibold">{schematic.title}</span>
+        {showSubsystemCrumb && (
+          <>
+            <ChevronRight size={12} className="text-gray-400 shrink-0" />
+            <Link
+              to={`/schemes?model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}&section=${encodeURIComponent(schematic.section)}&subsystem=${encodeURIComponent(schematic.subsystem)}`}
+              className="hover:text-tesla-red transition-colors"
+            >
+              {schematic.subsystem}
+            </Link>
+          </>
+        )}
+        {showTitleCrumb && (
+          <>
+            <ChevronRight size={12} className="text-gray-400 shrink-0" />
+            <span className="text-gray-900 font-semibold">{schematic.title}</span>
+          </>
+        )}
       </nav>
 
       {/* Header Info */}
