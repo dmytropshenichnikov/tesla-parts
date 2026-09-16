@@ -198,34 +198,64 @@ export const SchematicManager: React.FC = () => {
     }
   };
 
-  /** Товар підходить під обрану модель? `category` — список через кому. */
-  const productMatchesModel = (product: Product, model: string) => {
-    if (!model) return true;
-    const needle = model.trim().toLowerCase();
+  /**
+   * Товар підходить під схему? `category` у товару — список моделей через кому.
+   * Приймаємо кілька варіантів: і точну категорію схеми («Model 3 Highland»),
+   * і базову модель («Model 3») — товар для всієї лінійки теж підходить.
+   */
+  const productMatchesModel = (product: Product, models: string[]) => {
+    const wanted = models.map((m) => (m || '').trim().toLowerCase()).filter(Boolean);
+    if (wanted.length === 0) return true;
     const tokens = (product.category || '')
       .split(',')
       .map((token) => token.trim().toLowerCase())
       .filter(Boolean);
-    if (tokens.length > 0) return tokens.includes(needle);
+    if (tokens.length > 0) return tokens.some((token) => wanted.includes(token));
     // Якщо модель у товару не заповнена — шукаємо в назві
-    return (product.name || '').toLowerCase().includes(needle);
+    const name = (product.name || '').toLowerCase();
+    return wanted.some((model) => name.includes(model));
   };
+
+  /**
+   * Прибирає всі розділювачі з артикулів: «1771474-00-K» → «177147400k».
+   * У каталозі номери часто без дефісів, тому пошук має бути нечутливим до них.
+   */
+  const normalizeCode = (value?: string) =>
+    (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
   // Фільтр каталогу рахуємо один раз на зміну, а не двічі щорендера
   const filteredCatalogProducts = useMemo(() => {
     if (!editingSchematic) return [];
-    const query = productSearchQuery.trim().toLowerCase();
+
+    // Фільтруємо за категорією схеми («Model 3 Highland») І за базовою моделлю
+    // («Model 3») — інакше зникали товари, позначені лише як «Model 3 Highland»
+    const modelScope = [formCategory, editingSchematic.model].filter(Boolean);
+
+    const raw = productSearchQuery.trim().toLowerCase();
+    const code = normalizeCode(productSearchQuery);
+
     return catalogProducts.filter((product) => {
-      if (filterBySchematicModel && !productMatchesModel(product, editingSchematic.model)) {
+      if (filterBySchematicModel && !productMatchesModel(product, modelScope)) {
         return false;
       }
-      if (!query) return true;
+      if (!raw) return true;
+
       const name = (product.name || '').toLowerCase();
-      const number = (product.detail_number || product.cross_number || product.id || '').toLowerCase();
-      return name.includes(query) || number.includes(query);
+      if (name.includes(raw)) return true;
+
+      // Номери порівнюємо без дефісів, пробілів і регістру
+      if (!code) return false;
+      const codes = [product.detail_number, product.cross_number, product.id].map(normalizeCode);
+      return codes.some((value) => value.includes(code)) || normalizeCode(product.name).includes(code);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogProducts, productSearchQuery, filterBySchematicModel, editingSchematic?.model]);
+  }, [
+    catalogProducts,
+    productSearchQuery,
+    filterBySchematicModel,
+    editingSchematic?.model,
+    formCategory,
+  ]);
 
   /** Копіює точку в буфер разом із номером, парт-номером і варіантами. */
   const handleCopyHotspot = (index: number) => {
@@ -554,6 +584,17 @@ export const SchematicManager: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [editingSchematic, selectedHotspotIdx, pointClipboard]);
+
+  /**
+   * Відкриває вибір товару з каталогу й одразу підставляє в пошук парт-номер
+   * точки — щоб не шукати вручну й не спотикатись об дефіси.
+   */
+  const openProductPicker = (hotspotIdx: number, varIdx?: number) => {
+    setVariantModalTarget(varIdx === undefined ? 'new' : { hotspotIdx, varIdx });
+    setVariantModalStep('search');
+    setProductSearchQuery(editingSchematic?.hotspots[hotspotIdx]?.part_number || '');
+    setIsVariantModalOpen(true);
+  };
 
   /** Копіює парт-номер у системний буфер обміну. */
   const copyPartNumber = async (value?: string) => {
@@ -1250,7 +1291,7 @@ export const SchematicManager: React.FC = () => {
                     onClick={() => {
                       setVariantModalTarget('new');
                       setVariantModalStep('choice');
-                      setProductSearchQuery('');
+                      setProductSearchQuery(selectedHotspot?.part_number || '');
                       setFilterBySchematicModel(true);
                       setIsVariantModalOpen(true);
                     }}
@@ -1295,19 +1336,18 @@ export const SchematicManager: React.FC = () => {
                                   {linkedProd ? linkedProd.name : v.name}
                                 </span>
                                 <span className="text-[10px] text-emerald-700 font-mono">
-                                  {linkedProd?.detail_number ? `Арт: ${linkedProd.detail_number} • ` : ''}ID: {v.product_id}
+                                  {linkedProd?.detail_number ? `Арт: ${linkedProd.detail_number} • ` : ''}
+                                  {linkedProd ? `${linkedProd.priceUAH} ₴ • ` : ''}
+                                  {linkedProd && !linkedProd.inStock
+                                    ? 'немає в наявності'
+                                    : 'в наявності'}
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setVariantModalTarget({ hotspotIdx: selectedHotspotIdx, varIdx });
-                                  setVariantModalStep('search');
-                                  setProductSearchQuery('');
-                                  setIsVariantModalOpen(true);
-                                }}
+                                onClick={() => openProductPicker(selectedHotspotIdx!, varIdx)}
                                 className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded text-[10px] font-montserrat font-bold transition-colors cursor-pointer"
                               >
                                 Змінити
@@ -1323,19 +1363,20 @@ export const SchematicManager: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setVariantModalTarget({ hotspotIdx: selectedHotspotIdx, varIdx });
-                              setVariantModalStep('search');
-                              setProductSearchQuery('');
-                              setIsVariantModalOpen(true);
-                            }}
-                            className="w-full py-1.5 px-2 bg-white hover:bg-red-50 text-gray-700 hover:text-red-700 border border-dashed border-gray-300 hover:border-red-300 rounded-lg text-[11px] font-montserrat font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                          >
-                            <LinkIcon size={12} />
-                            <span>Прив'язати товар з каталогу</span>
-                          </button>
+                          <div className="space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openProductPicker(selectedHotspotIdx, varIdx)}
+                              className="w-full py-1.5 px-2 bg-white hover:bg-red-50 text-gray-700 hover:text-red-700 border border-dashed border-gray-300 hover:border-red-300 rounded-lg text-[11px] font-montserrat font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <LinkIcon size={12} />
+                              <span>Прив'язати товар з каталогу</span>
+                            </button>
+                            <p className="text-[10px] text-gray-400 font-manrope leading-tight">
+                              Товару немає в каталозі — на сайті покажемо{' '}
+                              <strong className="text-gray-500">«Немає в наявності»</strong> без ціни.
+                            </p>
+                          </div>
                         )}
 
                         <div className="grid grid-cols-3 gap-2">
@@ -1362,12 +1403,22 @@ export const SchematicManager: React.FC = () => {
                             </select>
                           </div>
                           <div>
-                            <span className="text-gray-400 block mb-0.5 font-medium">Ціна (₴)</span>
+                            <span className="text-gray-400 block mb-0.5 font-medium">
+                              Ціна (₴){v.product_id ? '' : ' — довідково'}
+                            </span>
                             <input
                               type="number"
                               value={v.priceUAH}
+                              disabled={Boolean(v.product_id)}
+                              title={
+                                v.product_id
+                                  ? 'Ціна береться з каталогу — тут не редагується'
+                                  : 'На сайті не показується, доки товар не привʼязано до каталогу'
+                              }
                               onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'priceUAH', parseFloat(e.target.value) || 0)}
-                              className="w-full bg-white p-1 border border-gray-200 rounded font-bold text-xs"
+                              className={`w-full p-1 border border-gray-200 rounded font-bold text-xs ${
+                                v.product_id ? 'bg-gray-100 text-gray-500' : 'bg-white'
+                              }`}
                             />
                           </div>
                         </div>
@@ -1530,7 +1581,13 @@ export const SchematicManager: React.FC = () => {
                         onChange={(e) => setFilterBySchematicModel(e.target.checked)}
                         className="rounded text-red-600 focus:ring-red-500"
                       />
-                      <span>Фільтрувати тільки для <strong>{editingSchematic.model}</strong></span>
+                      <span>
+                        Фільтрувати для{' '}
+                        <strong>{formCategory || editingSchematic.model}</strong>
+                        {formCategory && formCategory !== editingSchematic.model && (
+                          <span className="text-gray-400"> (і {editingSchematic.model})</span>
+                        )}
+                      </span>
                     </label>
                     <span className="text-gray-400">
                       {catalogLoading ? 'Завантаження...' : `Знайдено: ${filteredCatalogProducts.length}`}

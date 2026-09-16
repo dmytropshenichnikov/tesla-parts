@@ -111,6 +111,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     }));
   };
 
+  /**
+   * Позиція продається лише тоді, коли вона привʼязана до товару каталогу і той
+   * є в наявності. Якщо деталь на схемі є, а товару в каталозі немає — показуємо
+   * «Немає в наявності», без ціни й без кнопки «В кошик».
+   */
+  const isVariantAvailable = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
+    const linkedProductId = variant?.product_id || hotspot.product_id;
+    if (!linkedProductId) return false;
+    if (!variant) return true;
+    return variant.inStock !== false;
+  };
+
   const handleAddToCart = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
     const rate = uahPerUsd > 0 ? uahPerUsd : 40;
     const priceUAH = variant ? variant.priceUAH : (hotspot.variants?.[0]?.priceUAH || 1000);
@@ -179,12 +191,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Count stock details
   const totalVariantsCount = schematic.hotspots.reduce(
-    (acc, h) => acc + (h.variants ? h.variants.length : 1),
+    (acc, h) => acc + (h.variants && h.variants.length > 0 ? h.variants.length : 1),
     0
   );
   const inStockCount = schematic.hotspots.reduce((acc, h) => {
-    const stockVariants = h.variants?.filter(v => v.inStock).length || 0;
-    return acc + (stockVariants > 0 ? stockVariants : 1);
+    const variants = h.variants && h.variants.length > 0 ? h.variants : [undefined];
+    return acc + variants.filter((v) => isVariantAvailable(h, v)).length;
   }, 0);
 
   const isCompatibleWithGarageCar = activeCar && (
@@ -318,10 +330,13 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
               const variants = h.variants || [];
               const hasMultipleVariants = variants.length > 1;
 
-              // Find lowest price
-              const minPrice = variants.length > 0
-                ? Math.min(...variants.map(v => v.priceUAH))
-                : 1000;
+              // Ціну показуємо лише для позицій, які реально є в каталозі
+              const availableVariants = variants.filter((v) => isVariantAvailable(h, v));
+              const hotspotAvailable = isVariantAvailable(h, variants[0]);
+              const hasAvailable = availableVariants.length > 0;
+              const minPrice = hasAvailable
+                ? Math.min(...availableVariants.map((v) => v.priceUAH))
+                : null;
 
               return (
                 <div
@@ -367,7 +382,11 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
                         {/* Variants summary badge */}
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span
+                            className={`inline-block w-2 h-2 rounded-full ${
+                              hasAvailable ? 'bg-emerald-500' : 'bg-gray-300'
+                            }`}
+                          ></span>
                           <span className="text-xs text-gray-500 font-manrope">
                             {variants.length > 0 ? `${variants.length} варіанти` : '1 варіант'}
                           </span>
@@ -377,12 +396,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
                     {/* Price & Action Button */}
                     <div className="text-right shrink-0 flex flex-col items-end">
-                      <div className="text-xs text-gray-400 font-manrope">
-                        {hasMultipleVariants ? 'від ' : ''}
-                        <strong className="text-base font-black font-montserrat text-gray-900">
-                          {convertPrice(minPrice)}
-                        </strong>
-                      </div>
+                      {hasAvailable && minPrice !== null ? (
+                        <div className="text-xs text-gray-400 font-manrope">
+                          {hasMultipleVariants ? 'від ' : ''}
+                          <strong className="text-base font-black font-montserrat text-gray-900">
+                            {convertPrice(minPrice)}
+                          </strong>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 text-[11px] font-manrope font-semibold whitespace-nowrap">
+                          Немає в наявності
+                        </span>
+                      )}
 
                       {hasMultipleVariants ? (
                         <button
@@ -400,7 +425,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                           <span>Обрати</span>
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
-                      ) : (
+                      ) : hotspotAvailable ? (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -412,7 +437,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                           <ShoppingCart size={13} />
                           В кошик
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
@@ -440,10 +465,17 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                               {v.condition === 'used' ? 'Б/В' : 'Новий'}
                             </span>
 
-                            <span className="text-[11px] font-manrope text-emerald-600 font-semibold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              {v.inStock ? 'В наявності' : 'Під замовлення'}
-                            </span>
+                            {isVariantAvailable(h, v) ? (
+                              <span className="text-[11px] font-manrope text-emerald-600 font-semibold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                В наявності
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-manrope text-gray-500 font-semibold flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                Немає в наявності
+                              </span>
+                            )}
 
                             {v.name && (
                               <span className="text-xs text-gray-600 font-manrope ml-1">
@@ -454,20 +486,28 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
                           {/* Price & Add to Cart button */}
                           <div className="flex items-center justify-between sm:justify-end gap-3 self-end sm:self-center">
-                            <span className="font-montserrat font-black text-sm text-gray-900">
-                              {convertPrice(v.priceUAH)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToCart(h, v);
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tesla-red hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-                            >
-                              <ShoppingCart size={13} />
-                              В кошик
-                            </button>
+                            {isVariantAvailable(h, v) ? (
+                              <>
+                                <span className="font-montserrat font-black text-sm text-gray-900">
+                                  {convertPrice(v.priceUAH)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddToCart(h, v);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tesla-red hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                                >
+                                  <ShoppingCart size={13} />
+                                  В кошик
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[11px] font-manrope text-gray-400 font-semibold">
+                                Немає в наявності
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
