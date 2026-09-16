@@ -139,6 +139,49 @@ export const SchematicManager: React.FC = () => {
   // Саме вона робить фільтр товарів точним, а не по вільному тексту `category`.
   const [catalogTree, setCatalogTree] = useState<CatalogTreeCategory[]>([]);
 
+  /** id підкатегорії → місце в каталозі (модель, розділ, підсистема) */
+  const subcategoryIndex = useMemo(() => {
+    const byId = new Map<
+      number,
+      { categoryId: number; categoryName: string; name: string; parentId: number | null }
+    >();
+    for (const category of catalogTree) {
+      for (const sub of category.subcategories || []) {
+        byId.set(sub.id, {
+          categoryId: category.id,
+          categoryName: category.name,
+          name: sub.name,
+          parentId: sub.parent_id ?? null,
+        });
+      }
+    }
+    return byId;
+  }, [catalogTree]);
+
+  /**
+   * Де товар лежить у каталозі: модель, розділ і підсистема.
+   * Це і є «тягнеться з каталогу» — і для фільтра, і для розділу схеми.
+   */
+  const resolveProductPlacement = (product: Product) => {
+    const ids = [
+      ...(product.subcategory_ids || []),
+      ...(product.subcategory_id ? [product.subcategory_id] : []),
+    ];
+    for (const id of ids) {
+      const entry = subcategoryIndex.get(id);
+      if (!entry) continue;
+      const parent = entry.parentId ? subcategoryIndex.get(entry.parentId) : null;
+      return {
+        categoryName: entry.categoryName,
+        section: parent ? parent.name : entry.name,
+        subsystem: parent ? entry.name : '',
+        subcategoryName: entry.name,
+      };
+    }
+    return null;
+  };
+
+
   // Розділи/підсистеми з каталогу для обраної моделі
   const [sectionOptions, setSectionOptions] = useState<SchematicSectionOption[]>([]);
   const [sectionMode, setSectionMode] = useState<'catalog' | 'custom'>('catalog');
@@ -608,48 +651,6 @@ export const SchematicManager: React.FC = () => {
   const focusCanvas = () => {
     (document.activeElement as HTMLElement | null)?.blur();
     imageContainerRef.current?.focus({ preventScroll: true });
-  };
-
-  /** id підкатегорії → місце в каталозі (модель, розділ, підсистема) */
-  const subcategoryIndex = useMemo(() => {
-    const byId = new Map<
-      number,
-      { categoryId: number; categoryName: string; name: string; parentId: number | null }
-    >();
-    for (const category of catalogTree) {
-      for (const sub of category.subcategories || []) {
-        byId.set(sub.id, {
-          categoryId: category.id,
-          categoryName: category.name,
-          name: sub.name,
-          parentId: sub.parent_id ?? null,
-        });
-      }
-    }
-    return byId;
-  }, [catalogTree]);
-
-  /**
-   * Де товар лежить у каталозі: модель, розділ і підсистема.
-   * Це і є «тягнеться з каталогу» — і для фільтра, і для розділу схеми.
-   */
-  const resolveProductPlacement = (product: Product) => {
-    const ids = [
-      ...(product.subcategory_ids || []),
-      ...(product.subcategory_id ? [product.subcategory_id] : []),
-    ];
-    for (const id of ids) {
-      const entry = subcategoryIndex.get(id);
-      if (!entry) continue;
-      const parent = entry.parentId ? subcategoryIndex.get(entry.parentId) : null;
-      return {
-        categoryName: entry.categoryName,
-        section: parent ? parent.name : entry.name,
-        subsystem: parent ? entry.name : '',
-        subcategoryName: entry.name,
-      };
-    }
-    return null;
   };
 
   // Підсистеми обраного розділу (з каталогу)
