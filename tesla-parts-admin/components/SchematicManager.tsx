@@ -160,6 +160,17 @@ export const SchematicManager: React.FC = () => {
     loadModelOptions();
   }, []);
 
+  // Після повторного входу (сесія протухла) підтягуємо дані заново —
+  // щоб не лишались банери помилок від невдалих запитів
+  useEffect(() => {
+    const handleTokensRefreshed = () => {
+      loadModelOptions();
+      loadSchematics();
+    };
+    window.addEventListener('admin-tokens-refreshed', handleTokensRefreshed);
+    return () => window.removeEventListener('admin-tokens-refreshed', handleTokensRefreshed);
+  }, []);
+
   useEffect(() => {
     loadSchematics();
   }, [filterModel, searchQuery]);
