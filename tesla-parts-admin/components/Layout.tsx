@@ -228,6 +228,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="whitespace-nowrap overflow-hidden">Вийти</span>
             )}
           </button>
+          {!collapsed && (
+            <p
+              className="mt-3 text-[10px] leading-tight text-gray-600 font-manrope select-text"
+              title="Час збірки цієї версії адмінки. Якщо він старий — натисніть ⌘⇧R (жорстке оновлення сторінки)."
+            >
+              Версія від {typeof __BUILD_STAMP__ !== 'undefined' ? __BUILD_STAMP__ : '—'}
+            </p>
+          )}
         </div>
       </aside>
 

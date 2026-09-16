@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      // Мітка збірки: показується в сайдбарі, щоб було видно актуальність бандла
+      __BUILD_STAMP__: JSON.stringify(
+        new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', hour12: false })
+      ),
     },
     resolve: {
       alias: {
