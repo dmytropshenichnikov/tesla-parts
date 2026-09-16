@@ -1066,18 +1066,6 @@ export const SchematicManager: React.FC = () => {
             ref={imageContainerRef}
             tabIndex={0}
             onClick={handleCanvasClick}
-            onKeyDown={(e) => {
-              // ⌘C/⌘V працюють і коли фокус на полотні схеми
-              if (!(e.metaKey || e.ctrlKey)) return;
-              const key = e.key.toLowerCase();
-              if (key === 'c' && selectedHotspotIdx !== null) {
-                e.preventDefault();
-                handleCopyHotspot(selectedHotspotIdx);
-              } else if (key === 'v' && pointClipboard) {
-                e.preventDefault();
-                handlePasteHotspot();
-              }
-            }}
             className={`relative w-full border border-gray-200 rounded-xl overflow-hidden bg-gray-50 select-none min-h-[380px] flex items-center justify-center outline-none focus:ring-2 focus:ring-red-300 ${
               isRepositioningMode ? 'cursor-crosshair ring-2 ring-amber-400' : 'cursor-crosshair'
             }`}
