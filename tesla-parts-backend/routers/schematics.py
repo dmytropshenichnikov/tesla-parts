@@ -290,6 +290,7 @@ def get_schematics_for_subcategory(
 @router.get("/subsystem-info")
 def get_subsystem_info(
     model: Optional[str] = None,
+    section: Optional[str] = None,
     subsystem: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
@@ -317,7 +318,21 @@ def get_subsystem_info(
                 if model.strip().lower().startswith(category.name.strip().lower()):
                     category_ids.append(category.id)
 
+    by_id = {item.id: item for item in subcategories}
+    section_name = (section or "").strip().lower()
+
     def find_in(scope):
+        # Якщо відомий розділ — шукаємо саме в ньому: схема живе за точним
+        # шляхом каталогу (категорія → розділ → підсистема)
+        if section_name:
+            for item in subcategories:
+                if scope is not None and item.category_id not in scope:
+                    continue
+                if item.name.strip().lower() != wanted:
+                    continue
+                parent = by_id.get(item.parent_id) if item.parent_id else None
+                if parent and parent.name.strip().lower() == section_name:
+                    return item
         for item in subcategories:
             if scope is not None and item.category_id not in scope:
                 continue

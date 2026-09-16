@@ -495,6 +495,33 @@ export const ApiService = {
   },
 
   /**
+   * Підкатегорія каталогу, якій відповідає шлях схеми
+   * (модель → розділ → підсистема). Нею звужуємо вибір товарів.
+   */
+  getSubcategoryForSubsystem: async (params: {
+    model?: string;
+    section?: string;
+    subsystem?: string;
+  }): Promise<{ subcategory_id: number | null; subcategory_name?: string }> => {
+    if (!params.subsystem) return { subcategory_id: null };
+    const searchParams = new URLSearchParams();
+    if (params.model) searchParams.append('model', params.model);
+    if (params.section) searchParams.append('section', params.section);
+    searchParams.append('subsystem', params.subsystem);
+    try {
+      const res = await _authenticatedFetch(
+        `${API_URL}/schematics/subsystem-info?${searchParams.toString()}`,
+        { headers: getHeaders() }
+      );
+      if (!res.ok) return { subcategory_id: null };
+      return await res.json();
+    } catch (err) {
+      console.warn('Failed to resolve subsystem subcategory', err);
+      return { subcategory_id: null };
+    }
+  },
+
+  /**
    * Уся структура каталогу одним запитом: категорії (моделі) + їхні
    * підкатегорії. Потрібно, щоб мапити товар → модель і → розділ схеми.
    */

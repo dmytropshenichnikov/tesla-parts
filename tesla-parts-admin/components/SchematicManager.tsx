@@ -135,6 +135,12 @@ export const SchematicManager: React.FC = () => {
   // Зсув курсора відносно центру піна на момент натискання
   const pinDragOffset = useRef<{ dx: number; dy: number } | null>(null);
 
+  // Область пошуку товарів у виборі: точний вузол схеми / уся модель / весь каталог
+  const [pickerScope, setPickerScope] = useState<'node' | 'model' | 'all'>('node');
+  const [onlyInStock, setOnlyInStock] = useState(true);
+  // Підкатегорія каталогу, якій відповідає шлях схеми
+  const [schemeSubcategoryId, setSchemeSubcategoryId] = useState<number | null>(null);
+
   // Структура каталогу: id підкатегорії → id категорії (моделі) і назад.
   // Саме вона робить фільтр товарів точним, а не по вільному тексту `category`.
   const [catalogTree, setCatalogTree] = useState<CatalogTreeCategory[]>([]);
@@ -157,6 +163,28 @@ export const SchematicManager: React.FC = () => {
     }
     return byId;
   }, [catalogTree]);
+
+  /** Усі підкатегорії вузла разом із вкладеними (товари можуть лежати глибше) */
+  const subcategoryBranchIds = useMemo(() => {
+    if (!schemeSubcategoryId) return [] as number[];
+    const childrenByParent = new Map<number, number[]>();
+    for (const category of catalogTree) {
+      for (const sub of category.subcategories || []) {
+        if (sub.parent_id) {
+          const bucket = childrenByParent.get(sub.parent_id) || [];
+          bucket.push(sub.id);
+          childrenByParent.set(sub.parent_id, bucket);
+        }
+      }
+    }
+    const result: number[] = [];
+    const walk = (id: number) => {
+      result.push(id);
+      for (const child of childrenByParent.get(id) || []) walk(child);
+    };
+    walk(schemeSubcategoryId);
+    return result;
+  }, [schemeSubcategoryId, catalogTree]);
 
   /**
    * Де товар лежить у каталозі: модель, розділ і підсистема.
@@ -330,7 +358,16 @@ export const SchematicManager: React.FC = () => {
     const code = normalizeCode(productSearchQuery);
 
     return catalogProducts.filter((product) => {
-      if (filterBySchematicModel) {
+      if (onlyInStock && !product.inStock) return false;
+
+      // Область пошуку: точний вузол схеми (як у каталозі), уся модель або все
+      if (pickerScope === 'node' && subcategoryBranchIds.length > 0) {
+        const productSubs = [
+          ...(product.subcategory_ids || []),
+          ...(product.subcategory_id ? [product.subcategory_id] : []),
+        ];
+        if (!productSubs.some((id) => subcategoryBranchIds.includes(id))) return false;
+      } else if (pickerScope !== 'all' && filterBySchematicModel) {
         // Каталог — джерело істини. Вільний текст лишаємо запасним варіантом
         // лише для товарів, які ще не розкладені по підкатегоріях.
         const placement = resolveProductPlacement(product);
@@ -367,6 +404,9 @@ export const SchematicManager: React.FC = () => {
     filterBySchematicModel,
     editingSchematic?.model,
     formCategory,
+    pickerScope,
+    subcategoryBranchIds,
+    onlyInStock,
   ]);
 
   /** Копіює точку в буфер разом із номером, парт-номером і варіантами. */
@@ -686,6 +726,30 @@ export const SchematicManager: React.FC = () => {
     }
     return null;
   }, [editingSchematic, catalogProducts, subcategoryIndex]);
+
+  // Шлях схеми (модель + розділ + підсистема) → підкатегорія каталогу.
+  // Саме за нею показуємо товари у виборі: 1 в 1 як у каталозі.
+  useEffect(() => {
+    const model = formCategory || editingSchematic?.model;
+    const section = editingSchematic?.section;
+    const subsystem = editingSchematic?.subsystem;
+    if (!model || !subsystem) {
+      setSchemeSubcategoryId(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .getSubcategoryForSubsystem({ model, section, subsystem })
+      .then((info) => {
+        if (!cancelled) setSchemeSubcategoryId(info.subcategory_id ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setSchemeSubcategoryId(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [formCategory, editingSchematic?.model, editingSchematic?.section, editingSchematic?.subsystem]);
 
   // Підсистеми обраного розділу (з каталогу)
   const catalogSubsystems =
@@ -1915,18 +1979,60 @@ export const SchematicManager: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Область пошуку: той самий шлях, що й у каталозі */}
+                  <div className="flex flex-wrap items-center gap-1.5 px-1">
+                    <button
+                      type="button"
+                      disabled={!schemeSubcategoryId}
+                      onClick={() => setPickerScope('node')}
+                      title={
+                        schemeSubcategoryId
+                          ? 'Товари саме цього вузла каталогу'
+                          : 'Спершу оберіть розділ і підсистему схеми'
+                      }
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-montserrat font-bold transition-colors ${
+                        pickerScope === 'node' && schemeSubcategoryId
+                          ? 'bg-tesla-red text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40'
+                      }`}
+                    >
+                      {editingSchematic?.subsystem
+                        ? `Вузол «${editingSchematic.subsystem.slice(0, 22)}»`
+                        : 'Вузол схеми'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickerScope('model')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-montserrat font-bold transition-colors ${
+                        pickerScope === 'model'
+                          ? 'bg-tesla-red text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      Уся модель «{formCategory || editingSchematic?.model}»
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickerScope('all')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-montserrat font-bold transition-colors ${
+                        pickerScope === 'all'
+                          ? 'bg-tesla-red text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      Весь каталог
+                    </button>
+                  </div>
+
                   <div className="flex items-center justify-between text-xs font-manrope px-1">
                     <label className="flex items-center gap-2 cursor-pointer select-none text-gray-700 font-medium">
                       <input
                         type="checkbox"
-                        checked={filterBySchematicModel}
-                        onChange={(e) => setFilterBySchematicModel(e.target.checked)}
+                        checked={onlyInStock}
+                        onChange={(e) => setOnlyInStock(e.target.checked)}
                         className="rounded text-red-600 focus:ring-red-500"
                       />
-                      <span>
-                        Фільтрувати тільки для{' '}
-                        <strong>{formCategory || editingSchematic.model}</strong>
-                      </span>
+                      <span>Тільки в наявності</span>
                     </label>
                     <span className="text-gray-400">
                       {catalogLoading ? 'Завантаження...' : `Знайдено: ${filteredCatalogProducts.length}`}
