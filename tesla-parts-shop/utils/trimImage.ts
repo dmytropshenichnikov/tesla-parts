@@ -13,6 +13,14 @@ const inFlight = new Map<string, Promise<string>>();
 const BACKGROUND_LUMA = 232;
 /** Мінімальний відступ навколо малюнка (частка від розміру) */
 const PADDING = 0.03;
+/**
+ * Наскільки «світліше» за фон вважаємо шумом під час вибілювання.
+ * Саме вибілювання прибирає сірий прямокутник навколо малюнка — інакше він
+ * висить як окрема плашка на білій картці.
+ */
+const WHITEN_GAP = 8;
+/** Якщо фон темніший за це — це фото, а не креслення, і вибілювати його не можна */
+const MAX_WHITEN_BG = 210;
 
 export const trimImage = (src: string): Promise<string> => {
   if (!src) return Promise.resolve(src);
@@ -43,6 +51,12 @@ export const trimImage = (src: string): Promise<string> => {
         probeCtx.drawImage(img, 0, 0, probeW, probeH);
         const { data } = probeCtx.getImageData(0, 0, probeW, probeH);
 
+        // Рівень фону беремо з кута — під нього й підлаштовуємось
+        const cornerLuma =
+          0.299 * data[0] + 0.587 * data[1] + 0.114 * data[2];
+        const whitenThreshold = cornerLuma - WHITEN_GAP;
+        const canWhiten = cornerLuma <= 255 && cornerLuma >= MAX_WHITEN_BG;
+
         let minX = probeW;
         let minY = probeH;
         let maxX = -1;
@@ -54,7 +68,7 @@ export const trimImage = (src: string): Promise<string> => {
             const alpha = data[i + 3];
             if (alpha < 30) continue; // прозоре — теж фон
             const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            if (luma < BACKGROUND_LUMA) {
+            if (luma < Math.min(BACKGROUND_LUMA, whitenThreshold)) {
               if (x < minX) minX = x;
               if (y < minY) minY = y;
               if (x > maxX) maxX = x;
@@ -94,6 +108,24 @@ export const trimImage = (src: string): Promise<string> => {
           out.width,
           out.height
         );
+
+        // Прибираємо сіру плашку: усе світліше за фон робимо чисто білим,
+        // а темні лінії креслення лишаються без змін.
+        if (canWhiten) {
+          const imgData = outCtx.getImageData(0, 0, out.width, out.height);
+          const px = imgData.data;
+          for (let i = 0; i < px.length; i += 4) {
+            if (px[i + 3] === 0) continue;
+            const luma = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+            if (luma >= whitenThreshold) {
+              px[i] = 255;
+              px[i + 1] = 255;
+              px[i + 2] = 255;
+              px[i + 3] = 255;
+            }
+          }
+          outCtx.putImageData(imgData, 0, 0);
+        }
 
         const url = out.toDataURL('image/png');
         cache.set(src, url);
