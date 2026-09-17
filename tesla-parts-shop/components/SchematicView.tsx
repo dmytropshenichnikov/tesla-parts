@@ -89,14 +89,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       setError(null);
       const data = await api.getSchematic(schematicId);
       setSchematic(data);
-      // Expand the first hotspot with variants by default
-      if (data.hotspots.length > 0) {
-        const firstWithVars = data.hotspots.find(h => (h.variants && h.variants.length > 1) || (h.variants && h.variants.length > 0));
-        if (firstWithVars) {
-          setExpandedVariants({ [firstWithVars.id]: true });
-          setActiveHotspotId(firstWithVars.id);
-        }
-      }
+      // Жодну точку не вибираємо й не розкриваємо автоматично: усе біле, поки
+      // користувач сам не натисне номер або «Обрати» (клієнт просив саме так).
+      setActiveHotspotId(null);
+      setExpandedVariants({});
     } catch (err: any) {
       setError(err.message || 'Помилка завантаження схеми');
     } finally {
