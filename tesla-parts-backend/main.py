@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Response, Depends, HTTPException
+from fastapi import FastAPI, Response, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
@@ -80,6 +80,18 @@ if frontend_url:
     origins.append(frontend_url)
     # Also add with trailing slash
     origins.append(frontend_url.rstrip("/"))
+
+@app.middleware("http")
+async def always_fresh_api(request: Request, call_next):
+    """API завжди свіжий: без цього браузер міг віддати старі дані з кешу
+    (напр. старі картинки розділів у схемах) навіть після правки на сервері.
+    Статику (картинки) не чіпаємо — її кешувати корисно."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/static"):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
