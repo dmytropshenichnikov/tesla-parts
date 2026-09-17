@@ -20,7 +20,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Schematic, SchematicHotspot, HotspotVariant, Currency, Product, SavedCar } from '../types';
+import { Schematic, SchematicHotspot, HotspotVariant, Currency, Product, SavedCar, SchematicSubsystem } from '../types';
 import { formatCurrency } from '../utils/currency';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -39,6 +39,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [schematic, setSchematic] = useState<Schematic | null>(null);
+  // Сусідні підсистеми того самого розділу — щоб перемкнутись на «ЗАХИСТИ ЗАДНІ»
+  // одним кліком прямо зі схеми, не повертаючись у список.
+  const [siblingSubsystems, setSiblingSubsystems] = useState<SchematicSubsystem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -257,6 +260,29 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       setLoading(false);
     }
   };
+
+  // Сусідні підсистеми розділу цієї схеми: дають перемкнутись на інший вузол
+  // («ЗАХИСТИ ЗАДНІ») одним кліком, не виходячи зі схеми.
+  useEffect(() => {
+    if (!schematic?.model || !schematic?.section) {
+      setSiblingSubsystems([]);
+      return;
+    }
+    let cancelled = false;
+    api
+      .getSchematicSections({ model: schematic.model })
+      .then((list) => {
+        if (cancelled) return;
+        const group = list.find((g) => g.section === schematic.section);
+        setSiblingSubsystems(group?.subsystems || []);
+      })
+      .catch(() => {
+        if (!cancelled) setSiblingSubsystems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [schematic?.model, schematic?.section]);
 
   const handleSelectHotspot = (hotspot: SchematicHotspot) => {
     setActiveHotspotId(hotspot.id);
@@ -485,6 +511,35 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           </span>
         ))}
       </nav>
+
+      {/* Швидке перемикання підсистем: зі схеми одразу видно сусідні вузли цього
+          розділу, тож «ЗАХИСТИ ПЕРЕДНІ» → «ЗАХИСТИ ЗАДНІ» — один клік. */}
+      {siblingSubsystems.length > 1 && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <span className="text-[11px] font-montserrat font-bold uppercase tracking-wider text-gray-400 shrink-0">
+            Підсистеми розділу
+          </span>
+          {siblingSubsystems.map((sub) => {
+            const isCurrent = crumbKey(sub.subsystem) === crumbKey(schematic.subsystem);
+            return isCurrent ? (
+              <span
+                key={sub.subsystem}
+                className="px-3 py-1.5 rounded-xl bg-tesla-red text-white text-xs font-montserrat font-bold"
+              >
+                {sub.subsystem}
+              </span>
+            ) : (
+              <Link
+                key={sub.subsystem}
+                to={`/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}&subsystem=${encodeURIComponent(sub.subsystem)}`}
+                className="px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-tesla-red hover:text-tesla-red text-xs font-montserrat font-bold transition-colors"
+              >
+                {sub.subsystem}
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {/* Header Info */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
