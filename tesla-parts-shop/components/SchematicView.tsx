@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
   ChevronDown,
@@ -37,6 +37,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   onAddToCart
 }) => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [schematic, setSchematic] = useState<Schematic | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -427,6 +428,21 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           <span className="text-sm font-manrope font-medium">{addedToast}</span>
         </div>
       )}
+
+      {/* Повернення до списку схем: велика кнопка — на телефоні легко влучити.
+          Повертає на попередній крок (розділ/підсистему), а якщо історії немає —
+          у каталог схем. */}
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) navigate(-1);
+          else navigate('/schemes');
+        }}
+        className="inline-flex items-center gap-2 mb-3 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-tesla-red hover:text-tesla-red font-montserrat font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
+      >
+        <ArrowLeft size={16} />
+        До списку схем
+      </button>
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-manrope mb-4 overflow-x-auto whitespace-nowrap pb-1">
