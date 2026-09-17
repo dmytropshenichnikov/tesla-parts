@@ -47,20 +47,28 @@ const resolveOption = (
 ): SchematicModelOption | null => {
   if (!model || options.length === 0) return null;
   const lowModel = model.toLowerCase();
-  const direct = options.find((o) => o.category.toLowerCase() === lowModel);
-  if (direct) return direct;
-  const byModel = options.filter((o) => o.model.toLowerCase() === lowModel);
-  if (byModel.length === 0) return null;
-  if (generation) {
-    const lowGen = generation.toLowerCase();
-    const variant = byModel.find(
-      (o) => o.category !== o.model && lowGen.includes(o.category.replace(o.model, '').trim().toLowerCase())
-    );
+  const direct = options.filter((o) => o.category.toLowerCase() === lowModel);
+  const byModel = options.filter(
+    (o) => o.model.toLowerCase() === lowModel && !direct.includes(o)
+  );
+  const pool = [...direct, ...byModel];
+  if (pool.length === 0) return null;
+
+  // Покоління уточнює модель: «Model 3» + «Highland» → саме категорія
+  // «Model 3 Highland», а не базова «Model 3».
+  const gen = (generation || '').trim().toLowerCase();
+  if (gen && gen !== 'всі покоління') {
+    const variant = pool.find((o) => {
+      if (o.category === o.model) return false;
+      const suffix = o.category.replace(o.model, '').trim().toLowerCase();
+      return Boolean(suffix) && (gen.includes(suffix) || suffix.includes(gen));
+    });
     if (variant) return variant;
-    const matched = byModel.find((o) => o.generations.some((g) => g.toLowerCase() === lowGen));
+    const matched = pool.find((o) => o.generations.some((g) => g.toLowerCase() === gen));
     if (matched) return matched;
   }
-  return byModel.find((o) => o.category === o.model) || byModel[0];
+
+  return direct[0] || byModel.find((o) => o.category === o.model) || byModel[0];
 };
 
 export const SchemesCatalog: React.FC = () => {
@@ -184,6 +192,8 @@ export const SchemesCatalog: React.FC = () => {
           if (option) {
             setSelectedModel(option.category);
             setSelectedGen(ALL_GENERATIONS);
+            setSelectedSection('');
+            setSelectedSubsystem('');
           }
           const newCar: SavedCar = {
             id: `car_${Date.now()}`,
@@ -267,12 +277,6 @@ export const SchemesCatalog: React.FC = () => {
     };
   }, [selectedModel, selectedSubsystem]);
 
-  // Зміна авто скидає обраний шлях
-  useEffect(() => {
-    setSelectedSection('');
-    setSelectedSubsystem('');
-  }, [selectedModel]);
-
   // Вантажимо схеми, коли обрано авто. Виняток — пошук за парт-номером:
   // він має працювати й без вибору моделі (шукаємо по всьому каталогу схем).
   useEffect(() => {
@@ -294,6 +298,8 @@ export const SchemesCatalog: React.FC = () => {
           if (option) {
             setSelectedModel(option.category);
             setSelectedGen(ALL_GENERATIONS);
+            setSelectedSection('');
+            setSelectedSubsystem('');
           }
         }
       } else {
