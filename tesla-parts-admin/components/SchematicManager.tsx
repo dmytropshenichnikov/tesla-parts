@@ -568,22 +568,26 @@ export const SchematicManager: React.FC = () => {
   };
 
   const handleCreateNew = async () => {
-    // Модель/покоління беремо з категорій каталогу, а не з хардкоду.
+    // Порожня схема: НІЯКИХ підставлених значень (раніше тут жили залишки
+    // «НАРУЖНЫЕ КРЕПЛЕНИЯ / Защита днища», які плутали при створенні).
+    // Категорію беремо лише з поточного фільтра списку — його обрав адміністратор.
     const options = modelOptions.length > 0 ? modelOptions : await loadModelOptions();
-    const preset = pickDefaultOption(options);
+    const preset = options.find((o) => o.category === filterModel) || null;
     const blank: Schematic = {
       id: 0,
       title: '',
       model: preset?.model || '',
       generation: preset?.generation || '',
-      section: 'НАРУЖНЫЕ КРЕПЛЕНИЯ',
-      subsystem: 'Защита днища и диффузор',
+      section: '',
+      subsystem: '',
       image_url: '',
       sort_order: 1,
       hotspots: []
     };
     setIsNew(true);
     setFormCategory(preset?.category || '');
+    setSectionMode('catalog');
+    setSubsystemMode('catalog');
     setEditingSchematic(blank);
     setSelectedHotspotIdx(null);
     loadedSnapshot.current = JSON.stringify(blank);
@@ -961,9 +965,14 @@ export const SchematicManager: React.FC = () => {
     api.getSchematicSectionOptions(option.category_id).then(setSectionOptions);
   }, [formCategory, modelOptions]);
 
-  // Якщо збережене значення не з каталогу — одразу показуємо ручне поле
+  // Якщо збережене значення не з каталогу — показуємо ручне поле.
+  // Порожній розділ — це «ще не обрано», лишаємо вибір зі списку каталогу.
   useEffect(() => {
     if (!editingSchematic || sectionOptions.length === 0) return;
+    if (!editingSchematic.section) {
+      setSectionMode('catalog');
+      return;
+    }
     if (!sectionOptions.some((o) => o.section === editingSchematic.section)) {
       setSectionMode('custom');
     }
@@ -1696,11 +1705,16 @@ export const SchematicManager: React.FC = () => {
                 return;
               }
               setFormCategory(option.category);
+              // розділ і підсистема належать конкретній категорії — скидаємо
               setEditingSchematic({
                 ...editingSchematic,
                 model: option.model,
-                generation: option.generation
+                generation: option.generation,
+                section: '',
+                subsystem: ''
               });
+              setSectionMode('catalog');
+              setSubsystemMode('catalog');
             }}
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
           >
