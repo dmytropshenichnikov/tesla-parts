@@ -1,4 +1,5 @@
 import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption } from '../types';
+import { trimImageFile } from '../utils/trimImageFile';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -623,7 +624,8 @@ export const ApiService = {
     formData.append('name', name);
 
     if (file) {
-      formData.append('file', file);
+      const preparedFile = await trimImageFile(file);
+      formData.append('file', preparedFile);
     }
 
     if (sort_order !== undefined && sort_order !== null) {
@@ -653,7 +655,8 @@ export const ApiService = {
     formData.append('name', name);
 
     if (file) {
-      formData.append('file', file);
+      const preparedFile = await trimImageFile(file);
+      formData.append('file', preparedFile);
     }
 
     if (sort_order !== undefined && sort_order !== null) {
@@ -688,7 +691,8 @@ export const ApiService = {
     }
 
     if (file) {
-      formData.append('file', file);
+      const preparedFile = await trimImageFile(file);
+      formData.append('file', preparedFile);
     }
     if (sortOrder !== undefined && sortOrder !== null) {
       formData.append('sort_order', sortOrder.toString());
@@ -722,7 +726,8 @@ export const ApiService = {
     }
 
     if (file) {
-      formData.append('file', file);
+      const preparedFile = await trimImageFile(file);
+      formData.append('file', preparedFile);
     }
     if (sortOrder !== undefined && sortOrder !== null) {
       formData.append('sort_order', sortOrder.toString());
@@ -970,7 +975,6 @@ export const ApiService = {
 
   createReview: async (file: File, sortOrder: number = 0): Promise<any> => {
     const formData = new FormData();
-    formData.append('file', file);
     formData.append('sort_order', sortOrder.toString());
 
     const res = await _authenticatedFetch(`${API_URL}/reviews/`, {
@@ -1287,7 +1291,6 @@ export const ApiService = {
 
   uploadSchematicImage: async (file: File): Promise<{ image_url: string }> => {
     const formData = new FormData();
-    formData.append('file', file);
     const res = await _authenticatedFetch(`${API_URL}/schematics/upload-image`, {
       method: 'POST',
       headers: getHeaders(true),
