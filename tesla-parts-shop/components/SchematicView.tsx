@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ChevronRight,
@@ -155,7 +155,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Наведення працює в обидва боки: навів на номер на схемі — підсвітилась
   // деталь у списку; навів на деталь у списку — підсвітився номер на схемі.
-  const [hoveredHotspotId, setHoveredHotspotId] = useState<number | null>(null);
+  // Наведення зберігаємо КЛЮЧЕМ ГРУПИ (номер деталі на схемі), а не id точки:
+  // однакова деталь може стояти на кількох позиціях під одним номером.
+  const [hoveredGroupKey, setHoveredGroupKey] = useState<string | null>(null);
 
   // Collapsed / Expanded state for variants (map of hotspot.id -> boolean)
   const [expandedVariants, setExpandedVariants] = useState<Record<number, boolean>>({});
@@ -324,14 +326,64 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     );
   }
 
-  // Count stock details
-  const totalVariantsCount = schematic.hotspots.reduce(
-    (acc, h) => acc + (h.variants && h.variants.length > 0 ? h.variants.length : 1),
+  // Деталі з ОДНАКОВИМ номером на схемі — це одна позиція (кронштейн під
+  // номером 7 стоїть у двох місцях), тому в списку показуємо їх одним рядком.
+  const hotspotGroups = useMemo(() => {
+    const list = schematic.hotspots || [];
+    const map = new Map<string, {
+      key: string;
+      number: number;
+      hotspots: SchematicHotspot[];
+      lead: SchematicHotspot;
+      variants: HotspotVariant[];
+    }>();
+
+    list.forEach((h) => {
+      const key = `n${h.number}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.hotspots.push(h);
+        (h.variants || []).forEach((v) => {
+          const signature = v.product_id || v.name;
+          if (!existing.variants.some((x) => (x.product_id || x.name) === signature)) {
+            existing.variants.push(v);
+          }
+        });
+        return;
+      }
+      map.set(key, {
+        key,
+        number: h.number,
+        hotspots: [h],
+        lead: h,
+        variants: [...(h.variants || [])],
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.number - b.number);
+  }, [schematic]);
+
+  const groupKeyByHotspotId = useMemo(() => {
+    const map: Record<number, string> = {};
+    hotspotGroups.forEach((group) => {
+      group.hotspots.forEach((h) => {
+        map[h.id] = group.key;
+      });
+    });
+    return map;
+  }, [hotspotGroups]);
+
+  const activeGroupKey =
+    activeHotspotId !== null ? groupKeyByHotspotId[activeHotspotId] ?? null : null;
+
+  // Count stock details — по унікальних позиціях, а не по точках на кресленні
+  const totalVariantsCount = hotspotGroups.reduce(
+    (acc, g) => acc + (g.variants.length > 0 ? g.variants.length : 1),
     0
   );
-  const inStockCount = schematic.hotspots.reduce((acc, h) => {
-    const variants = h.variants && h.variants.length > 0 ? h.variants : [undefined];
-    return acc + variants.filter((v) => isVariantAvailable(h, v)).length;
+  const inStockCount = hotspotGroups.reduce((acc, g) => {
+    const variants = g.variants.length > 0 ? g.variants : [undefined];
+    return acc + variants.filter((v) => isVariantAvailable(g.lead, v)).length;
   }, 0);
 
   const isCompatibleWithGarageCar = activeCar && (
@@ -431,7 +483,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         <div className="lg:col-span-6 xl:col-span-7 bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center justify-between mb-2 lg:hidden">
             <span className="font-montserrat font-bold text-xs text-gray-800">
-              Схема вузла ({pluralParts(schematic.hotspots.length)})
+              Схема вузла ({pluralParts(hotspotGroups.length)})
             </span>
             <span className="text-[11px] text-gray-400 font-manrope">
               Клікніть номер для вибору
@@ -551,8 +603,9 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
             {/* Red Hotspot Pins */}
             {schematic.hotspots.map((h) => {
-              const isActive = activeHotspotId === h.id;
-              const isHovered = hoveredHotspotId === h.id;
+              const groupKey = groupKeyByHotspotId[h.id];
+              const isActive = activeGroupKey === groupKey;
+              const isHovered = hoveredGroupKey === groupKey;
               return (
                 <button
                   key={h.id}
@@ -562,10 +615,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                     transform: 'translate(-50%, -50%)'
                   }}
                   onClick={() => handleSelectHotspot(h)}
-                  onMouseEnter={() => setHoveredHotspotId(h.id)}
-                  onMouseLeave={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
-                  onFocus={() => setHoveredHotspotId(h.id)}
-                  onBlur={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
+                  onMouseEnter={() => setHoveredGroupKey(groupKey)}
+                  onMouseLeave={() => setHoveredGroupKey((prev) => (prev === groupKey ? null : prev))}
+                  onFocus={() => setHoveredGroupKey(groupKey)}
+                  onBlur={() => setHoveredGroupKey((prev) => (prev === groupKey ? null : prev))}
                   title={`#${h.number}: ${h.name}`}
                   className={`absolute w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[9px] sm:text-xs transition-all duration-200 cursor-pointer shadow-sm ${
                     isActive
@@ -591,7 +644,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
               Натисніть на червоний номер — деталь підсвітиться у списку
             </span>
             <span className="font-semibold text-gray-600 hidden sm:inline">
-              {pluralParts(schematic.hotspots.length)} на схемі
+              {pluralParts(hotspotGroups.length)} на схемі
             </span>
           </div>
         </div>
@@ -611,11 +664,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
           {/* Cards List */}
           <div className="space-y-3">
-            {schematic.hotspots.map((h) => {
-              const isActive = activeHotspotId === h.id;
-              const isHovered = hoveredHotspotId === h.id;
+            {hotspotGroups.map((group) => {
+              const h = group.lead;
+              const isActive = activeGroupKey === group.key;
+              const isHovered = hoveredGroupKey === group.key;
               const isExpanded = expandedVariants[h.id] ?? false;
-              const variants = h.variants || [];
+              const variants = group.variants;
               const hasMultipleVariants = variants.length > 1;
 
               // Ціну показуємо лише для позицій, які реально є в каталозі
@@ -628,11 +682,11 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
               return (
                 <div
-                  key={h.id}
+                  key={group.key}
                   ref={(el) => (partRefs.current[h.id] = el)}
                   onClick={() => setActiveHotspotId(h.id)}
-                  onMouseEnter={() => setHoveredHotspotId(h.id)}
-                  onMouseLeave={() => setHoveredHotspotId((prev) => (prev === h.id ? null : prev))}
+                  onMouseEnter={() => setHoveredGroupKey(group.key)}
+                  onMouseLeave={() => setHoveredGroupKey((prev) => (prev === group.key ? null : prev))}
                   className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xs ${
                     isActive
                       ? 'border-tesla-red ring-2 ring-tesla-red/15 shadow-md'
