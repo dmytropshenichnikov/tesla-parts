@@ -864,6 +864,25 @@ def delete_schematic(schematic_id: int, session: Session = Depends(get_session))
     session.commit()
     return {"message": "Схему успішно видалено"}
 
+@router.post("/upload-image-url", dependencies=[Depends(get_current_admin)])
+async def upload_schematic_image_from_url(payload: dict):
+    """Бере креслення за посиланням (напр. з EPC Tesla) і зберігає оригінал.
+
+    Корисно, коли треба велика картинка для глибокого наближення на сайті.
+    """
+    url = (payload or {}).get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Не вказано посилання")
+
+    result = await image_uploader.upload_from_url(url, folder="tesla-parts/schematics")
+    if not result:
+        raise HTTPException(
+            status_code=400,
+            detail="Не вдалося завантажити зображення за посиланням (перевірте, що це пряме посилання на картинку)",
+        )
+    return result
+
+
 @router.post("/reorder", dependencies=[Depends(get_current_admin)])
 def reorder_schematics(
     request: dict,

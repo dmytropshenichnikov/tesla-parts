@@ -242,6 +242,9 @@ export const SchematicManager: React.FC = () => {
   const loadedSnapshot = useRef<string>('');
   // Підказка про якість завантаженої картинки (від неї залежить різкість при наближенні)
   const [imageQualityHint, setImageQualityHint] = useState<string | null>(null);
+  // Завантаження креслення за посиланням (напр. з EPC Tesla)
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [uploadingByUrl, setUploadingByUrl] = useState(false);
   const [draftToRestore, setDraftToRestore] = useState<{ savedAt: string; schematic: Schematic } | null>(null);
 
   // Catalog products for linking
@@ -633,6 +636,43 @@ export const SchematicManager: React.FC = () => {
       img.src = url;
     });
 
+  /** Показує підказку про різкість для картинки з відомою роздільністю */
+  const describeQuality = (w: number, h: number) => {
+    if (!w) return;
+    if (w < 2000) {
+      setImageQualityHint(
+        `Файл ${w}×${h} px. На сайті різко наближається приблизно до ${Math.round(
+          Math.max(100, (w / 700) * 100)
+        )}%, далі буде розмито. Для глибокого збільшення краще ${2000}–3000 px.`
+      );
+    } else {
+      setImageQualityHint(
+        `Файл ${w}×${h} px — різке наближення до ~${Math.round((w / 700) * 100)}%. Добре!`
+      );
+    }
+  };
+
+  const handleUploadFromUrl = async () => {
+    const url = imageUrlInput.trim();
+    if (!url || !editingSchematic) return;
+    try {
+      setUploadingByUrl(true);
+      setError(null);
+      const res = await api.uploadSchematicImageFromUrl(url);
+      setEditingSchematic((prev) => (prev ? { ...prev, image_url: res.image_url } : prev));
+      setImageUrlInput('');
+      setSuccessMsg('Креслення завантажено за посиланням (оригінал, без стиснення)');
+      // міряємо роздільність, щоб одразу сказати, до якого масштабу буде різко
+      const img = new Image();
+      img.onload = () => describeQuality(img.naturalWidth, img.naturalHeight);
+      img.src = res.image_url;
+    } catch (err: any) {
+      setError(err.message || 'Не вдалося завантажити за посиланням');
+    } finally {
+      setUploadingByUrl(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingSchematic) return;
@@ -641,15 +681,7 @@ export const SchematicManager: React.FC = () => {
       setUploadingImage(true);
       // Різкість при наближенні на сайті залежить від роздільності файлу
       const { w, h } = await measureImage(file);
-      if (w && w < 2000) {
-        setImageQualityHint(
-          `Файл ${w}×${h} px. На сайті різко наближається приблизно до ${Math.round(
-            Math.max(100, (w / 700) * 100)
-          )}%, далі буде розмито. Для глибокого збільшення завантажте ${2000}–3000 px по ширині (як у Tesla EPC).`
-        );
-      } else {
-        setImageQualityHint(null);
-      }
+      describeQuality(w, h);
       const res = await api.uploadSchematicImage(file);
       setEditingSchematic({
         ...editingSchematic,
@@ -1855,6 +1887,36 @@ export const SchematicManager: React.FC = () => {
             Для різкого наближення на сайті — картинка від <strong>2000 px</strong> по ширині
             (оптимально 2800–3000 px).
           </p>
+          <div className="mt-2">
+            <div className="text-[10px] font-bold font-montserrat text-gray-500 uppercase mb-1">
+              Або взяти за посиланням (EPC Tesla)
+            </div>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                placeholder="https://epc.tesla.com/resources/images/..."
+                className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-[11px] font-manrope focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+              <button
+                type="button"
+                onClick={handleUploadFromUrl}
+                disabled={uploadingByUrl || !imageUrlInput.trim()}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-montserrat font-bold transition-colors ${
+                  uploadingByUrl || !imageUrlInput.trim()
+                    ? 'bg-gray-100 text-gray-400'
+                    : 'bg-gray-900 text-white hover:bg-tesla-red cursor-pointer'
+                }`}
+              >
+                {uploadingByUrl ? '…' : 'Взяти'}
+              </button>
+            </div>
+            <p className="mt-1 text-[10px] text-gray-400 font-manrope leading-snug">
+              Копіюйте адресу самої картинки (правою кнопкою → «Копіювати адресу зображення»).
+              Файл збережеться в оригіналі, без стиснення.
+            </p>
+          </div>
           {imageQualityHint && (
             <p className="mt-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 font-manrope leading-snug">
               {imageQualityHint}

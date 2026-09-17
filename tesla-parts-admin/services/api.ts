@@ -1233,6 +1233,22 @@ export const ApiService = {
     }
   },
 
+  /** Завантажити зображення схеми за посиланням (напр. з EPC Tesla) */
+  uploadSchematicImageFromUrl: async (
+    url: string
+  ): Promise<{ image_url: string; bytes?: number }> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/upload-image-url`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) {
+      const msg = await res.json().catch(() => null);
+      throw new Error(msg?.detail || 'Не вдалося завантажити зображення за посиланням');
+    }
+    return res.json();
+  },
+
   getSchematic: async (id: number): Promise<Schematic> => {
     const res = await _authenticatedFetch(`${API_URL}/schematics/${id}`, {
       headers: getHeaders(),
