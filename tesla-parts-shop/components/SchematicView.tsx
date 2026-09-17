@@ -621,12 +621,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                   onFocus={() => setHoveredGroupKey(groupKey)}
                   onBlur={() => setHoveredGroupKey((prev) => (prev === groupKey ? null : prev))}
                   title={`#${h.number}: ${h.name}`}
-                  className={`absolute w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[9px] sm:text-xs transition-all duration-200 cursor-pointer shadow-sm ${
+                  className={`absolute w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-montserrat font-black text-[9px] sm:text-xs transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-tesla-red text-white ring-3 ring-red-300 ring-offset-1 scale-120 z-20 shadow-red-500/40'
+                      ? 'bg-white text-tesla-red ring-4 sm:ring-[5px] ring-tesla-red scale-[1.45] z-40 shadow-lg shadow-red-500/50 animate-pulse'
                       : isHovered
                         ? 'bg-tesla-red text-white ring-4 ring-red-200 scale-125 z-30 shadow-lg shadow-red-500/40'
-                        : 'bg-tesla-red text-white hover:scale-110 z-10 hover:shadow'
+                        : 'bg-tesla-red text-white hover:scale-110 z-10 shadow-sm hover:shadow'
                   }`}
                 >
                   {h.number}
@@ -685,7 +685,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 <div
                   key={group.key}
                   ref={(el) => (partRefs.current[h.id] = el)}
-                  onClick={() => setActiveHotspotId(h.id)}
+                  onClick={() => handleSelectHotspot(h)}
                   onMouseEnter={() => setHoveredGroupKey(group.key)}
                   onMouseLeave={() => setHoveredGroupKey((prev) => (prev === group.key ? null : prev))}
                   className={`bg-white rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xs ${
