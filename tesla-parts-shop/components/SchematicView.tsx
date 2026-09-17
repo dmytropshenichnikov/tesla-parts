@@ -10,11 +10,14 @@ import {
   Share2,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
   ShieldCheck,
   PackageCheck,
   Layers,
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  Minus,
+  RotateCcw,
+  Maximize2
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicHotspot, HotspotVariant, Currency, Product, SavedCar } from '../types';
@@ -40,6 +43,101 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Active highlighted hotspot pin / part
   const [activeHotspotId, setActiveHotspotId] = useState<number | null>(null);
+
+  // --- Зум креслення (як в оригінальному каталозі Tesla) ---
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 8;
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef({
+    active: false,
+    moved: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
+
+  /** Не даємо витягнути креслення за межі кадру */
+  const clampPan = (next: { x: number; y: number }, z: number) => {
+    const el = frameRef.current;
+    const w = el?.clientWidth || 600;
+    const h = el?.clientHeight || 400;
+    const maxX = ((z - 1) * w) / 2;
+    const maxY = ((z - 1) * h) / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, next.x)),
+      y: Math.max(-maxY, Math.min(maxY, next.y)),
+    };
+  };
+
+  const applyZoom = (nextZoom: number) => {
+    const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+    if (z <= 1) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    setZoom(z);
+    setPan((prev) => clampPan(prev, z));
+  };
+
+  const zoomIn = () => applyZoom(zoom * 1.5);
+  const zoomOut = () => applyZoom(zoom / 1.5);
+  const resetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  // Коліщатко / пінч: на 1x не чіпаємо — сторінка гортається як звично
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey && zoom <= 1) return;
+      e.preventDefault();
+      applyZoom(zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  });
+
+  const onPanStart = (e: React.PointerEvent) => {
+    if (zoom <= 1) return;
+    dragRef.current = {
+      active: true,
+      moved: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: pan.x,
+      originY: pan.y,
+    };
+  };
+
+  const onPanMove = (e: React.PointerEvent) => {
+    const st = dragRef.current;
+    if (!st.active) return;
+    const dx = e.clientX - st.startX;
+    const dy = e.clientY - st.startY;
+    if (!st.moved && Math.hypot(dx, dy) > 4) st.moved = true;
+    if (st.moved) setPan(clampPan({ x: st.originX + dx, y: st.originY + dy }, zoom));
+  };
+
+  const onPanEnd = () => {
+    const st = dragRef.current;
+    st.active = false;
+    window.setTimeout(() => {
+      st.moved = false;
+    }, 0);
+  };
+
+  const suppressClickAfterPan = (e: React.MouseEvent) => {
+    if (dragRef.current.moved) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
   // «1 деталь / 2 деталі / 5 деталей»
   const pluralParts = (n: number) => {
     const mod10 = n % 10;
@@ -325,12 +423,87 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             </span>
           </div>
 
-          <div className="relative w-full border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden bg-[#fafafa] flex items-center justify-center select-none min-h-[220px] sm:min-h-[400px]">
+          <div
+            ref={frameRef}
+            className={`relative w-full border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden bg-[#fafafa] select-none min-h-[220px] sm:min-h-[400px] ${
+              zoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+            }`}
+            onPointerDown={onPanStart}
+            onPointerMove={onPanMove}
+            onPointerUp={onPanEnd}
+            onPointerLeave={onPanEnd}
+            onDoubleClick={() => (zoom > 1 ? resetZoom() : applyZoom(3))}
+            style={{ touchAction: zoom > 1 ? 'none' : 'auto' }}
+          >
+            {/* Тулбар масштабу — як в оригінальному каталозі Tesla */}
+            <div className="absolute left-2 top-2 z-30 flex flex-col items-center gap-0.5 rounded-2xl bg-white/95 backdrop-blur border border-gray-200 shadow-md p-1">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); zoomIn(); }}
+                disabled={zoom >= MAX_ZOOM}
+                title="Збільшити"
+                className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${
+                  zoom >= MAX_ZOOM ? 'text-gray-300' : 'text-gray-700 hover:bg-red-50 hover:text-tesla-red cursor-pointer'
+                }`}
+              >
+                <Plus size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); resetZoom(); }}
+                title="Скинути масштаб"
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-500 hover:bg-red-50 hover:text-tesla-red transition-colors cursor-pointer"
+              >
+                <RotateCcw size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); zoomOut(); }}
+                disabled={zoom <= MIN_ZOOM}
+                title="Зменшити"
+                className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${
+                  zoom <= MIN_ZOOM ? 'text-gray-300' : 'text-gray-700 hover:bg-red-50 hover:text-tesla-red cursor-pointer'
+                }`}
+              >
+                <Minus size={18} />
+              </button>
+              <span className="text-[10px] font-montserrat font-bold text-gray-500 pb-0.5">
+                {Math.round(zoom * 100)}%
+              </span>
+            </div>
+
+            {/* На весь екран */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const el = frameRef.current?.parentElement;
+                if (!el) return;
+                if (document.fullscreenElement) document.exitFullscreen();
+                else el.requestFullscreen?.().catch(() => {});
+              }}
+              title="На весь екран"
+              className="absolute right-2 top-2 z-30 w-8 h-8 flex items-center justify-center rounded-xl bg-white/95 backdrop-blur border border-gray-200 shadow-md text-gray-600 hover:text-tesla-red transition-colors cursor-pointer"
+            >
+              <Maximize2 size={15} />
+            </button>
+
+            {/* Все, що масштабується разом: креслення + точки деталей */}
+            <div
+              className="relative w-full"
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transformOrigin: 'center center',
+                transition: dragRef.current.active ? 'none' : 'transform 120ms ease-out',
+              }}
+              onClickCapture={suppressClickAfterPan}
+            >
             {schematic.image_url ? (
               <img
                 src={getFullImageUrl(schematic.image_url)}
                 alt={schematic.title}
-                className="w-full h-auto object-contain pointer-events-none max-h-[340px] sm:max-h-[500px]"
+                draggable={false}
+                className="block w-full h-auto object-contain pointer-events-none"
               />
             ) : (
               <div className="text-gray-400 text-sm font-manrope p-8">Зображення схеми відсутнє</div>
@@ -366,11 +539,13 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 </button>
               );
             })}
+            </div>
           </div>
 
           <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
             <span className="hidden sm:inline">
               Наведіть на номер — підсвітиться деталь у списку (і навпаки). Клік закріплює вибір
+              • масштаб: +/− , коліщатко з Ctrl або подвійний клік, тягніть мишкою щоб рухати
             </span>
             <span className="sm:hidden">
               Натисніть на червоний номер — деталь підсвітиться у списку
