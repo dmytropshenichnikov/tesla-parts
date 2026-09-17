@@ -1171,6 +1171,20 @@ export const ApiService = {
    * Опції моделей і поколінь для редактора схем.
    * Джерело — категорії каталогу (єдине місце, де задаються моделі).
    */
+  /**
+   * Зміна порядку схем у списку (як у каталозі): передаємо id у потрібному
+   * порядку, бекенд проставляє sort_order. Магазин показує схеми в цьому ж порядку.
+   */
+  reorderSchematics: async (ids: number[]): Promise<{ message: string }> => {
+    const res = await _authenticatedFetch(`${API_URL}/schematics/reorder`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ schematic_ids: ids }),
+    });
+    if (!res.ok) throw new Error('Failed to reorder schematics');
+    return res.json();
+  },
+
   getSchematicModelOptions: async (): Promise<SchematicModelOption[]> => {
     const res = await _authenticatedFetch(`${API_URL}/schematics/model-options`, {
       headers: getHeaders(),

@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, col
 from sqlalchemy.orm import selectinload
 
 from database import get_session
@@ -828,6 +828,37 @@ def delete_schematic(schematic_id: int, session: Session = Depends(get_session))
     session.delete(schematic)
     session.commit()
     return {"message": "Схему успішно видалено"}
+
+@router.post("/reorder", dependencies=[Depends(get_current_admin)])
+def reorder_schematics(
+    request: dict,
+    session: Session = Depends(get_session)
+):
+    """Порядок схем у списку (як у каталозі).
+
+    Приймає {"schematic_ids": [...]} у тому порядку, у якому схеми мають
+    показуватись у магазині, і проставляє sort_order за індексом.
+    """
+    ids = request.get("schematic_ids") or []
+    if not ids:
+        return {"message": "Нічого змінювати", "updated": 0}
+
+    schematics = session.exec(
+        select(Schematic).where(col(Schematic.id).in_([int(i) for i in ids]))
+    ).all()
+    by_id = {item.id: item for item in schematics}
+
+    updated = 0
+    for index, schematic_id in enumerate(ids):
+        item = by_id.get(int(schematic_id))
+        if not item:
+            continue
+        item.sort_order = index
+        session.add(item)
+        updated += 1
+    session.commit()
+    return {"message": "Порядок схем збережено", "updated": updated}
+
 
 @router.post("/upload-image", dependencies=[Depends(get_current_admin)])
 async def upload_schematic_image(file: UploadFile = File(...)):

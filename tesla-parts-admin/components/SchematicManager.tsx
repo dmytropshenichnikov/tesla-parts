@@ -21,7 +21,10 @@ import {
   Unlink,
   Package,
   Sparkles,
-  Copy
+  Copy,
+  GripVertical,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption, SchematicSectionOption, CatalogTreeCategory } from '../types';
@@ -113,6 +116,9 @@ const pluralPoints = (n: number) => {
 
 export const SchematicManager: React.FC = () => {
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
+  // Перетягування карток схем — порядок як у каталозі
+  const [dragSchemeId, setDragSchemeId] = useState<number | null>(null);
+  const [dragSchemeOverId, setDragSchemeOverId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -327,6 +333,43 @@ export const SchematicManager: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  /** Спершу показуємо новий порядок локально, потім пишемо його в API */
+  const persistSchematicOrder = async (ordered: SchematicSummary[]) => {
+    setSchematics(ordered);
+    try {
+      await api.reorderSchematics(ordered.map((item) => item.id));
+      setSuccessMsg('Порядок схем збережено');
+      window.setTimeout(() => setSuccessMsg(null), 2500);
+    } catch (err: any) {
+      setError(err.message || 'Не вдалося зберегти порядок схем');
+      loadSchematics();
+    }
+  };
+
+  const moveSchematic = (id: number, direction: -1 | 1) => {
+    const from = schematics.findIndex((item) => item.id === id);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= schematics.length) return;
+    const ordered = [...schematics];
+    const [moved] = ordered.splice(from, 1);
+    ordered.splice(to, 0, moved);
+    void persistSchematicOrder(ordered);
+  };
+
+  const dropSchematicOn = (targetId: number) => {
+    const sourceId = dragSchemeId;
+    setDragSchemeId(null);
+    setDragSchemeOverId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const from = schematics.findIndex((item) => item.id === sourceId);
+    const to = schematics.findIndex((item) => item.id === targetId);
+    if (from < 0 || to < 0) return;
+    const ordered = [...schematics];
+    const [moved] = ordered.splice(from, 1);
+    ordered.splice(to, 0, moved);
+    void persistSchematicOrder(ordered);
   };
 
   const loadCatalogProducts = async () => {
@@ -1201,6 +1244,18 @@ export const SchematicManager: React.FC = () => {
           );
         })()}
 
+        {/* Підказка: порядок схем змінюється перетягуванням або стрілками */}
+        {!loading && schematics.length > 1 && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-900 font-manrope">
+            <GripVertical size={16} className="shrink-0 mt-0.5 text-blue-500" />
+            <span>
+              Порядок схем змінюється <strong>перетягуванням картки</strong> або стрілками ↑↓.
+              Він одразу застосовується в магазині — на сторінці схем і в блоці
+              «Схема цього вузла» в каталозі.
+            </span>
+          </div>
+        )}
+
         {/* Grid of Schematics */}
         {loading ? (
           <div className="py-20 text-center text-gray-400 font-manrope">
@@ -1222,10 +1277,34 @@ export const SchematicManager: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {schematics.map((s) => (
+            {schematics.map((s, idx) => (
               <div
                 key={s.id}
-                className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                draggable
+                onDragStart={(e) => {
+                  setDragSchemeId(s.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', String(s.id));
+                }}
+                onDragOver={(e) => {
+                  if (dragSchemeId === null || dragSchemeId === s.id) return;
+                  e.preventDefault();
+                  setDragSchemeOverId(s.id);
+                }}
+                onDragLeave={() => setDragSchemeOverId((prev) => (prev === s.id ? null : prev))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  dropSchematicOn(s.id);
+                }}
+                onDragEnd={() => {
+                  setDragSchemeId(null);
+                  setDragSchemeOverId(null);
+                }}
+                className={`bg-white rounded-2xl border overflow-hidden transition-all flex flex-col ${
+                  dragSchemeOverId === s.id
+                    ? 'border-red-500 ring-2 ring-red-200 shadow-md'
+                    : 'border-gray-200 shadow-sm hover:shadow-md'
+                } ${dragSchemeId === s.id ? 'opacity-50' : ''}`}
               >
                 <div className="relative h-48 bg-gray-50 border-b border-gray-100 flex items-center justify-center p-4">
                   {s.image_url ? (
@@ -1237,6 +1316,32 @@ export const SchematicManager: React.FC = () => {
                   ) : (
                     <Layers size={36} className="text-gray-300" />
                   )}
+
+                  {/* Порядок: ручка для перетягування + стрілки */}
+                  <div className="absolute top-3 left-3 flex items-center gap-0.5 bg-white/95 border border-gray-200 rounded-full px-1.5 py-1 shadow-sm">
+                    <span
+                      className="text-gray-300 hover:text-red-600 cursor-grab active:cursor-grabbing px-0.5"
+                      title="Перетягніть картку, щоб змінити порядок"
+                    >
+                      <GripVertical size={14} />
+                    </span>
+                    <button
+                      onClick={() => moveSchematic(s.id, -1)}
+                      disabled={idx === 0}
+                      title="Вище"
+                      className={`p-0.5 rounded ${idx === 0 ? 'text-gray-200 cursor-default' : 'text-gray-500 hover:text-red-600'}`}
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => moveSchematic(s.id, 1)}
+                      disabled={idx === schematics.length - 1}
+                      title="Нижче"
+                      className={`p-0.5 rounded ${idx === schematics.length - 1 ? 'text-gray-200 cursor-default' : 'text-gray-500 hover:text-red-600'}`}
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </div>
                   <div className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full font-montserrat flex items-center gap-1 shadow-sm">
                     <MapPin size={12} />
                     {pluralPoints(s.hotspots_count)}
