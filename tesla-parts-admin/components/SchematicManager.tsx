@@ -1718,6 +1718,7 @@ export const SchematicManager: React.FC = () => {
             }}
             className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope focus:ring-2 focus:ring-red-500 focus:outline-none"
           >
+            {!formCategory && <option value="">— оберіть категорію —</option>}
             {formCategory && !modelOptions.some((o) => o.category === formCategory) && (
               <option value={formCategory}>{formCategory} (немає в категоріях)</option>
             )}
