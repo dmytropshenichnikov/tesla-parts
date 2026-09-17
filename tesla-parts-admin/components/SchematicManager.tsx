@@ -568,9 +568,11 @@ export const SchematicManager: React.FC = () => {
   };
 
   const handleCreateNew = async () => {
-    // Порожня схема: НІЯКИХ підставлених значень (раніше тут жили залишки
-    // «НАРУЖНЫЕ КРЕПЛЕНИЯ / Защита днища», які плутали при створенні).
-    // Категорію беремо лише з поточного фільтра списку — його обрав адміністратор.
+    // Порожня схема, але з підставленим ШЛЯХОМ, який адміністратор уже обрав
+    // фільтрами вище: модель → розділ → підсистема. Тоді у формі не треба
+    // вдруге шукати ті самі значення — вони вже стоять на своїх місцях.
+    // Раніше тут жили залишки «НАРУЖНЫЕ КРЕПЛЕНИЯ / Защита днища», які плутали
+    // при створенні, тому підставляємо ЛИШЕ те, що реально обрано у фільтрі.
     const options = modelOptions.length > 0 ? modelOptions : await loadModelOptions();
     const preset = options.find((o) => o.category === filterModel) || null;
     const blank: Schematic = {
@@ -578,14 +580,16 @@ export const SchematicManager: React.FC = () => {
       title: '',
       model: preset?.model || '',
       generation: preset?.generation || '',
-      section: '',
-      subsystem: '',
+      section: filterSection || '',
+      subsystem: filterSubsystem || '',
       image_url: '',
       sort_order: 1,
       hotspots: []
     };
     setIsNew(true);
     setFormCategory(preset?.category || '');
+    // Значення прийшли зі списків каталогу — тримаємо режим вибору зі списку,
+    // інакше розділ поїхав би у ручне поле й міг розійтися з каталогом.
     setSectionMode('catalog');
     setSubsystemMode('catalog');
     setEditingSchematic(blank);
