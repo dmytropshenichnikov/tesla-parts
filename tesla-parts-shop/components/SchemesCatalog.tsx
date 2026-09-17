@@ -18,6 +18,7 @@ import { api } from '../services/api';
 import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup, Product } from '../types';
 import { slugify } from '../utils/slugify';
 import { GarageModal } from './GarageModal';
+import { trimImage } from '../utils/trimImage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -69,6 +70,34 @@ const resolveOption = (
   }
 
   return direct[0] || byModel.find((o) => o.category === o.model) || byModel[0];
+};
+
+/**
+ * Картинка вузла без порожніх полів: показуємо обрізану версію (див. trimImage),
+ * щоб малюнок заповнював картку, а не «плавав» у світлому полі.
+ */
+const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const [url, setUrl] = useState(src);
+
+  useEffect(() => {
+    let alive = true;
+    setUrl(src);
+    trimImage(src).then((trimmed) => {
+      if (alive) setUrl(trimmed);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+    />
+  );
 };
 
 export const SchemesCatalog: React.FC = () => {
@@ -697,12 +726,7 @@ export const SchemesCatalog: React.FC = () => {
                   {/* Картинка велика — і без сірих полів: розмір задає сама картинка */}
                   <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
                     {group.image ? (
-                      <img
-                        src={group.image}
-                        alt={group.section}
-                        loading="lazy"
-                        className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                      />
+                      <NodeImage src={group.image} alt={group.section} />
                     ) : (
                       <Layers size={30} className="text-gray-300" />
                     )}
@@ -755,12 +779,7 @@ export const SchemesCatalog: React.FC = () => {
               >
                 <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
                   {sub.image ? (
-                    <img
-                      src={sub.image}
-                      alt={sub.subsystem}
-                      loading="lazy"
-                      className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                    />
+                    <NodeImage src={sub.image} alt={sub.subsystem} />
                   ) : (
                     <Layers size={30} className="text-gray-300" />
                   )}
