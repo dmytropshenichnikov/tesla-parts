@@ -56,6 +56,11 @@
     />
     <script>
       tailwind.config = {
+        // На тачскріні :hover «залипає» після дотику — картки виглядали вже
+        // обраними. Тому hover-варіанти вмикаємо лише для пристроїв із курсором.
+        future: {
+          hoverOnlyWhenSupported: true,
+        },
         theme: {
           extend: {
             fontFamily: {

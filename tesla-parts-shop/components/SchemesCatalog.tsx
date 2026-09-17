@@ -91,6 +91,7 @@ export const SchemesCatalog: React.FC = () => {
   const [selectedGen, setSelectedGen] = useState<string>(ALL_GENERATIONS);
   // Шлях до схеми як у каталозі: розділ → підсистема → схема
   const [sections, setSections] = useState<SchematicSectionGroup[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [selectedSubsystem, setSelectedSubsystem] = useState<string>('');
   const [showAllSchematics, setShowAllSchematics] = useState(false);
@@ -123,6 +124,16 @@ export const SchemesCatalog: React.FC = () => {
   // Крок «підсистема» показуємо завжди, якщо в розділі є підсистеми:
   // шлях такий самий, як у каталозі — авто → розділ → підсистема → схема
   const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 0;
+  // Якщо в обраній підсистемі рівно одна схема — відкриваємо її одразу.
+  // Раніше треба було тицяти «ЗАХИСТИ ПЕРЕДНІ» → потім ще раз «ЗАХИСТИ ПЕРЕДНІ».
+  useEffect(() => {
+    if (!selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) return;
+    if (showAllSchematics || activeSearch || loading) return;
+    if (schematics.length !== 1) return;
+    const only = schematics[0];
+    if (only?.id) navigate(`/schemes/${only.id}`, { replace: true });
+  }, [schematics, loading, selectedSubsystem, showAllSchematics, activeSearch, navigate]);
+
   // Список схем показуємо, коли шлях пройдено або користувач попросив усі схеми
   const canShowSchemes =
     Boolean(selectedModel) &&
@@ -206,7 +217,19 @@ export const SchemesCatalog: React.FC = () => {
       setSections([]);
       return;
     }
-    api.getSchematicSections({ model: selectedModel }).then(setSections);
+    let cancelled = false;
+    setSectionsLoading(true);
+    api
+      .getSchematicSections({ model: selectedModel })
+      .then((list) => {
+        if (!cancelled) setSections(list);
+      })
+      .finally(() => {
+        if (!cancelled) setSectionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedModel]);
 
   // На кроці «підсистема» підтягуємо деталі саме цього вузла з каталогу
@@ -670,7 +693,12 @@ export const SchemesCatalog: React.FC = () => {
             )}
           </div>
 
-          {sections.length === 0 ? (
+          {sectionsLoading && sections.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
+              <div className="w-9 h-9 mx-auto mb-3 rounded-full border-4 border-gray-100 border-t-tesla-red animate-spin" />
+              <p className="text-gray-400 font-manrope text-sm">Завантаження розділів…</p>
+            </div>
+          ) : sections.length === 0 ? (
             <div className="bg-white rounded-3xl border border-dashed border-gray-300 p-10 text-center">
               <Layers size={40} className="mx-auto text-gray-300 mb-3" />
               <h3 className="font-montserrat font-bold text-gray-700">Для цієї моделі схем ще немає</h3>
