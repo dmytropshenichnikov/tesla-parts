@@ -397,7 +397,9 @@ export const SchemesCatalog: React.FC = () => {
 
   // Вибір авто: окремо реальні моделі й окремо аксесуари.
   // «Всі моделі» прибрано навмисно — схеми завжди привʼязані до конкретного авто.
-  const carOptions = modelOptions.filter((o) => !o.is_accessory);
+  // Показуємо рівно ті категорії, які адміністратор лишив видимими
+  // в «Схемах запчастин (EPC)» (перемикач «око» в Категоріях).
+  const carOptions = modelOptions.filter((o) => o.show_in_schematics !== false);
 
   // Покоління показуємо лише тоді, коли категорія справді має кілька варіантів.
   // Покоління показуємо лише коли категорія його НЕ визначає.
@@ -564,7 +566,7 @@ export const SchemesCatalog: React.FC = () => {
 
                   <div className="absolute bottom-0 left-0 p-6 z-20 text-white w-full">
                     <h3 className="text-xl md:text-2xl font-bold mb-1 group-hover:translate-x-0.5 transition-transform duration-200">
-                      Tesla {o.category}
+                      {o.is_accessory ? o.category : `Tesla ${o.category}`}
                     </h3>
                     <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-200 group-hover:text-white transition-colors">
                       <span>Переглянути схеми</span>

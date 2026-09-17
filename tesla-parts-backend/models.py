@@ -12,6 +12,10 @@ class Category(SQLModel, table=True):
     name: str
     image: Optional[str] = None
     sort_order: int = Field(default=0, index=True)
+    # Чи показувати категорію в розділі «Схеми запчастин (EPC)» — і в магазині,
+    # і в адмінці. Так «Аксесуари» можна сховати, а нову модель (Cybertruck)
+    # лишити видимою. Керується перемикачем у «Категоріях».
+    show_in_schematics: bool = Field(default=True, index=True)
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
     

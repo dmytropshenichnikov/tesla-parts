@@ -149,6 +149,8 @@ export interface SchematicModelOption {
   /** true — покоління визначене категорією (напр. «Model 3 Highland»). */
   pinned_generation: boolean;
   is_accessory: boolean;
+  /** Чи показувати категорію в схемах (керується в адмінці → «Категорії») */
+  show_in_schematics?: boolean;
   schematics_count: number;
 }
 

@@ -20,6 +20,8 @@ import {
   ArrowDown,
   Copy,
   GripVertical,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface SubcategoryItemProps {
@@ -916,6 +918,21 @@ const CategoryList: React.FC = () => {
     }
   };
 
+  /** Показати або сховати категорію в розділі «Схеми запчастин (EPC)» */
+  const handleToggleSchematics = async (category: Category) => {
+    const next = category.show_in_schematics === false;
+    try {
+      await ApiService.setCategorySchematicsVisibility(category.id, next);
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.id === category.id ? { ...item, show_in_schematics: next } : item
+        )
+      );
+    } catch (e) {
+      alert('Не вдалося змінити видимість у схемах');
+    }
+  };
+
   const handleUpdateCategorySort = async (
     category: Category,
     newSortOrder: number
@@ -1227,7 +1244,9 @@ const CategoryList: React.FC = () => {
           <span>
             Порядок моделей і підкатегорій змінюється <strong>перетягуванням рядка</strong> (або
             стрілками ↑↓). Він одразу застосовується в каталозі, на головній сторінці та в
-            розділі «Схеми запчастин».
+            розділі «Схеми запчастин». Іконка <strong>ока</strong> праворуч керує тим, чи
+            показувати категорію в «Схемах запчастин (EPC)» — саме так сховані «Аксесуари»,
+            і так само можна сховати будь-яку нову категорію.
           </span>
         </div>
         {sortedCategories.map((category, idx) => (
@@ -1416,6 +1435,21 @@ const CategoryList: React.FC = () => {
                       <ArrowDown size={16} />
                     </button>
                   </div>
+                  <button
+                    onClick={() => handleToggleSchematics(category)}
+                    className={`p-2 rounded transition ${
+                      category.show_in_schematics === false
+                        ? 'text-gray-300 hover:text-tesla-red'
+                        : 'text-emerald-600 hover:bg-emerald-50'
+                    }`}
+                    title={
+                      category.show_in_schematics === false
+                        ? 'Не показується в «Схемах запчастин» — натисніть, щоб увімкнути'
+                        : 'Показується в «Схемах запчастин» — натисніть, щоб сховати'
+                    }
+                  >
+                    {category.show_in_schematics === false ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                   <Link
                     to={`/products/new?category_id=${category.id}`}
                     className="text-gray-400 hover:text-green-600 p-2 rounded transition"

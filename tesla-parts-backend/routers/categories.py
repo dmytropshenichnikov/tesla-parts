@@ -177,6 +177,26 @@ def get_categories(session: Session = Depends(get_session)):
     ).all()
     return categories
 
+@router.post("/{category_id}/schematics-visibility", dependencies=[Depends(get_current_admin)])
+def set_category_schematics_visibility(
+    category_id: int,
+    payload: dict,
+    session: Session = Depends(get_session),
+):
+    """Показувати категорію в «Схемах запчастин (EPC)».
+
+    Нові категорії (напр. «Cybertruck») типово видимі, «Аксесуари» — можна
+    сховати перемикачем, щоб у магазині не було зайвих карток.
+    """
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Категорію не знайдено")
+    category.show_in_schematics = bool(payload.get("visible", True))
+    session.add(category)
+    session.commit()
+    return {"id": category.id, "show_in_schematics": category.show_in_schematics}
+
+
 class ReorderItem(BaseModel):
     id: int
     sort_order: int
@@ -540,6 +560,7 @@ async def update_category(
     sort_order: Optional[int] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
+    show_in_schematics: Optional[bool] = Form(None),
     session: Session = Depends(get_session)
 ):
     category = session.get(Category, category_id)
@@ -553,7 +574,9 @@ async def update_category(
         category.meta_title = meta_title or None
     if meta_description is not None:
         category.meta_description = meta_description or None
-    
+    if show_in_schematics is not None:
+        category.show_in_schematics = show_in_schematics
+
     # Handle file upload
     if file and file.filename:
         image_url = await image_uploader.upload_image(file, folder="tesla-parts/categories")

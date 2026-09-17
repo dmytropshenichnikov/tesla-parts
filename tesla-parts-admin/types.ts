@@ -15,6 +15,8 @@ export interface Category {
   name: string;
   image?: string;
   sort_order?: number;
+  /** Чи показувати категорію в «Схемах запчастин (EPC)» */
+  show_in_schematics?: boolean;
   meta_title?: string | null;
   meta_description?: string | null;
   subcategories: Subcategory[];

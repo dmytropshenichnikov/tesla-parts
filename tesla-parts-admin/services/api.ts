@@ -463,6 +463,23 @@ export const ApiService = {
    * Використовується там, де потрібен порядок і повний перелік категорій каталогу.
    */
   /** Зберігає новий порядок категорій (моделей) після перетягування. */
+  /** Показати/сховати категорію в «Схемах запчастин (EPC)» */
+  setCategorySchematicsVisibility: async (
+    id: number,
+    visible: boolean
+  ): Promise<{ id: number; show_in_schematics: boolean }> => {
+    const res = await _authenticatedFetch(
+      `${API_URL}/categories/${id}/schematics-visibility`,
+      {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ visible }),
+      }
+    );
+    if (!res.ok) throw new Error('Failed to update schematics visibility');
+    return res.json();
+  },
+
   reorderCategories: async (
     items: { id: number; sort_order: number }[]
   ): Promise<void> => {

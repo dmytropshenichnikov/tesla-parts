@@ -130,6 +130,9 @@ export const SchematicManager: React.FC = () => {
   const [filterSection, setFilterSection] = useState<string>('');
   const [filterSubsystem, setFilterSubsystem] = useState<string>('');
   const [filterSections, setFilterSections] = useState<SchematicSectionOption[]>([]);
+  // «Показати всі схеми розділу» — інакше список схем з'являється лише після
+  // вибору підсистеми, щоб випадково не змінити порядок усіх схем
+  const [showAllOfSection, setShowAllOfSection] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Моделі/покоління — з категорій каталогу (єдине джерело істини)
@@ -278,15 +281,33 @@ export const SchematicManager: React.FC = () => {
     return () => window.removeEventListener('admin-tokens-refreshed', handleTokensRefreshed);
   }, []);
 
+  // Схеми показуємо лише коли шлях пройдено: модель → розділ → (підсистема).
+  // Виняток — пошук: він шукає по всіх схемах.
+  const activeSectionGroup = filterSections.find((item) => item.section === filterSection);
+  const activeSubsystems = activeSectionGroup?.subsystems || [];
+  const needsSubsystemPick =
+    Boolean(filterSection) && activeSubsystems.length > 0 && !filterSubsystem && !showAllOfSection;
+  const canShowSchemes = Boolean(searchQuery) || (Boolean(filterSection) && !needsSubsystemPick);
+
   useEffect(() => {
+    if (searchQuery) {
+      loadSchematics();
+      return;
+    }
+    if (!canShowSchemes) {
+      setSchematics([]);
+      setLoading(false);
+      return;
+    }
     loadSchematics();
-  }, [filterModel, filterSection, filterSubsystem, searchQuery]);
+  }, [filterModel, filterSection, filterSubsystem, searchQuery, showAllOfSection]);
 
   // Розділи беремо з підкатегорій каталогу обраної категорії.
   // Зміна авто скидає глибші кроки, щоб не було стану «авто одне, розділ інший».
   useEffect(() => {
     setFilterSection('');
     setFilterSubsystem('');
+    setShowAllOfSection(false);
     const category = modelOptions.find((o) => o.category === filterModel);
     if (!filterModel || !category || category.is_accessory) {
       setFilterSections([]);
@@ -1219,6 +1240,7 @@ export const SchematicManager: React.FC = () => {
                     onClick={() => {
                       setFilterSection(active ? '' : group.section);
                       setFilterSubsystem('');
+                      setShowAllOfSection(false);
                     }}
                     className={`px-3.5 py-2 rounded-xl border text-xs font-montserrat font-bold transition-all ${
                       active
@@ -1276,6 +1298,44 @@ export const SchematicManager: React.FC = () => {
           );
         })()}
 
+        {/* Схеми не показуємо, поки не дійшли до розділу/підсистеми */}
+        {!filterModel ? (
+          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-300">
+            <Layers size={44} className="mx-auto text-gray-300 mb-3" />
+            <h3 className="font-montserrat font-bold text-gray-700">Оберіть модель</h3>
+            <p className="text-gray-400 font-manrope text-sm mt-1 max-w-md mx-auto">
+              Схеми показуються після вибору моделі, розділу та підсистеми — так порядок
+              змінюється лише в межах одного вузла, а не серед усіх схем.
+            </p>
+          </div>
+        ) : !filterSection ? (
+          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-300">
+            <Layers size={44} className="mx-auto text-gray-300 mb-3" />
+            <h3 className="font-montserrat font-bold text-gray-700">
+              {filterSections.length > 0 ? 'Оберіть розділ' : 'Для цієї моделі схем ще немає'}
+            </h3>
+            <p className="text-gray-400 font-manrope text-sm mt-1 max-w-md mx-auto">
+              {filterSections.length > 0
+                ? 'Далі оберіть підсистему — і побачите схеми цього вузла.'
+                : 'Додайте першу схему для цієї моделі.'}
+            </p>
+          </div>
+        ) : needsSubsystemPick ? (
+          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-gray-300">
+            <Layers size={44} className="mx-auto text-gray-300 mb-3" />
+            <h3 className="font-montserrat font-bold text-gray-700">Оберіть підсистему</h3>
+            <p className="text-gray-400 font-manrope text-sm mt-1 max-w-md mx-auto">
+              Покажемо схеми лише цього вузла. Або відкрийте всі схеми розділу.
+            </p>
+            <button
+              onClick={() => setShowAllOfSection(true)}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-montserrat font-bold cursor-pointer"
+            >
+              Показати всі схеми розділу
+            </button>
+          </div>
+        ) : (
+          <>
         {/* Підказка: порядок схем змінюється перетягуванням або стрілками */}
         {!loading && schematics.length > 1 && (
           <div className="flex items-start gap-2 p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-900 font-manrope">
@@ -1417,6 +1477,8 @@ export const SchematicManager: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
     );

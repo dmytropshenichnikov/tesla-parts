@@ -683,6 +683,8 @@ def get_schematic_model_options(session: Session = Depends(get_session)):
             schematics_count = session.exec(scope).first() or 0
 
         option["schematics_count"] = schematics_count
+        # Чи показувати цю категорію в схемах (керується в «Категоріях»)
+        option["show_in_schematics"] = bool(getattr(category, "show_in_schematics", True))
         (accessories if option["is_accessory"] else vehicles).append(option)
 
     return {"options": vehicles + accessories}
