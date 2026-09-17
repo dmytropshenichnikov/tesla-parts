@@ -14,6 +14,7 @@ import {
   PackageCheck,
   Layers,
   ArrowLeft,
+  ExternalLink,
   Plus,
   Minus,
   RotateCcw,
@@ -327,6 +328,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     if (!linkedProductId) return false;
     if (!variant) return true;
     return variant.inStock !== false;
+  };
+
+  /**
+   * Куди веде клік по деталі: картка товару в каталозі. Привʼязка та сама, що
+   * для кошика — варіант має свій product_id, а посилання рівня точки діє лише
+   * коли варіант один (у нинішній адмінці його вже не виставляють).
+   */
+  const productPathFor = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
+    const variantCount = (hotspot.variants || []).length;
+    const linkedProductId =
+      variant?.product_id || (variantCount <= 1 ? hotspot.product_id : null);
+    return linkedProductId ? `/product/${linkedProductId}` : null;
   };
 
   const handleAddToCart = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
@@ -811,7 +824,18 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
                         {/* Name */}
                         <h3 className="font-montserrat font-bold text-sm text-gray-900 mt-0.5 leading-snug">
-                          {h.name}
+                          {productPathFor(h) ? (
+                            <Link
+                              to={productPathFor(h) as string}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Відкрити картку товару"
+                              className="hover:text-tesla-red underline decoration-gray-300 decoration-dotted underline-offset-2 transition-colors"
+                            >
+                              {h.name}
+                            </Link>
+                          ) : (
+                            h.name
+                          )}
                         </h3>
 
                         {/* Variants summary badge */}
@@ -914,9 +938,21 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                             )}
 
                             {v.name && (
-                              <span className="text-xs text-gray-600 font-manrope ml-1">
-                                {v.name}
-                              </span>
+                              productPathFor(h, v) ? (
+                                <Link
+                                  to={productPathFor(h, v) as string}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Відкрити картку товару"
+                                  className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-tesla-red font-manrope ml-1 underline decoration-dotted underline-offset-2 transition-colors"
+                                >
+                                  {v.name}
+                                  <ExternalLink size={12} className="shrink-0 opacity-70" />
+                                </Link>
+                              ) : (
+                                <span className="text-xs text-gray-600 font-manrope ml-1">
+                                  {v.name}
+                                </span>
+                              )
                             )}
                           </div>
 

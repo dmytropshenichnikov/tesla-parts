@@ -399,39 +399,14 @@ const ProductPage: React.FC<ProductPageProps> = ({
               )}
             </div>
 
-            {/* Quick Delivery Guarantee Note */}
-            <div className="mt-4 pt-3 border-t border-gray-200/60 hidden sm:flex items-center justify-between text-xs text-gray-500">
-              <span className="flex items-center gap-1.5 text-gray-600">
-                <Truck size={15} className="text-tesla-red" />
-                Відправка Новою Поштою по Україні
-              </span>
-              <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                <ShieldCheck size={15} />
-                Гарантія 14 днів
-              </span>
-            </div>
           </div>
 
           {/* Right Column: Product Details & Purchase */}
           <div className="md:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col justify-between">
             <div>
-              {/* Status & Badges */}
+              {/* Бейджі «В наявності» / «Аналог» тут більше не дублюємо — вони вже
+                  є на фото. Лишаємо тільки мобільні теги моделей. */}
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                {product.inStock ? (
-                  <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/70 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold tracking-wide shadow-2xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    В наявності
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center bg-gray-100 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium">
-                    Під замовлення
-                  </span>
-                )}
-
-                {partType && (
-                  <PartTypeBadge type={partType} variant="pill" size="md" />
-                )}
-
                 {/* Mobile models tags */}
                 {models.map((model, idx) => (
                   <span
@@ -554,6 +529,36 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     </>
                   )}
                 </button>
+
+                {/* Перехід на схему вузла: доступний одразу під кнопкою купівлі,
+                    без прокрутки — саме те, що потрібно, коли деталь шукали зі схеми. */}
+                {productSchematics.length > 0 && (
+                  <Link
+                    to={`/schemes/${productSchematics[0].schematic_id}`}
+                    className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-red-100 bg-red-50/60 hover:bg-red-50 hover:border-tesla-red transition-colors group"
+                  >
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-white text-tesla-red flex items-center justify-center shrink-0 shadow-2xs">
+                        <Layers size={16} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[11px] font-manrope text-gray-500">
+                          Ця деталь на схемі
+                        </span>
+                        <span className="block font-montserrat font-bold text-sm text-gray-900 truncate">
+                          {productSchematics[0].title}
+                          {productSchematics.length > 1
+                            ? ` та ще ${productSchematics.length - 1}`
+                            : ''}
+                        </span>
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="text-tesla-red shrink-0 group-hover:translate-x-0.5 transition-transform"
+                    />
+                  </Link>
+                )}
 
                 {/* Quick Consultation Messengers */}
                 <div className="grid grid-cols-2 gap-2">
@@ -697,15 +702,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
           </div>
 
           {/* Description Text */}
-          {product.description && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <h3 className="text-base font-bold text-gray-900 mb-3">Опис деталі</h3>
-              <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                {product.description}
-              </div>
-            </div>
-          )}
-
           {/* Схеми, де стоїть ця деталь — шлях «від деталі до вузла» */}
           {productSchematics.length > 0 && (
             <div className="mt-6 pt-6 border-t border-gray-100">
@@ -742,6 +738,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     />
                   </Link>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {product.description && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 mb-3">Опис деталі</h3>
+              <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                {product.description}
               </div>
             </div>
           )}
