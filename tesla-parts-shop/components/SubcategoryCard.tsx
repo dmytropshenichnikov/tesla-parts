@@ -18,12 +18,14 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
       className="bg-white rounded-xl shadow-xs border border-gray-100 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out cursor-pointer group overflow-hidden flex items-center p-3 sm:p-6 select-none"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      <div className="w-24 h-16 sm:w-48 sm:h-[108px] bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden mr-3 sm:mr-6 flex items-center justify-center">
+      <div className="w-24 h-16 sm:w-48 sm:h-[108px] bg-white rounded-lg flex-shrink-0 overflow-hidden mr-3 sm:mr-6 flex items-center justify-center p-1">
         {subcategory.image ? (
+          /* object-contain: картинки в каталозі вже обрізані по малюнку, тому
+             «cover» дорізав би сам малюнок — показуємо повністю */
           <img
             src={subcategory.image}
             alt={subcategory.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+            className="max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300 ease-out"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

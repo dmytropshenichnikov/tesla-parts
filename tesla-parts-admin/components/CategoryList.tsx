@@ -704,7 +704,7 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                               <img
                                 src={product.image}
                                 alt=""
-                                className="w-8 h-8 rounded object-cover border border-gray-100"
+                                className="w-8 h-8 rounded object-contain bg-white border border-gray-100"
                               />
                               <div>
                                 <div className="font-medium text-gray-900">
@@ -1576,7 +1576,7 @@ const CategoryList: React.FC = () => {
                                     <img
                                       src={product.image}
                                       alt=""
-                                      className="w-8 h-8 rounded object-cover border border-gray-100"
+                                      className="w-8 h-8 rounded object-contain bg-white border border-gray-100"
                                     />
                                     <div>
                                       <div className="font-medium text-gray-900">
