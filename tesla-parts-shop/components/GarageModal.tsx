@@ -181,6 +181,12 @@ export const GarageModal: React.FC<GarageModalProps> = ({
       setCurrentCar(car);
       if (onCarSaved) onCarSaved(car);
       onClose();
+
+      // Залогіненим — одразу пишемо авто й в акаунт, щоб воно було доступне на
+      // іншому пристрої. Якщо мережа підвела, локальний гараж усе одно працює.
+      if (localStorage.getItem('customerToken')) {
+        api.addGarageCar(car).catch((e) => console.error('Не вдалося зберегти авто в акаунті', e));
+      }
     } catch (e) {
       console.error('Failed to save car to garage:', e);
     }

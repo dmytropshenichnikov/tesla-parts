@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, SubcategorySchemeSummary, VinDecodeResult, PlateLookupResult } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, SubcategorySchemeSummary, VinDecodeResult, PlateLookupResult, SavedCar } from '../types';
 
 /**
  * Абсолютна адреса бекенду (api.teslapartscenter.com.ua).
@@ -296,6 +296,102 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to update profile');
     return res.json();
+  },
+
+  // --- Мій Гараж (прив'язаний до акаунта) ---
+
+  getGarageCars: async (): Promise<SavedCar[]> => {
+    const res = await fetchWithAuth(`/garage`);
+    if (!res.ok) throw new Error('Failed to fetch garage');
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((c: any) => ({
+      id: `server_${c.id}`,
+      serverId: c.id,
+      vin: c.vin || undefined,
+      plate: c.plate || undefined,
+      model: c.model,
+      generation: c.generation || '',
+      year: c.year || 0,
+      drive: c.drive || undefined,
+      plant: c.plant || undefined,
+      body_type: c.body_type || undefined,
+      description: c.description || `Tesla ${c.model}`,
+      isActive: Boolean(c.is_active),
+      savedAt: c.created_at || undefined,
+    }));
+  },
+
+  addGarageCar: async (car: SavedCar): Promise<SavedCar> => {
+    const res = await fetchWithAuth(`/garage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vin: car.vin || null,
+        plate: car.plate || null,
+        model: car.model,
+        generation: car.generation || null,
+        year: car.year || null,
+        drive: car.drive || null,
+        plant: car.plant || null,
+        body_type: car.body_type || null,
+        description: car.description || null,
+        make_active: true,
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to save car to account');
+    return res.json();
+  },
+
+  setActiveGarageCar: async (serverId: number): Promise<void> => {
+    const res = await fetchWithAuth(`/garage/${serverId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: true }),
+    });
+    if (!res.ok) throw new Error('Failed to switch active car');
+  },
+
+  deleteGarageCar: async (serverId: number): Promise<void> => {
+    const res = await fetchWithAuth(`/garage/${serverId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new Error('Failed to delete car');
+  },
+
+  importGarage: async (cars: SavedCar[], activeVin?: string): Promise<SavedCar[]> => {
+    const res = await fetchWithAuth(`/garage/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cars: cars.map((c) => ({
+          vin: c.vin || null,
+          plate: c.plate || null,
+          model: c.model,
+          generation: c.generation || null,
+          year: c.year || null,
+          drive: c.drive || null,
+          plant: c.plant || null,
+          body_type: c.body_type || null,
+          description: c.description || null,
+        })),
+        active_vin: activeVin || null,
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to import garage');
+    const data = await res.json();
+    return (Array.isArray(data) ? data : []).map((c: any) => ({
+      id: `server_${c.id}`,
+      serverId: c.id,
+      vin: c.vin || undefined,
+      plate: c.plate || undefined,
+      model: c.model,
+      generation: c.generation || '',
+      year: c.year || 0,
+      drive: c.drive || undefined,
+      plant: c.plant || undefined,
+      body_type: c.body_type || undefined,
+      description: c.description || `Tesla ${c.model}`,
+      isActive: Boolean(c.is_active),
+      savedAt: c.created_at || undefined,
+    }));
   },
 
   validatePromoCode: async (code: string) => {

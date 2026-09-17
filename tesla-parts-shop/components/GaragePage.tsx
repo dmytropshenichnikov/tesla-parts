@@ -19,6 +19,7 @@ import {
 import { api } from '../services/api';
 import { SavedCar, PlateLookupResult, VinDecodeResult } from '../types';
 import { slugify } from '../utils/slugify';
+import { useAuth } from '../context/AppContext';
 
 // Helper for precise Tesla model & submodel matching
 export const getCarTargetInfo = (car: SavedCar) => {
@@ -72,6 +73,7 @@ export const getCarTargetInfo = (car: SavedCar) => {
 
 export const GaragePage: React.FC = () => {
   const navigate = useNavigate();
+  const { customerProfile } = useAuth();
 
   // Active car & all saved cars
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
@@ -107,6 +109,24 @@ export const GaragePage: React.FC = () => {
     window.scrollTo(0, 0);
     loadGarageState();
     loadModels();
+    // Підтягуємо гараж з акаунта (якщо людина залогінена) і одразу переносимо
+    // в нього авто, які вже лежали в цьому браузері.
+    void syncGarageWithServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Після входу гараж підтягуємо з акаунта (а локальні авто переносимо в нього),
+  // після виходу — повертаємось до того, що лежить у браузері.
+  useEffect(() => {
+    if (customerProfile) void syncGarageWithServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerProfile]);
+
+  useEffect(() => {
+    const onLogout = () => loadGarageState();
+    window.addEventListener('customer-logged-out', onLogout);
+    return () => window.removeEventListener('customer-logged-out', onLogout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const showToast = (msg: string) => {
@@ -154,6 +174,43 @@ export const GaragePage: React.FC = () => {
     }
   };
 
+  /**
+   * Гараж на сервері. Якщо людина залогінена — авто їде за акаунтом, тож на
+   * іншому пристрої гараж не порожній. Локальний гараж при цьому лишається:
+   * він і кеш, і режим для незалогінених. Коли в акаунті ще нічого немає, а в
+   * браузері авто вже збережені — переносимо їх в акаунт (import).
+   */
+  const syncGarageWithServer = async () => {
+    if (!localStorage.getItem('customerToken')) return;
+    try {
+      let serverCars = await api.getGarageCars();
+
+      if (serverCars.length === 0) {
+        let localCars: SavedCar[] = [];
+        let activeVin: string | undefined;
+        try {
+          localCars = JSON.parse(localStorage.getItem('tesla_garage_all_cars') || '[]');
+          activeVin = JSON.parse(localStorage.getItem('tesla_garage_active_car') || 'null')?.vin;
+        } catch {
+          localCars = [];
+        }
+        if (localCars.length > 0) {
+          serverCars = await api.importGarage(localCars, activeVin);
+        }
+      }
+
+      if (serverCars.length === 0) return;
+      const active = serverCars.find((c) => c.isActive) || serverCars[0];
+      localStorage.setItem('tesla_garage_all_cars', JSON.stringify(serverCars));
+      localStorage.setItem('tesla_garage_active_car', JSON.stringify(active));
+      setAllCars(serverCars);
+      setActiveCar(active);
+      window.dispatchEvent(new Event('garage-car-changed'));
+    } catch (e) {
+      console.error('Не вдалося синхронізувати гараж із акаунтом', e);
+    }
+  };
+
   const saveCarToGarage = (car: SavedCar) => {
     try {
       // 1. Set as active car
@@ -173,6 +230,15 @@ export const GaragePage: React.FC = () => {
       // Trigger global event for header and catalog
       window.dispatchEvent(new Event('garage-car-changed'));
       showToast(`Автомобіль ${car.model} успішно додано до вашого Гаража!`);
+
+      // 3. Якщо людина залогінена — дублюємо в акаунт, щоб авто було й на
+      //    іншому пристрої. Помилка мережі не ламає локальний гараж.
+      if (localStorage.getItem('customerToken')) {
+        api
+          .addGarageCar(car)
+          .then(() => syncGarageWithServer())
+          .catch((e) => console.error('Не вдалося зберегти авто в акаунті', e));
+      }
     } catch (e) {
       console.error('Failed to save car to garage', e);
     }
@@ -183,10 +249,14 @@ export const GaragePage: React.FC = () => {
     setActiveCar(car);
     window.dispatchEvent(new Event('garage-car-changed'));
     showToast(`Активне авто перемкнено на ${car.model}`);
+    if (car.serverId && localStorage.getItem('customerToken')) {
+      api.setActiveGarageCar(car.serverId).catch((e) => console.error('Не вдалося перемкнути авто в акаунті', e));
+    }
   };
 
   const handleRemoveCar = (carId: string) => {
     try {
+      const removing = allCars.find((c) => c.id === carId);
       const updated = allCars.filter((c) => c.id !== carId);
       localStorage.setItem('tesla_garage_all_cars', JSON.stringify(updated));
       setAllCars(updated);
@@ -202,6 +272,13 @@ export const GaragePage: React.FC = () => {
         window.dispatchEvent(new Event('garage-car-changed'));
       }
       showToast('Автомобіль видалено з гаража');
+
+      if (removing?.serverId && localStorage.getItem('customerToken')) {
+        api
+          .deleteGarageCar(removing.serverId)
+          .then(() => syncGarageWithServer())
+          .catch((e) => console.error('Не вдалося видалити авто з акаунта', e));
+      }
     } catch (e) {
       console.error('Failed to remove car', e);
     }

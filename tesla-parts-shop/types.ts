@@ -240,6 +240,10 @@ export interface VinDecodeResult {
 
 export interface SavedCar {
   id: string;
+  /** id у БД, коли авто прив'язане до акаунта (localStorage-гараж його не має). */
+  serverId?: number;
+  /** Чи це авто вибране для підбору (актуально для гаража в акаунті). */
+  isActive?: boolean;
   vin?: string;
   plate?: string;
   model: string;
