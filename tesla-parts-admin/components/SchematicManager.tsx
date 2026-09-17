@@ -766,26 +766,27 @@ export const SchematicManager: React.FC = () => {
   };
 
   const handleUpdateHotspot = (index: number, field: keyof SchematicHotspot, value: any) => {
-    if (!editingSchematic) return;
-    const updated = [...editingSchematic.hotspots];
-    updated[index] = {
-      ...updated[index],
-      [field]: value
-    };
-    setEditingSchematic({
-      ...editingSchematic,
-      hotspots: updated
+    // Тільки функціональне оновлення: у межах одного обробника (напр. «додати
+    // варіант» + автозаповнення парт-номера) два виклики читали один і той самий
+    // застарілий стан і другий перетирав перший — варіант «не додавався».
+    setEditingSchematic((prev) => {
+      if (!prev) return prev;
+      const updated = [...prev.hotspots];
+      updated[index] = {
+        ...updated[index],
+        [field]: value
+      };
+      return { ...prev, hotspots: updated };
     });
   };
 
   const handleDeleteHotspot = (index: number) => {
-    if (!editingSchematic) return;
-    const updated = editingSchematic.hotspots.filter((_, i) => i !== index);
-    setEditingSchematic({
-      ...editingSchematic,
-      hotspots: updated
+    setEditingSchematic((prev) => {
+      if (!prev) return prev;
+      const updated = prev.hotspots.filter((_, i) => i !== index);
+      setSelectedHotspotIdx(updated.length > 0 ? Math.max(0, index - 1) : null);
+      return { ...prev, hotspots: updated };
     });
-    setSelectedHotspotIdx(updated.length > 0 ? Math.max(0, index - 1) : null);
   };
 
   /** Знімає фокус з полів і ставить його на полотно схеми. */
