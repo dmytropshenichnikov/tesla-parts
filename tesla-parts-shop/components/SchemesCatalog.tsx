@@ -77,29 +77,41 @@ const resolveOption = (
  * щоб малюнок заповнював картку, а не «плавав» у світлому полі.
  */
 const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
-  // Якщо картинка вже оброблена раніше — показуємо одразу її, без «сіре → біле»
-  const [url, setUrl] = useState(() => getCachedTrimmed(src) ?? src);
+  // Показуємо картинку лише коли вона вже оброблена (кроп + білий фон) або коли
+  // зрозуміло, що обробляти нічого. Так немає «спочатку сіре, потім біле».
+  const [url, setUrl] = useState<string | null>(() => getCachedTrimmed(src));
 
   useEffect(() => {
     let alive = true;
     const cached = getCachedTrimmed(src);
-    setUrl(cached ?? src);
-    if (!cached) {
-      trimImage(src).then((trimmed) => {
-        if (alive) setUrl(trimmed);
-      });
+    if (cached) {
+      setUrl(cached);
+      return () => {
+        alive = false;
+      };
     }
+    setUrl(null);
+    // Запобіжник: якщо обробка з якоїсь причини зависне — показати оригінал
+    const safety = window.setTimeout(() => {
+      if (alive) setUrl((prev) => prev ?? src);
+    }, 3000);
+    trimImage(src).then((trimmed) => {
+      if (alive) setUrl(trimmed);
+    });
     return () => {
       alive = false;
+      window.clearTimeout(safety);
     };
   }, [src]);
 
   return (
     <img
-      src={url}
+      src={url ?? undefined}
       alt={alt}
       loading="lazy"
-      className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+      className={`max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-all duration-300 group-hover:scale-105 ${
+        url ? 'opacity-100' : 'opacity-0'
+      }`}
     />
   );
 };
@@ -629,14 +641,33 @@ export const SchemesCatalog: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2 mb-6">
           {selectedModel ? (
             <>
-              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
-                <Car size={16} className="text-tesla-red" />
-                <span className="font-montserrat font-bold text-sm text-gray-900">
+              {/* Великий клікабельний чип: на телефоні по ньому легко влучити,
+                  а веде він на самий початок — до вибору автомобіля */}
+              <button
+                type="button"
+                onClick={() =>
+                  goToStep({
+                    model: null,
+                    generation: null,
+                    section: null,
+                    subsystem: null,
+                    all: null,
+                  })
+                }
+                title="Повернутись до вибору автомобіля"
+                className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs hover:border-tesla-red/50 hover:bg-red-50/40 transition-colors cursor-pointer"
+              >
+                <Car size={16} className="text-tesla-red flex-shrink-0" />
+                <span className="font-montserrat font-bold text-sm text-gray-900 group-hover:text-tesla-red transition-colors">
                   {activeModelObj && activeModelObj.is_accessory
                     ? activeModelObj.category
                     : `Tesla ${selectedModel}`}
                 </span>
-              </div>
+                <ArrowLeft
+                  size={14}
+                  className="text-gray-300 group-hover:text-tesla-red transition-all group-hover:-translate-x-0.5"
+                />
+              </button>
 
               {selectedSection && (
                 <>
