@@ -688,7 +688,7 @@ export const GaragePage: React.FC = () => {
               <div className="mt-3.5 sm:mt-5 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2.5 sm:gap-3 text-red-700 text-xs sm:text-sm animate-in fade-in duration-200">
                 <AlertCircle size={16} className="text-tesla-red flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-bold font-montserrat">Помилка валідації VIN</div>
+                  <div className="font-bold font-montserrat">Авто не підібралось автоматично</div>
                   <div className="text-[11px] sm:text-xs text-red-600 mt-0.5">{vinError}</div>
                 </div>
               </div>

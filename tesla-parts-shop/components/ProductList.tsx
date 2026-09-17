@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Product, Currency } from '../types';
-import { ShoppingBag, AlertCircle, Copy, Check } from 'lucide-react';
+import { ShoppingBag, AlertCircle, Copy, Check, Car, CheckCircle2 } from 'lucide-react';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
 import { formatCurrency } from '../utils/currency';
 import { useAuth } from '../context/AppContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { getProductPartType } from '../utils/partType';
 import { PartTypeBadge } from './PartTypeBadge';
+import { catalogModelForCar, isProductCompatibleWithCar, useActiveCar } from '../utils/garageMatch';
 
 interface ProductListProps {
   products: Product[];
@@ -25,6 +26,21 @@ const ProductList: React.FC<ProductListProps> = ({
 }) => {
   const navigate = useNavigate();
   const { customerProfile } = useAuth();
+  const activeCar = useActiveCar();
+  const myModel = catalogModelForCar(activeCar);
+  // «Показати тільки для мого авто» — вмикається вручну, щоб не ховати від
+  // людини товари, які вона, можливо, шукає для іншої машини.
+  const [onlyMyCar, setOnlyMyCar] = useState(false);
+
+  const visibleProducts = useMemo(() => {
+    if (!onlyMyCar || !activeCar) return products;
+    return products.filter((p) => isProductCompatibleWithCar(p, activeCar));
+  }, [products, onlyMyCar, activeCar]);
+
+  const compatibleCount = useMemo(
+    () => (activeCar ? products.filter((p) => isProductCompatibleWithCar(p, activeCar)).length : 0),
+    [products, activeCar]
+  );
   const effectiveRate =
     uahPerUsd > 0 ? uahPerUsd : DEFAULT_EXCHANGE_RATE_UAH_PER_USD;
 
@@ -112,8 +128,52 @@ const ProductList: React.FC<ProductListProps> = ({
           {title}
         </h2>
       )}
+
+      {/* Каталог підлаштовується під гараж: показуємо, скільки позицій підходить
+          саме цьому авто, і даємо одним кліком лишити тільки їх. */}
+      {activeCar && products.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-xs">
+          <span className="inline-flex items-center gap-2 text-sm text-gray-600 font-manrope">
+            <Car size={16} className="text-tesla-red" />
+            Ваше авто: <span className="font-semibold text-tesla-dark">{myModel}</span>
+            <span className="text-gray-400">•</span>
+            підходить <span className="font-semibold text-emerald-700">{compatibleCount}</span> з {products.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => setOnlyMyCar((v) => !v)}
+            className={`ml-auto inline-flex items-center gap-2 text-xs font-montserrat font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+              onlyMyCar
+                ? 'bg-tesla-red text-white border-tesla-red hover:bg-red-700'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-tesla-red hover:text-tesla-red'
+            }`}
+          >
+            {onlyMyCar ? 'Показати всі товари' : 'Тільки для мого авто'}
+          </button>
+        </div>
+      )}
+
+      {onlyMyCar && visibleProducts.length === 0 && (
+        <div className="text-center py-14 bg-white rounded-lg shadow-sm border border-gray-100">
+          <div className="text-gray-400 mb-3 flex justify-center">
+            <Car size={40} />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900">Для {myModel} серед цих товарів нічого не позначено</h3>
+          <p className="text-gray-500 mt-2 text-sm">
+            Покажіть усі товари — серед них є універсальні позиції, які теж можуть підійти.
+          </p>
+          <button
+            type="button"
+            onClick={() => setOnlyMyCar(false)}
+            className="mt-4 inline-flex items-center gap-2 text-xs font-montserrat font-bold px-4 py-2 rounded-lg bg-tesla-red text-white hover:bg-red-700 transition-colors cursor-pointer"
+          >
+            Показати всі товари
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
-        {products.map((product, index) => {
+        {visibleProducts.map((product, index) => {
           const { original, final } = getDiscountedPriceInfo(product);
           const partType = getProductPartType(product);
 
@@ -130,6 +190,10 @@ const ProductList: React.FC<ProductListProps> = ({
                 .map((m) => m.trim())
                 .filter(Boolean)
             : [];
+
+          // Чи підходить цей товар до авто з гаража
+          const fitsMyCar = isProductCompatibleWithCar(product, activeCar);
+          const myCarModel = myModel.toLowerCase();
 
           // Cross numbers preview
           const crossNumbers = product.cross_number
@@ -188,10 +252,20 @@ const ProductList: React.FC<ProductListProps> = ({
                   {/* Car Models Tags */}
                   {models.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2 select-text">
+                      {fitsMyCar && (
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-1.5 py-0.5 rounded select-text">
+                          <CheckCircle2 size={11} />
+                          Ваше авто
+                        </span>
+                      )}
                       {models.map((model, idx) => (
                         <span
                           key={idx}
-                          className="bg-gray-100 text-gray-700 text-[10px] font-semibold px-1.5 py-0.5 rounded select-text"
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded select-text ${
+                            activeCar && model.trim().toLowerCase() === myCarModel
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
                         >
                           {model}
                         </span>
