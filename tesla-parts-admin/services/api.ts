@@ -975,6 +975,7 @@ export const ApiService = {
 
   createReview: async (file: File, sortOrder: number = 0): Promise<any> => {
     const formData = new FormData();
+    formData.append('file', file);
     formData.append('sort_order', sortOrder.toString());
 
     const res = await _authenticatedFetch(`${API_URL}/reviews/`, {
@@ -1291,6 +1292,9 @@ export const ApiService = {
 
   uploadSchematicImage: async (file: File): Promise<{ image_url: string }> => {
     const formData = new FormData();
+    // Без цього рядка запит ішов без файлу → бекенд відповідав 422 і адмінка
+    // показувала «Failed to upload schematic image».
+    formData.append('file', file);
     const res = await _authenticatedFetch(`${API_URL}/schematics/upload-image`, {
       method: 'POST',
       headers: getHeaders(true),
