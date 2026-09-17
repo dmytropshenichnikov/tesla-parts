@@ -159,6 +159,57 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   // однакова деталь може стояти на кількох позиціях під одним номером.
   const [hoveredGroupKey, setHoveredGroupKey] = useState<string | null>(null);
 
+  // Деталі з ОДНАКОВИМ номером на схемі — це одна позиція (кронштейн під
+  // номером 7 стоїть у двох місцях), тому в списку показуємо їх одним рядком.
+  const hotspotGroups = useMemo(() => {
+    const list = schematic?.hotspots || [];
+    const map = new Map<string, {
+      key: string;
+      number: number;
+      hotspots: SchematicHotspot[];
+      lead: SchematicHotspot;
+      variants: HotspotVariant[];
+    }>();
+
+    list.forEach((h) => {
+      const key = `n${h.number}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.hotspots.push(h);
+        (h.variants || []).forEach((v) => {
+          const signature = v.product_id || v.name;
+          if (!existing.variants.some((x) => (x.product_id || x.name) === signature)) {
+            existing.variants.push(v);
+          }
+        });
+        return;
+      }
+      map.set(key, {
+        key,
+        number: h.number,
+        hotspots: [h],
+        lead: h,
+        variants: [...(h.variants || [])],
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.number - b.number);
+  }, [schematic]);
+
+  const groupKeyByHotspotId = useMemo(() => {
+    const map: Record<number, string> = {};
+    hotspotGroups.forEach((group) => {
+      group.hotspots.forEach((h) => {
+        map[h.id] = group.key;
+      });
+    });
+    return map;
+  }, [hotspotGroups]);
+
+  const activeGroupKey =
+    activeHotspotId !== null ? groupKeyByHotspotId[activeHotspotId] ?? null : null;
+
+
   // Collapsed / Expanded state for variants (map of hotspot.id -> boolean)
   const [expandedVariants, setExpandedVariants] = useState<Record<number, boolean>>({});
 
@@ -325,56 +376,6 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       </div>
     );
   }
-
-  // Деталі з ОДНАКОВИМ номером на схемі — це одна позиція (кронштейн під
-  // номером 7 стоїть у двох місцях), тому в списку показуємо їх одним рядком.
-  const hotspotGroups = useMemo(() => {
-    const list = schematic.hotspots || [];
-    const map = new Map<string, {
-      key: string;
-      number: number;
-      hotspots: SchematicHotspot[];
-      lead: SchematicHotspot;
-      variants: HotspotVariant[];
-    }>();
-
-    list.forEach((h) => {
-      const key = `n${h.number}`;
-      const existing = map.get(key);
-      if (existing) {
-        existing.hotspots.push(h);
-        (h.variants || []).forEach((v) => {
-          const signature = v.product_id || v.name;
-          if (!existing.variants.some((x) => (x.product_id || x.name) === signature)) {
-            existing.variants.push(v);
-          }
-        });
-        return;
-      }
-      map.set(key, {
-        key,
-        number: h.number,
-        hotspots: [h],
-        lead: h,
-        variants: [...(h.variants || [])],
-      });
-    });
-
-    return Array.from(map.values()).sort((a, b) => a.number - b.number);
-  }, [schematic]);
-
-  const groupKeyByHotspotId = useMemo(() => {
-    const map: Record<number, string> = {};
-    hotspotGroups.forEach((group) => {
-      group.hotspots.forEach((h) => {
-        map[h.id] = group.key;
-      });
-    });
-    return map;
-  }, [hotspotGroups]);
-
-  const activeGroupKey =
-    activeHotspotId !== null ? groupKeyByHotspotId[activeHotspotId] ?? null : null;
 
   // Count stock details — по унікальних позиціях, а не по точках на кресленні
   const totalVariantsCount = hotspotGroups.reduce(
