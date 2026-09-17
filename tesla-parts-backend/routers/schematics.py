@@ -201,12 +201,9 @@ def _category_for_images(
             select(Category).where(func.lower(Category.name) == name.strip().lower())
         ).first()
 
-    # 1) точна назва категорії (найчастіший випадок — магазин передає саме її)
-    exact = find(clean)
-    if exact:
-        return exact
-
-    # 2) базова модель + покоління → шукаємо категорію-варіант
+    # 1) якщо вказано покоління — спершу шукаємо категорію-варіант
+    #    («Model 3» + «Highland» → «Model 3 Highland»), інакше фото буде
+    #    з базової моделі, хоча схема належить варіанту
     gen = (generation or "").strip().lower()
     if gen and gen != "всі покоління":
         for name in all_names:
@@ -216,7 +213,8 @@ def _category_for_images(
                 if found:
                     return found
 
-    return None
+    # 2) точна назва категорії (магазин передає саме її)
+    return find(clean)
 
 
 @router.get("/sections")
