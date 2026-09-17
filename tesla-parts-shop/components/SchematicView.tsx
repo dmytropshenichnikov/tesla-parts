@@ -248,13 +248,22 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     const priceUAH = variant ? variant.priceUAH : (hotspot.variants?.[0]?.priceUAH || 1000);
     const priceUSD = variant?.priceUSD || (priceUAH / rate);
 
+    // Для варіанта, привʼязаного до каталогу, це вже конкретний товар: беремо
+    // його назву й фото. Креслення лишається тільки як крайній варіант.
+    const linkedToCatalog = Boolean(variant?.product_id || hotspot.product_id);
+    const productImage = getFullImageUrl(
+      variant?.image || hotspot.product?.image || ''
+    );
+
     const cartProduct: Product = {
       id: variant?.product_id || hotspot.product_id || `schematic_${hotspot.id}_${variant?.name || 'default'}`,
-      name: `${hotspot.name}${variant ? ` (${variant.name})` : ''}`,
+      name: linkedToCatalog
+        ? (variant?.name || hotspot.name)
+        : `${hotspot.name}${variant ? ` (${variant.name})` : ''}`,
       category: `${schematic?.model || 'Tesla'}, Схеми запчастин`,
       priceUAH: priceUAH,
       priceUSD: priceUSD,
-      image: hotspot.product?.image || getFullImageUrl(schematic?.image_url || ''),
+      image: productImage || getFullImageUrl(schematic?.image_url || ''),
       description: `Оригінальний парт-номер: ${hotspot.part_number || 'н/д'}. Вузол: ${schematic?.title || ''}`,
       inStock: variant?.inStock ?? true,
       detail_number: hotspot.part_number || undefined,

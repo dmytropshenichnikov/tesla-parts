@@ -285,6 +285,8 @@ class HotspotVariant(BaseModel):
     priceUSD: float = 0.0
     inStock: bool = True
     product_id: str | None = None
+    # Фото товару з каталогу — щоб у кошику була картинка деталі, а не креслення
+    image: str | None = None
 
 
 class SchematicHotspotBase(BaseModel):

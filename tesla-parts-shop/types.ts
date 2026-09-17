@@ -114,6 +114,8 @@ export interface HotspotVariant {
   priceUSD: number;
   inStock: boolean;
   product_id?: string | null;
+  /** Фото товару з каталогу (якщо варіант прив'язаний) */
+  image?: string | null;
 }
 
 export interface SchematicHotspot {
