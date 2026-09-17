@@ -15,7 +15,7 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
   return (
     <Link
       to={to}
-      className="bg-white rounded-xl shadow-xs border border-gray-100 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out cursor-pointer group overflow-hidden flex items-center p-3 sm:p-6 select-none"
+      className="h-full bg-white rounded-xl shadow-xs border border-gray-100 hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 ease-out cursor-pointer group overflow-hidden flex items-center p-3 sm:p-6 select-none"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
       <div className="w-24 h-16 sm:w-48 sm:h-[108px] bg-white rounded-lg flex-shrink-0 overflow-hidden mr-3 sm:mr-6 flex items-center justify-center p-1">
