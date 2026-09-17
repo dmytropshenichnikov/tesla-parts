@@ -694,14 +694,14 @@ export const SchemesCatalog: React.FC = () => {
                   }
                   className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
                 >
-                  {/* Картинка велика — по ній одразу видно, які деталі в розділі */}
-                  <div className="w-[42%] min-w-[104px] max-w-[190px] aspect-[4/3] shrink-0 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                  {/* Картинка велика — і без сірих полів: розмір задає сама картинка */}
+                  <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
                     {group.image ? (
                       <img
                         src={group.image}
                         alt={group.section}
                         loading="lazy"
-                        className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                        className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
                       <Layers size={30} className="text-gray-300" />
@@ -753,13 +753,13 @@ export const SchemesCatalog: React.FC = () => {
                 onClick={() => goToStep({ subsystem: sub.subsystem })}
                 className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
-                <div className="w-[42%] min-w-[104px] max-w-[190px] aspect-[4/3] shrink-0 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden">
+                <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
                   {sub.image ? (
                     <img
                       src={sub.image}
                       alt={sub.subsystem}
                       loading="lazy"
-                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
                     <Layers size={30} className="text-gray-300" />
