@@ -363,7 +363,6 @@ export const SchemesCatalog: React.FC = () => {
   // Вибір авто: окремо реальні моделі й окремо аксесуари.
   // «Всі моделі» прибрано навмисно — схеми завжди привʼязані до конкретного авто.
   const carOptions = modelOptions.filter((o) => !o.is_accessory);
-  const accessoryOptions = modelOptions.filter((o) => o.is_accessory);
 
   // Покоління показуємо лише тоді, коли категорія справді має кілька варіантів.
   // Покоління показуємо лише коли категорія його НЕ визначає.
@@ -542,33 +541,6 @@ export const SchemesCatalog: React.FC = () => {
                   </div>
                 </button>
               ))}
-            </div>
-          )}
-
-          {accessoryOptions.length > 0 && (
-            <div className="mt-8 p-5 sm:p-6 rounded-3xl bg-white border border-gray-100 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-[11px] uppercase tracking-wider font-montserrat font-bold text-gray-400">
-                  Аксесуари та універсальні схеми
-                </span>
-                {accessoryOptions.map((o) => (
-                  <button
-                    key={o.category}
-                    onClick={() =>
-                      goToStep({
-                        model: o.category,
-                        generation: null,
-                        section: null,
-                        subsystem: null,
-                        all: null,
-                      })
-                    }
-                    className="px-4 py-2 rounded-full border border-gray-200 bg-white text-xs font-montserrat font-semibold text-gray-700 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
-                  >
-                    {o.category}
-                  </button>
-                ))}
-              </div>
             </div>
           )}
         </div>
