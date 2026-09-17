@@ -80,7 +80,12 @@ def trim_and_whiten_image(path: Path, padding: float = 0.03) -> bool:
                     luma = 0.299 * r + 0.587 * g + 0.114 * b
                     if luma >= whiten_threshold:
                         data[x, y] = (255, 255, 255)
-            cropped.save(path, format="PNG")
+            # Зберігаємо у ТОМУ Ж форматі, що й оригінал: інакше .jpg містив би
+            # PNG-дані й сервер віддавав би неправильний Content-Type.
+            if str(path).lower().endswith((".jpg", ".jpeg")):
+                cropped.save(path, format="JPEG", quality=95, subsampling=0)
+            else:
+                cropped.save(path, format="PNG")
         return True
     except Exception as e:  # pragma: no cover
         print(f"Image trim skipped: {e}")
