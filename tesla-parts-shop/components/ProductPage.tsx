@@ -623,7 +623,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
       {/* Product Details Specifications & Description */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Characteristics Specifications Table (2 cols) */}
-        <div className="md:col-span-2 bg-white rounded-2xl shadow-xs border border-gray-100 p-5 sm:p-7">
+        <div className="md:col-span-3 bg-white rounded-2xl shadow-xs border border-gray-100 p-5 sm:p-7">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
             <span>Технічні характеристики</span>
           </h2>
@@ -747,56 +747,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <h3 className="text-base font-bold text-gray-900 mb-3">Опис деталі</h3>
               <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
                 {product.description}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Sidebar: Delivery & Payment Details */}
-        <div className="bg-white rounded-2xl shadow-xs border border-gray-100 p-5 sm:p-7 flex flex-col justify-between">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
-              <Truck size={20} className="text-tesla-red" />
-              <span>Доставка та оплата</span>
-            </h2>
-
-            <div className="space-y-4 text-xs sm:text-sm text-gray-600">
-              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="font-bold text-gray-900 mb-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-tesla-red"></span>
-                  Нова Пошта
-                </div>
-                <p className="text-gray-500 text-xs">
-                  Доставка у будь-яке відділення чи поштомат України за 1-2 дні.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="font-bold text-gray-900 mb-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-tesla-red"></span>
-                  Способи оплати
-                </div>
-                <p className="text-gray-500 text-xs">
-                  Накладений платіж при отриманні або оплата на рахунок ФОП.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="font-bold text-gray-900 mb-1 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Гарантія повернення
-                </div>
-                <p className="text-gray-500 text-xs">
-                  14 днів з моменту отримання товару відповідно до Закону України.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {deliveryInfo && (
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <div className="text-[11px] text-gray-400 max-h-36 overflow-y-auto pr-1 custom-scrollbar whitespace-pre-line">
-                {deliveryInfo}
               </div>
             </div>
           )}
