@@ -1,4 +1,5 @@
 import json
+import re
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlmodel import Session, select, func, col
@@ -19,6 +20,30 @@ from dependencies import get_current_admin
 from services.image_uploader import image_uploader
 
 router = APIRouter(prefix="/schematics", tags=["schematics"])
+
+# Той самий rule, що й у магазині (tesla-parts-shop/utils/partType.ts):
+# поле part_type → назва товару → опис. Потрібно, щоб «Оригінал/Аналог» на схемі,
+# у кошику та на сторінці товару завжди збігались.
+_ORIGINAL_RE = re.compile(r"ориг[іи]нал|original", re.IGNORECASE)
+_ANALOG_RE = re.compile(r"аналог", re.IGNORECASE)
+
+
+def _resolve_part_type(product) -> Optional[str]:
+    if product is None:
+        return None
+    if product.part_type in ("original", "analog"):
+        return product.part_type
+    name = product.name or ""
+    if _ANALOG_RE.search(name):
+        return "analog"
+    if _ORIGINAL_RE.search(name):
+        return "original"
+    description = product.description or ""
+    if _ANALOG_RE.search(description):
+        return "analog"
+    if _ORIGINAL_RE.search(description):
+        return "original"
+    return None
 
 def _format_hotspot(
     hotspot: SchematicHotspot,
@@ -51,8 +76,9 @@ def _format_hotspot(
                 variant.image = product.image
             # Тип («Оригінал»/«Аналог») теж беремо з товару каталогу — саме він
             # показується на сторінці товару, тож на схемі й у кошику має бути той самий
-            if product.part_type:
-                variant.type = product.part_type
+            resolved_type = _resolve_part_type(product)
+            if resolved_type:
+                variant.type = resolved_type
     
     product_read = None
     if hotspot.product:
@@ -67,7 +93,7 @@ def _format_hotspot(
             inStock=hotspot.product.inStock,
             detail_number=hotspot.product.detail_number,
             cross_number=hotspot.product.cross_number,
-            part_type=hotspot.product.part_type,
+            part_type=_resolve_part_type(hotspot.product),
             created_at=hotspot.product.created_at,
             images=[img.url for img in hotspot.product.images] if hotspot.product.images else []
         )
