@@ -18,7 +18,6 @@ import { api } from '../services/api';
 import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup, Product } from '../types';
 import { slugify } from '../utils/slugify';
 import { GarageModal } from './GarageModal';
-import { trimImage, getCachedTrimmed } from '../utils/trimImage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -73,48 +72,18 @@ const resolveOption = (
 };
 
 /**
- * Картинка вузла без порожніх полів: показуємо обрізану версію (див. trimImage),
- * щоб малюнок заповнював картку, а не «плавав» у світлому полі.
+ * Картинка вузла. Обробка (обрізка полів + білий фон) робиться НА СЕРВЕРІ під
+ * час завантаження в адмінці, тому тут просто показуємо файл — без жодних
+ * перемальовувань у браузері (раніше через це картинка встигала блимнути сірим).
  */
-const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
-  // Показуємо картинку лише коли вона вже оброблена (кроп + білий фон) або коли
-  // зрозуміло, що обробляти нічого. Так немає «спочатку сіре, потім біле».
-  const [url, setUrl] = useState<string | null>(() => getCachedTrimmed(src));
-
-  useEffect(() => {
-    let alive = true;
-    const cached = getCachedTrimmed(src);
-    if (cached) {
-      setUrl(cached);
-      return () => {
-        alive = false;
-      };
-    }
-    setUrl(null);
-    // Запобіжник: якщо обробка з якоїсь причини зависне — показати оригінал
-    const safety = window.setTimeout(() => {
-      if (alive) setUrl((prev) => prev ?? src);
-    }, 3000);
-    trimImage(src).then((trimmed) => {
-      if (alive) setUrl(trimmed);
-    });
-    return () => {
-      alive = false;
-      window.clearTimeout(safety);
-    };
-  }, [src]);
-
-  return (
-    <img
-      src={url ?? undefined}
-      alt={alt}
-      loading="lazy"
-      className={`max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-all duration-300 group-hover:scale-105 ${
-        url ? 'opacity-100' : 'opacity-0'
-      }`}
-    />
-  );
-};
+const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
+  <img
+    src={src}
+    alt={alt}
+    loading="lazy"
+    className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+  />
+);
 
 export const SchemesCatalog: React.FC = () => {
   const navigate = useNavigate();
