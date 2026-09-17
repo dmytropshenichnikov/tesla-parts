@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- кастомні стилі адмінки (перенесено з index.html) --- */
+body {
+  font-family: 'Inter', sans-serif;
+}
+.font-manrope {
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+.font-montserrat {
+  font-family: 'Montserrat', 'Inter', sans-serif;
+}

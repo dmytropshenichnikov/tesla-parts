@@ -5,41 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tesla Parts Admin</title>
     <link rel="icon" type="image/png" href="/tesla_logo.png" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // Без цього `text-tesla-red` / `bg-tesla-red` / `focus:ring-tesla-red`
-      // у Tailwind з CDN не існували: текст лишався білим на прозорому фоні,
-      // тобто кнопки ставали невидимими.
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'tesla-red': '#E82127',
-              'tesla-dark': '#171A20',
-            },
-            fontFamily: {
-              manrope: ['Manrope', 'Inter', 'sans-serif'],
-              montserrat: ['Montserrat', 'Inter', 'sans-serif'],
-            },
-          },
-        },
-      };
-    </script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800;900&display=swap"
       rel="stylesheet"
     />
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-      .font-manrope {
-        font-family: 'Manrope', 'Inter', sans-serif;
-      }
-      .font-montserrat {
-        font-family: 'Montserrat', 'Inter', sans-serif;
-      }
-    </style>
     <script type="importmap">
       {
         "imports": {
@@ -52,7 +21,6 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="/index.css" />
   </head>
   <body>
     <div id="root"></div>
