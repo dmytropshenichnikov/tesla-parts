@@ -81,7 +81,7 @@ const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
     src={src}
     alt={alt}
     loading="lazy"
-    className="max-w-full max-h-[118px] sm:max-h-[145px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+    className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
   />
 );
 
@@ -768,7 +768,7 @@ export const SchemesCatalog: React.FC = () => {
                   className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
                 >
                   {/* Картинка велика — і без сірих полів: розмір задає сама картинка */}
-                  <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
+                  <div className="w-[42%] min-w-[104px] max-w-[190px] h-[118px] sm:h-[145px] shrink-0 flex items-center justify-center">
                     {group.image ? (
                       <NodeImage src={group.image} alt={group.section} />
                     ) : (
@@ -832,7 +832,7 @@ export const SchemesCatalog: React.FC = () => {
                 }}
                 className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
-                <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">
+                <div className="w-[42%] min-w-[104px] max-w-[190px] h-[118px] sm:h-[145px] shrink-0 flex items-center justify-center">
                   {sub.image ? (
                     <NodeImage src={sub.image} alt={sub.subsystem} />
                   ) : (

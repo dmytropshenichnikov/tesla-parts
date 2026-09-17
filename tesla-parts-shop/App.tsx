@@ -199,12 +199,13 @@ const ScrollToTop = () => {
   useLayoutEffect(() => {
     const toTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     toTop();
-    // Контент нового кроку може дорендеритись (картки, схеми) — підстраховуємось
+    // Контент нового кроку дорендерюється не одразу (картки, картинки) —
+    // тримаємо сторінку вгорі, поки верстка не стабілізується
     const raf = requestAnimationFrame(toTop);
-    const timer = window.setTimeout(toTop, 150);
+    const timers = [150, 400, 800].map((delay) => window.setTimeout(toTop, delay));
     return () => {
       cancelAnimationFrame(raf);
-      window.clearTimeout(timer);
+      timers.forEach((t) => window.clearTimeout(t));
     };
   }, [pathname, search]);
 

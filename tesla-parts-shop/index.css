@@ -13,6 +13,13 @@ body {
   background-color: #f8fafc;
   color: #171a20;
 }
+
+/* Без цього браузер «прив'язує» прокрутку до елемента й стрибає вниз,
+   коли на кроці змінюється контент (помітно на iPhone). */
+html,
+body {
+  overflow-anchor: none;
+}
 /* Prevent iOS Safari auto-zoom on input focus while allowing manual pinch-zoom */
 @media screen and (max-width: 768px) {
   input,
