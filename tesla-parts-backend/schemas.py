@@ -210,6 +210,47 @@ class CustomerProfileRead(BaseModel):
 class CustomerForgotPasswordRequest(BaseModel):
     email: str
 
+
+class GarageCarBase(BaseModel):
+    vin: str | None = None
+    plate: str | None = None
+    model: str
+    generation: str | None = None
+    year: int | None = None
+    drive: str | None = None
+    plant: str | None = None
+    body_type: str | None = None
+    description: str | None = None
+
+
+class GarageCarCreate(GarageCarBase):
+    """Додавання авто. `make_active` — зробити його активним для підбору."""
+
+    make_active: bool = True
+
+
+class GarageCarUpdate(BaseModel):
+    plate: str | None = None
+    model: str | None = None
+    generation: str | None = None
+    year: int | None = None
+    drive: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class GarageCarRead(GarageCarBase):
+    id: int
+    is_active: bool
+    created_at: datetime | None = None
+
+
+class GarageImportRequest(BaseModel):
+    """Перенесення гаража, який лежав у браузері, в акаунт при вході."""
+
+    cars: list[GarageCarBase] = []
+    active_vin: str | None = None
+
 class CustomerResetPasswordRequest(BaseModel):
     token: str
     new_password: str

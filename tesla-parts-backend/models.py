@@ -184,6 +184,29 @@ class Customer(SQLModel, table=True):
         back_populates="customers", link_model=CustomerEmailListLink
     )
 
+class GarageCar(SQLModel, table=True):
+    """Автомобіль у «Моєму Гаражі», прив'язаний до акаунта покупця.
+
+    Раніше гараж жив лише в localStorage браузера, тож авто не переїжджало на
+    інший пристрій. Тепер він зберігається на сервері, а localStorage лишається
+    як швидкий кеш і як режим для незалогінених.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    customer_id: int = Field(foreign_key="customer.id", index=True)
+    vin: Optional[str] = Field(default=None, index=True)
+    plate: Optional[str] = None
+    model: str
+    generation: Optional[str] = None
+    year: Optional[int] = None
+    drive: Optional[str] = None
+    plant: Optional[str] = None
+    body_type: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=get_kyiv_time)
+
+
 class PromoCode(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     code: str = Field(unique=True, index=True)

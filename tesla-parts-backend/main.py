@@ -19,7 +19,7 @@ for _ext, _type in (
 from sqlmodel import Session, select
 from typing import List
 from database import create_db_and_tables, engine, get_session
-from routers import products, orders, categories, settings, pages, auth, feeds, reviews, customers, promocodes, email_campaigns, analytics, schematics, vin
+from routers import products, orders, categories, settings, pages, auth, feeds, reviews, customers, promocodes, email_campaigns, analytics, schematics, vin, garage
 from contextlib import asynccontextmanager
 import os
 from models import Product, Category, Subcategory, Page, StaticPageSEO
@@ -130,6 +130,7 @@ app.include_router(email_campaigns.router)
 app.include_router(analytics.router)
 app.include_router(schematics.router)
 app.include_router(vin.router)
+app.include_router(garage.router)
 
 @app.get("/")
 def read_root():
