@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- кастомні стилі застосунку (перенесено з index.html) --- */
+@font-face {
+  font-family: 'TESLA';
+  src: url('/fonts/TESLA.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+body {
+  background-color: #f8fafc;
+  color: #171a20;
+}
+/* Prevent iOS Safari auto-zoom on input focus while allowing manual pinch-zoom */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth slide-in for right-side drawers (Cart & Menu) */
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-drawer-slide {
+  animation: drawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+}
+/* Smooth fade for backdrops */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-backdrop-fade {
+  animation: backdropFadeIn 0.22s ease-out forwards;
+}
+/* Liquid wave expansion for mobile search */
+@keyframes searchWaveReveal {
+  0% {
+    opacity: 0;
+    clip-path: circle(0% at calc(100% - 85px) 50%);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    clip-path: circle(150% at calc(100% - 85px) 50%);
+  }
+}
+@keyframes searchWaveDismiss {
+  0% {
+    opacity: 1;
+    clip-path: circle(150% at calc(100% - 24px) 50%);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    clip-path: circle(0% at calc(100% - 24px) 50%);
+  }
+}
+.animate-search-wave {
+  animation: searchWaveReveal 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: clip-path, opacity;
+}
+.animate-search-wave-dismiss {
+  animation: searchWaveDismiss 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: clip-path, opacity;
+}
+/* Fluid bloom for input container inside search */
+@keyframes inputWaveFluid {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    box-shadow: 0 0 0 0 rgba(232, 33, 39, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 16px 2px rgba(232, 33, 39, 0.12);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(232, 33, 39, 0);
+  }
+}
+.animate-input-wave-fluid {
+  animation: inputWaveFluid 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+/* Smooth reveal for mobile search overlay */
+@keyframes searchDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-search-reveal {
+  animation: searchDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+/* Ambient breathing glow for FAB */
+@keyframes pulseAura {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.25;
+  }
+}
+.animate-aura {
+  animation: pulseAura 3s ease-in-out infinite;
+}
+/* Smooth slide-out for right-side drawers (Cart & Menu) */
+@keyframes drawerSlideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.animate-drawer-slide-out {
+  animation: drawerSlideOut 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+}
+/* Smooth fade-out for backdrops */
+@keyframes backdropFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.animate-backdrop-fade-out {
+  animation: backdropFadeOut 0.24s ease-out forwards;
+}

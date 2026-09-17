@@ -21,6 +21,12 @@ const PADDING = 0.03;
 const WHITEN_GAP = 8;
 /** Якщо фон темніший за це — це фото, а не креслення, і вибілювати його не можна */
 const MAX_WHITEN_BG = 210;
+/**
+ * Версія обробки у query. Потрібна, щоб браузер не підставляв з кешу старі
+ * відповіді без CORS-заголовків (через це були помилки CORS у консолі), а
+ * завантажив картинку свіжим запитом — далі вона вже кешується коректно.
+ */
+const TRIM_CACHE_VERSION = 'trim2';
 
 export const trimImage = (src: string): Promise<string> => {
   if (!src) return Promise.resolve(src);
@@ -33,6 +39,8 @@ export const trimImage = (src: string): Promise<string> => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.decoding = 'async';
+    const versioned =
+      src.includes('?') ? `${src}&${TRIM_CACHE_VERSION}` : `${src}?${TRIM_CACHE_VERSION}`;
 
     img.onload = () => {
       try {
@@ -136,8 +144,11 @@ export const trimImage = (src: string): Promise<string> => {
       }
     };
 
+    // Якщо CORS-запит не пройшов (напр. у кеші стара відповідь без заголовків) —
+    // показуємо звичайну картинку без обробки. Без crossOrigin вона вантажиться
+    // завжди, просто канвас буде «заплямований», тож обробку пропускаємо.
     img.onerror = () => resolve(src);
-    img.src = src;
+    img.src = versioned;
   }).finally(() => {
     inFlight.delete(src);
   });
