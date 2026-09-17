@@ -643,9 +643,13 @@ export const SchemesCatalog: React.FC = () => {
                   <ChevronRight size={14} className="text-gray-300 shrink-0" />
                   <button
                     onClick={() => goToStep({ section: null, subsystem: null, all: null })}
-                    className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
+                    title="Обрати інший розділ"
+                    className="group inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
                   >
                     {selectedSection}
+                    <span className="text-gray-300 group-hover:text-tesla-red transition-colors text-base leading-none">
+                      ×
+                    </span>
                   </button>
                 </>
               )}
@@ -805,6 +809,14 @@ export const SchemesCatalog: React.FC = () => {
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400 font-montserrat">
                 {subsystemStepNumber}. Оберіть підсистему
               </span>
+              {selectedSection && (
+                <button
+                  onClick={() => goToStep({ section: null, subsystem: null, all: null })}
+                  className="text-[11px] font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
+                >
+                  Змінити розділ
+                </button>
+              )}
             </div>
             <button
               onClick={() => goToStep({ subsystem: ALL_SUBSYSTEMS })}
