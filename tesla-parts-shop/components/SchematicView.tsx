@@ -447,11 +447,22 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             onPointerMove={onPanMove}
             onPointerUp={onPanEnd}
             onPointerLeave={onPanEnd}
-            onDoubleClick={() => (zoom > 1 ? resetZoom() : applyZoom(3))}
+            onDoubleClick={(e) => {
+              // Подвійний клік по кнопках (тулбар, повний екран, точки) не має
+              // скидати масштаб — реагуємо лише на подвійний клік по кресленню
+              if ((e.target as HTMLElement).closest('button')) return;
+              if (zoom > 1) resetZoom();
+              else applyZoom(3);
+            }}
             style={{ touchAction: zoom > 1 ? 'none' : 'auto' }}
           >
-            {/* Тулбар масштабу — як в оригінальному каталозі Tesla */}
-            <div className="absolute left-2 top-2 z-30 flex flex-col items-center gap-0.5 rounded-2xl bg-white/95 backdrop-blur border border-gray-200 shadow-md p-1">
+            {/* Тулбар масштабу — як в оригінальному каталозі Tesla.
+                stopPropagation важливий: інакше два швидкі кліки по «+» летять
+                у полотно як dblclick і скидають масштаб на 100 %. */}
+            <div
+              className="absolute left-2 top-2 z-30 flex flex-col items-center gap-0.5 rounded-2xl bg-white/95 backdrop-blur border border-gray-200 shadow-md p-1"
+              onDoubleClick={(e) => e.stopPropagation()}
+            >
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); zoomIn(); }}
@@ -507,6 +518,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 else el.requestFullscreen?.().catch(() => {});
               }}
               title="На весь екран"
+              onDoubleClick={(e) => e.stopPropagation()}
               className="absolute right-2 top-2 z-30 w-8 h-8 flex items-center justify-center rounded-xl bg-white/95 backdrop-blur border border-gray-200 shadow-md text-gray-600 hover:text-tesla-red transition-colors cursor-pointer"
             >
               <Maximize2 size={15} />
