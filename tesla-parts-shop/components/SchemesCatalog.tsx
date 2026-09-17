@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Layers,
@@ -18,7 +18,7 @@ import { api } from '../services/api';
 import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup, Product } from '../types';
 import { slugify } from '../utils/slugify';
 import { GarageModal } from './GarageModal';
-import { trimImage } from '../utils/trimImage';
+import { trimImage, getCachedTrimmed } from '../utils/trimImage';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -77,14 +77,18 @@ const resolveOption = (
  * щоб малюнок заповнював картку, а не «плавав» у світлому полі.
  */
 const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
-  const [url, setUrl] = useState(src);
+  // Якщо картинка вже оброблена раніше — показуємо одразу її, без «сіре → біле»
+  const [url, setUrl] = useState(() => getCachedTrimmed(src) ?? src);
 
   useEffect(() => {
     let alive = true;
-    setUrl(src);
-    trimImage(src).then((trimmed) => {
-      if (alive) setUrl(trimmed);
-    });
+    const cached = getCachedTrimmed(src);
+    setUrl(cached ?? src);
+    if (!cached) {
+      trimImage(src).then((trimmed) => {
+        if (alive) setUrl(trimmed);
+      });
+    }
     return () => {
       alive = false;
     };
@@ -118,6 +122,10 @@ export const SchemesCatalog: React.FC = () => {
     setSearchParams(next, { replace: false });
   };
   const stepBack = () => navigate(-1);
+
+  // Автовідкриття єдиної схеми — тільки коли користувач САМ щойно обрав
+  // підсистему. Інакше воно спрацьовувало й після «Назад» і закидало вперед.
+  const autoOpenArmed = useRef(false);
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,10 +172,12 @@ export const SchemesCatalog: React.FC = () => {
   // Якщо в обраній підсистемі рівно одна схема — відкриваємо її одразу.
   // Раніше треба було тицяти «ЗАХИСТИ ПЕРЕДНІ» → потім ще раз «ЗАХИСТИ ПЕРЕДНІ».
   useEffect(() => {
+    if (!autoOpenArmed.current) return;
     if (!selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) return;
     if (showAllSchematics || activeSearch || loading) return;
     if (schematics.length !== 1) return;
     const only = schematics[0];
+    autoOpenArmed.current = false;
     if (only?.id) navigate(`/schemes/${only.id}`, { replace: true });
   }, [schematics, loading, selectedSubsystem, showAllSchematics, activeSearch, navigate]);
 
@@ -776,7 +786,10 @@ export const SchemesCatalog: React.FC = () => {
             {activeSectionSubsystems.map((sub) => (
               <button
                 key={sub.subsystem}
-                onClick={() => goToStep({ subsystem: sub.subsystem })}
+                onClick={() => {
+                  autoOpenArmed.current = true;
+                  goToStep({ subsystem: sub.subsystem });
+                }}
                 className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
               >
                 <div className="w-[42%] min-w-[104px] max-w-[190px] shrink-0 flex items-center justify-center">

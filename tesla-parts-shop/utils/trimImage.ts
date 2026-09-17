@@ -28,6 +28,9 @@ const MAX_WHITEN_BG = 210;
  */
 const TRIM_CACHE_VERSION = 'trim2';
 
+/** Уже оброблена картинка (якщо є в кеші) — щоб не було миготіння при поверненні */
+export const getCachedTrimmed = (src: string): string | null => cache.get(src) ?? null;
+
 export const trimImage = (src: string): Promise<string> => {
   if (!src) return Promise.resolve(src);
   const cached = cache.get(src);
