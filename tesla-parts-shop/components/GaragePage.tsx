@@ -183,21 +183,21 @@ export const GaragePage: React.FC = () => {
   const syncGarageWithServer = async () => {
     if (!localStorage.getItem('customerToken')) return;
     try {
-      let serverCars = await api.getGarageCars();
-
-      if (serverCars.length === 0) {
-        let localCars: SavedCar[] = [];
-        let activeVin: string | undefined;
-        try {
-          localCars = JSON.parse(localStorage.getItem('tesla_garage_all_cars') || '[]');
-          activeVin = JSON.parse(localStorage.getItem('tesla_garage_active_car') || 'null')?.vin;
-        } catch {
-          localCars = [];
-        }
-        if (localCars.length > 0) {
-          serverCars = await api.importGarage(localCars, activeVin);
-        }
+      // Локальні авто ЗАВЖДИ відправляємо на сервер — ендпоінт ідемпотентний,
+      // тож дублі не створюються, а авто, додане до входу (як гість), не
+      // губиться. Раніше імпорт спрацьовував лише для порожнього акаунта, і
+      // таке авто зникало при вході.
+      let localCars: SavedCar[] = [];
+      let activeVin: string | undefined;
+      try {
+        localCars = JSON.parse(localStorage.getItem('tesla_garage_all_cars') || '[]');
+        activeVin = JSON.parse(localStorage.getItem('tesla_garage_active_car') || 'null')?.vin;
+      } catch {
+        localCars = [];
       }
+
+      const serverCars =
+        localCars.length > 0 ? await api.importGarage(localCars, activeVin) : await api.getGarageCars();
 
       if (serverCars.length === 0) return;
       const active = serverCars.find((c) => c.isActive) || serverCars[0];
