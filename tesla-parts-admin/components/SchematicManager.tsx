@@ -247,6 +247,10 @@ export const SchematicManager: React.FC = () => {
   // Буфер обміну для точок: одна деталь може стояти у кількох місцях схеми,
   // тому точку можна скопіювати (⌘C) і вставити (⌘V).
   const [pointClipboard, setPointClipboard] = useState<SchematicHotspot | null>(null);
+  // Щойно доданий/переставлений варіант підсвічуємо і прокручуємо до нього —
+  // інакше здається, що «додав, а нічого не з'явилось»
+  const variantsListRef = useRef<HTMLDivElement | null>(null);
+  const [flashVariantIdx, setFlashVariantIdx] = useState<number | null>(null);
 
   // Add/Link Variant Modal state
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -967,6 +971,33 @@ export const SchematicManager: React.FC = () => {
       document.body.removeChild(helper);
       setSuccessMsg(`Парт-номер ${text} скопійовано`);
     }
+  };
+
+  useEffect(() => {
+    if (flashVariantIdx === null) return;
+    const el = variantsListRef.current?.querySelector(
+      `[data-variant-idx="${flashVariantIdx}"]`
+    );
+    if (el && 'scrollIntoView' in el) {
+      (el as HTMLElement).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    const timer = window.setTimeout(() => setFlashVariantIdx(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [flashVariantIdx]);
+
+  /** Зміна порядку варіантів: порядок зберігається у variants_json і так само
+   *  показується в магазині (перший варіант — основний). */
+  const handleMoveVariant = (hotspotIdx: number, varIdx: number, direction: -1 | 1) => {
+    if (!editingSchematic) return;
+    const hotspot = editingSchematic.hotspots[hotspotIdx];
+    if (!hotspot) return;
+    const variants = [...(hotspot.variants || [])];
+    const to = varIdx + direction;
+    if (to < 0 || to >= variants.length) return;
+    const [moved] = variants.splice(varIdx, 1);
+    variants.splice(to, 0, moved);
+    handleUpdateHotspot(hotspotIdx, 'variants', variants);
+    setFlashVariantIdx(to);
   };
 
   const handleAddVariant = (hotspotIdx: number) => {
@@ -1962,11 +1993,19 @@ export const SchematicManager: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                <div ref={variantsListRef} className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {(selectedHotspot.variants || []).map((v, varIdx) => {
                     const linkedProd = v.product_id ? catalogProducts.find((p) => p.id === v.product_id) : null;
                     return (
-                      <div key={varIdx} className="bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2.5 text-xs">
+                      <div
+                        key={varIdx}
+                        data-variant-idx={varIdx}
+                        className={`bg-gray-50 p-3 rounded-xl border space-y-2.5 text-xs transition-all ${
+                          flashVariantIdx === varIdx
+                            ? 'border-red-400 ring-2 ring-red-200 bg-red-50/50'
+                            : 'border-gray-200'
+                        }`}
+                      >
                         <div className="flex items-center justify-between gap-2">
                           <input
                             type="text"
@@ -1975,14 +2014,38 @@ export const SchematicManager: React.FC = () => {
                             placeholder="напр. Оригинал б/у"
                             className="font-montserrat font-bold bg-white px-2 py-1 border border-gray-200 rounded-md text-gray-800 text-xs flex-1"
                           />
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteVariant(selectedHotspotIdx, varIdx)}
-                            className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
-                            title="Видалити варіант"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveVariant(selectedHotspotIdx!, varIdx, -1)}
+                              disabled={varIdx === 0}
+                              title="Вище"
+                              className={`p-0.5 rounded ${varIdx === 0 ? 'text-gray-200 cursor-default' : 'text-gray-400 hover:text-red-600 cursor-pointer'}`}
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveVariant(selectedHotspotIdx!, varIdx, 1)}
+                              disabled={varIdx === (selectedHotspot.variants || []).length - 1}
+                              title="Нижче"
+                              className={`p-0.5 rounded ${
+                                varIdx === (selectedHotspot.variants || []).length - 1
+                                  ? 'text-gray-200 cursor-default'
+                                  : 'text-gray-400 hover:text-red-600 cursor-pointer'
+                              }`}
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVariant(selectedHotspotIdx, varIdx)}
+                              className="text-gray-400 hover:text-red-600 p-1 cursor-pointer"
+                              title="Видалити варіант"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
 
                         {/* Linked Catalog Product status */}
@@ -2341,8 +2404,15 @@ export const SchematicManager: React.FC = () => {
                             ) : null}
                           </div>
 
+                          {(() => {
+                            const alreadyLinked = (selectedHotspot?.variants || []).some(
+                              (v) => v.product_id === p.id
+                            );
+                            return (
                           <button
                             type="button"
+                            disabled={alreadyLinked}
+                            title={alreadyLinked ? 'Цей товар уже додано в цю точку' : 'Додати цей товар як варіант'}
                             onClick={() => {
                               if (selectedHotspotIdx === null) return;
                               const isOriginal = Boolean(p.brand && /tesla/i.test(p.brand));
@@ -2360,14 +2430,14 @@ export const SchematicManager: React.FC = () => {
                                   inStock: p.inStock !== false
                                 };
                                 handleUpdateHotspot(selectedHotspotIdx, 'variants', [...currentVars, newVar]);
+                                // Показуємо, що саме додали: підсвітка + прокрутка
+                                setFlashVariantIdx(currentVars.length);
 
-                                // Auto-fill part_number if empty
+                                // Парт-номер точки заповнюємо лише якщо порожній.
+                                // Назву точки НЕ чіпаємо: у схемах вона = назва вузла
+                                // («ЗАХИСТИ ЗАДНІ»), а не назва товару.
                                 if (!selectedHotspot.part_number && p.detail_number) {
                                   handleUpdateHotspot(selectedHotspotIdx, 'part_number', p.detail_number);
-                                }
-                                // Auto-fill hotspot name if default
-                                if (selectedHotspot.name.startsWith('Деталь #')) {
-                                  handleUpdateHotspot(selectedHotspotIdx, 'name', p.name);
                                 }
                               } else {
                                 const { varIdx } = variantModalTarget;
@@ -2409,10 +2479,16 @@ export const SchematicManager: React.FC = () => {
                                 setSuccessMsg(`Товар "${p.name}" успішно прив'язано!`);
                               }
                             }}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-montserrat font-bold text-xs transition-colors cursor-pointer shadow-xs active:scale-95"
+                            className={`px-3 py-1.5 rounded-lg font-montserrat font-bold text-xs transition-colors shadow-xs ${
+                              alreadyLinked
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                                : 'bg-red-600 hover:bg-red-700 text-white cursor-pointer active:scale-95'
+                            }`}
                           >
-                            Обрати
+                            {alreadyLinked ? 'Вже додано' : 'Обрати'}
                           </button>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
