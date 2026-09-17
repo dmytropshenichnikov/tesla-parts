@@ -68,6 +68,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     localStorage.removeItem('customerToken');
     setIsCustomerLoggedIn(false);
     setCustomerProfile(null);
+    // Повідомляємо решту застосунку: раніше подія летіла лише при 401, тож при
+    // звичайному виході гараж і каталог далі показували дані акаунта.
+    window.dispatchEvent(new Event('customer-logged-out'));
   };
 
   const updateProfileState = (data: any) => {

@@ -123,7 +123,16 @@ export const GaragePage: React.FC = () => {
   }, [customerProfile]);
 
   useEffect(() => {
-    const onLogout = () => loadGarageState();
+    const onLogout = () => {
+      // Гараж належить акаунту, а не пристрою: після виходу не лишаємо чужі авто
+      // в браузері (на сервері вони збережені, тож нічого не втрачається, а на
+      // спільному пристрої наступна людина їх не побачить).
+      localStorage.removeItem('tesla_garage_all_cars');
+      localStorage.removeItem('tesla_garage_active_car');
+      setAllCars([]);
+      setActiveCar(null);
+      window.dispatchEvent(new Event('garage-car-changed'));
+    };
     window.addEventListener('customer-logged-out', onLogout);
     return () => window.removeEventListener('customer-logged-out', onLogout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
