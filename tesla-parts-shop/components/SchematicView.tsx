@@ -50,6 +50,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const frameRef = useRef<HTMLDivElement | null>(null);
+  // Роздільність самого файлу та ширина, у якій він показаний при 100%:
+  // співвідношення = межа, до якої збільшення лишається різким (1 піксель = 1 піксель)
+  const [naturalWidth, setNaturalWidth] = useState(0);
+  const [baseWidth, setBaseWidth] = useState(0);
+  const crispLimit = naturalWidth && baseWidth ? naturalWidth / baseWidth : 2;
+  const overCrisp = zoom > crispLimit + 0.02;
   const dragRef = useRef({
     active: false,
     moved: false,
@@ -476,7 +482,16 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
               >
                 <Minus size={18} />
               </button>
-              <span className="text-[10px] font-montserrat font-bold text-gray-500 pb-0.5">
+              <span
+                className={`text-[10px] font-montserrat font-bold pb-0.5 ${
+                  overCrisp ? 'text-amber-600' : 'text-gray-500'
+                }`}
+                title={
+                  overCrisp
+                    ? `Файл схеми ${naturalWidth}px — до ${Math.round(crispLimit * 100)}% збільшення різке, далі зображення розтягується понад оригінал. Щоб наближати без втрат, завантажте більшу картинку в адмінці.`
+                    : `Різке збільшення до ${Math.round(crispLimit * 100)}%`
+                }
+              >
                 {Math.round(zoom * 100)}%
               </span>
             </div>
@@ -512,6 +527,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 src={getFullImageUrl(schematic.image_url)}
                 alt={schematic.title}
                 draggable={false}
+                onLoad={(e) => {
+                  setNaturalWidth(e.currentTarget.naturalWidth);
+                  setBaseWidth(e.currentTarget.clientWidth);
+                }}
                 className="block w-full h-auto object-contain pointer-events-none"
               />
             ) : (

@@ -240,6 +240,8 @@ export const SchematicManager: React.FC = () => {
 
   // Чернетка: знімок схеми на момент відкриття + пропозиція відновити
   const loadedSnapshot = useRef<string>('');
+  // Підказка про якість завантаженої картинки (від неї залежить різкість при наближенні)
+  const [imageQualityHint, setImageQualityHint] = useState<string | null>(null);
   const [draftToRestore, setDraftToRestore] = useState<{ savedAt: string; schematic: Schematic } | null>(null);
 
   // Catalog products for linking
@@ -615,12 +617,39 @@ export const SchematicManager: React.FC = () => {
     }
   };
 
+  /** Вимірює реальні розміри файлу в браузері */
+  const measureImage = (file: File) =>
+    new Promise<{ w: number; h: number }>((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        resolve({ w: 0, h: 0 });
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    });
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingSchematic) return;
 
     try {
       setUploadingImage(true);
+      // Різкість при наближенні на сайті залежить від роздільності файлу
+      const { w, h } = await measureImage(file);
+      if (w && w < 2000) {
+        setImageQualityHint(
+          `Файл ${w}×${h} px. На сайті різко наближається приблизно до ${Math.round(
+            Math.max(100, (w / 700) * 100)
+          )}%, далі буде розмито. Для глибокого збільшення завантажте ${2000}–3000 px по ширині (як у Tesla EPC).`
+        );
+      } else {
+        setImageQualityHint(null);
+      }
       const res = await api.uploadSchematicImage(file);
       setEditingSchematic({
         ...editingSchematic,
@@ -1822,6 +1851,15 @@ export const SchematicManager: React.FC = () => {
               className="hidden"
             />
           </label>
+          <p className="mt-1.5 text-[11px] text-gray-400 font-manrope leading-snug">
+            Для різкого наближення на сайті — картинка від <strong>2000 px</strong> по ширині
+            (оптимально 2800–3000 px).
+          </p>
+          {imageQualityHint && (
+            <p className="mt-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 font-manrope leading-snug">
+              {imageQualityHint}
+            </p>
+          )}
         </div>
       </div>
 
