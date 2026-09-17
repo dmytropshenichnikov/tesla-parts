@@ -1,6 +1,21 @@
 from fastapi import FastAPI, Response, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import mimetypes
+
+# Контейнер не має /etc/mime.types, тому .webp віддавався як
+# application/octet-stream і картинка категорії не показувалась у браузері.
+for _ext, _type in (
+    (".webp", "image/webp"),
+    (".avif", "image/avif"),
+    (".heic", "image/heic"),
+    (".heif", "image/heif"),
+    (".jpeg", "image/jpeg"),
+    (".jpg", "image/jpeg"),
+    (".svg", "image/svg+xml"),
+):
+    mimetypes.add_type(_type, _ext)
+
 from sqlmodel import Session, select
 from typing import List
 from database import create_db_and_tables, engine, get_session
