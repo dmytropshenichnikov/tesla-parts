@@ -398,6 +398,14 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const crumbKey = (value?: string | null) =>
     (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
   const shopQuery = `model=${encodeURIComponent(schematic.model)}&generation=${encodeURIComponent(schematic.generation)}`;
+  // Фіксовані шляхи повернення: підсистеми розділу (крок, де обирають вузол) та
+  // всі схеми розділу. Обидва не залежать від історії браузера.
+  const backToPath = schematic.section
+    ? `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}`
+    : `/schemes?${shopQuery}`;
+  const allSchemesPath = schematic.section
+    ? `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}&subsystem=all`
+    : `/schemes?${shopQuery}&all=1`;
   const crumbChain = [
     { label: `${schematic.model} ${schematic.generation}`, to: `/schemes?${shopQuery}` },
     schematic.section
@@ -429,20 +437,28 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         </div>
       )}
 
-      {/* Повернення до списку схем: велика кнопка — на телефоні легко влучити.
-          Повертає на попередній крок (розділ/підсистему), а якщо історії немає —
-          у каталог схем. */}
-      <button
-        type="button"
-        onClick={() => {
-          if (window.history.length > 1) navigate(-1);
-          else navigate('/schemes');
-        }}
-        className="inline-flex items-center gap-2 mb-3 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-tesla-red hover:text-tesla-red font-montserrat font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
-      >
-        <ArrowLeft size={16} />
-        До списку схем
-      </button>
+      {/* Повернення до вибору підсистеми: велика кнопка — на телефоні легко влучити.
+          Раніше тут був navigate(-1), тобто крок у ДОВІЛЬНЕ місце історії — через
+          це зі схеми можна було вилетіти аж на вибір моделі («повертає на Model 3»).
+          Тепер це фіксоване посилання: підсистеми того самого розділу — саме те
+          місце, де обирають «ЗАХИСТИ ПЕРЕДНІ / ЗАХИСТИ ЗАДНІ». */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Link
+          to={backToPath}
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-tesla-red hover:text-tesla-red font-montserrat font-bold text-xs sm:text-sm transition-colors cursor-pointer shadow-2xs"
+        >
+          <ArrowLeft size={16} />
+          {schematic.section ? 'До підсистем розділу' : 'До вибору розділу'}
+        </Link>
+        {schematic.section && (
+          <Link
+            to={allSchemesPath}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-500 hover:border-tesla-red hover:text-tesla-red font-manrope font-medium text-xs sm:text-sm transition-colors"
+          >
+            Усі схеми розділу
+          </Link>
+        )}
+      </div>
 
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-manrope mb-4 overflow-x-auto whitespace-nowrap pb-1">
