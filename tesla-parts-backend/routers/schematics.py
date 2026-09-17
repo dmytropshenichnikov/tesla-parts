@@ -180,6 +180,45 @@ def list_schematics(
         )
     return results
 
+def _category_for_images(
+    model_name: str,
+    generation: Optional[str],
+    all_names: List[str],
+    session,
+) -> Optional[Category]:
+    """Категорія, з якої беремо картинки розділів/підсистем.
+
+    «Model 3 Highland» → сама категорія Highland (а не базова «Model 3»),
+    «Model 3» + покоління «Highland» → теж Highland,
+    «Model 3» без покоління → базова Model 3.
+    """
+    clean = (model_name or "").strip()
+    if not clean:
+        return None
+
+    def find(name: str) -> Optional[Category]:
+        return session.exec(
+            select(Category).where(func.lower(Category.name) == name.strip().lower())
+        ).first()
+
+    # 1) точна назва категорії (найчастіший випадок — магазин передає саме її)
+    exact = find(clean)
+    if exact:
+        return exact
+
+    # 2) базова модель + покоління → шукаємо категорію-варіант
+    gen = (generation or "").strip().lower()
+    if gen and gen != "всі покоління":
+        for name in all_names:
+            low = (name or "").lower()
+            if low.startswith(clean.lower() + " ") and gen in low:
+                found = find(name)
+                if found:
+                    return found
+
+    return None
+
+
 @router.get("/sections")
 def get_schematic_sections(
     model: Optional[str] = None,
@@ -227,11 +266,7 @@ def get_schematic_sections(
     catalog_order: dict = {}
     if model and model != "all" and model != "Всі моделі":
         clean = model.strip()
-        base = _base_category_name(clean, category_names_for_order)
-        target = (base or clean).strip()
-        category = session.exec(
-            select(Category).where(func.lower(Category.name) == target.lower())
-        ).first()
+        category = _category_for_images(clean, generation, category_names_for_order, session)
         if category:
             category_subs = session.exec(
                 select(Subcategory).where(Subcategory.category_id == category.id)
