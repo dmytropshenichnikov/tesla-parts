@@ -119,6 +119,10 @@ export const SchematicManager: React.FC = () => {
   // Перетягування карток схем — порядок як у каталозі
   const [dragSchemeId, setDragSchemeId] = useState<number | null>(null);
   const [dragSchemeOverId, setDragSchemeOverId] = useState<number | null>(null);
+  // Перетягування варіантів (товарів) всередині вузла: у вузлі їх буває
+  // десятки, і клацати стрілками «вгору/вниз» — довго.
+  const [dragVariantIdx, setDragVariantIdx] = useState<number | null>(null);
+  const [dragVariantOverIdx, setDragVariantOverIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -1119,6 +1123,22 @@ export const SchematicManager: React.FC = () => {
     variants.splice(to, 0, moved);
     handleUpdateHotspot(hotspotIdx, 'variants', variants);
     setFlashVariantIdx(to);
+  };
+
+  /** Перетягування варіанту: кинули один рядок на інший — порядок оновився.
+   *  Працює так само, як перетягування схем у списку, тільки всередині вузла. */
+  const handleDropVariant = (hotspotIdx: number, fromIdx: number, toIdx: number) => {
+    setDragVariantIdx(null);
+    setDragVariantOverIdx(null);
+    if (!editingSchematic || fromIdx === toIdx) return;
+    const hotspot = editingSchematic.hotspots[hotspotIdx];
+    if (!hotspot) return;
+    const variants = [...(hotspot.variants || [])];
+    if (fromIdx < 0 || fromIdx >= variants.length || toIdx < 0 || toIdx >= variants.length) return;
+    const [moved] = variants.splice(fromIdx, 1);
+    variants.splice(toIdx, 0, moved);
+    handleUpdateHotspot(hotspotIdx, 'variants', variants);
+    setFlashVariantIdx(toIdx);
   };
 
   const handleAddVariant = (hotspotIdx: number) => {
@@ -2208,13 +2228,51 @@ export const SchematicManager: React.FC = () => {
                       <div
                         key={varIdx}
                         data-variant-idx={varIdx}
+                        draggable
+                        onDragStart={(e) => {
+                          // Тягнемо за вільне місце рядка: усередині полів вводу
+                          // і кнопок перетягування має лишитись виділенням тексту.
+                          const target = e.target as HTMLElement;
+                          if (target.closest('input, textarea, select, button')) {
+                            e.preventDefault();
+                            return;
+                          }
+                          setDragVariantIdx(varIdx);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', String(varIdx));
+                        }}
+                        onDragOver={(e) => {
+                          if (dragVariantIdx === null || dragVariantIdx === varIdx) return;
+                          e.preventDefault();
+                          setDragVariantOverIdx(varIdx);
+                        }}
+                        onDragLeave={() =>
+                          setDragVariantOverIdx((prev) => (prev === varIdx ? null : prev))
+                        }
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragVariantIdx === null) return;
+                          handleDropVariant(selectedHotspotIdx!, dragVariantIdx, varIdx);
+                        }}
+                        onDragEnd={() => {
+                          setDragVariantIdx(null);
+                          setDragVariantOverIdx(null);
+                        }}
                         className={`bg-gray-50 p-3 rounded-xl border space-y-2.5 text-xs transition-all ${
                           flashVariantIdx === varIdx
                             ? 'border-red-400 ring-2 ring-red-200 bg-red-50/50'
-                            : 'border-gray-200'
-                        }`}
+                            : dragVariantOverIdx === varIdx
+                              ? 'border-red-500 ring-2 ring-red-200'
+                              : 'border-gray-200'
+                        } ${dragVariantIdx === varIdx ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center justify-between gap-2">
+                          <span
+                            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0"
+                            title="Перетягніть, щоб змінити порядок"
+                          >
+                            <GripVertical size={14} />
+                          </span>
                           <input
                             type="text"
                             value={v.name}
