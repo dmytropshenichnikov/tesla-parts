@@ -876,10 +876,15 @@ async def upload_schematic_image_from_url(payload: dict):
 
     result = await image_uploader.upload_from_url(url, folder="tesla-parts/schematics")
     if not result:
-        raise HTTPException(
-            status_code=400,
-            detail="Не вдалося завантажити зображення за посиланням (перевірте, що це пряме посилання на картинку)",
+        blocked = "tesla.com" in url.lower()
+        detail = (
+            "Сервер джерела блокує автоматичне завантаження (403) — так робить epc.tesla.com. "
+            "Скопіюйте картинку в браузері (правою кнопкою → «Копіювати зображення») і вставте "
+            "її в адмінці через ⌘V / Ctrl+V, або збережіть файл і завантажте його."
+            if blocked
+            else "Не вдалося завантажити зображення за посиланням — перевірте, що це пряме посилання на картинку."
         )
+        raise HTTPException(status_code=400, detail=detail)
     return result
 
 

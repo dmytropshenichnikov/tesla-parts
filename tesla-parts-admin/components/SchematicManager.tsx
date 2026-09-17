@@ -673,27 +673,52 @@ export const SchematicManager: React.FC = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const uploadSchematicImageFile = async (file: File) => {
     if (!file || !editingSchematic) return;
-
     try {
       setUploadingImage(true);
+      setError(null);
       // Різкість при наближенні на сайті залежить від роздільності файлу
       const { w, h } = await measureImage(file);
       describeQuality(w, h);
       const res = await api.uploadSchematicImage(file);
-      setEditingSchematic({
-        ...editingSchematic,
-        image_url: res.image_url
-      });
-      setSuccessMsg('Зображення завантажено');
+      setEditingSchematic((prev) => (prev ? { ...prev, image_url: res.image_url } : prev));
+      setSuccessMsg('Зображення завантажено (оригінал, без стиснення)');
     } catch (err: any) {
       setError(err.message || 'Помилка завантаження зображення');
     } finally {
       setUploadingImage(false);
     }
   };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadSchematicImageFile(file);
+    e.target.value = '';
+  };
+
+  // ⌘V / Ctrl+V: картинка з буфера (напр. скопійована з EPC Tesla) одразу
+  // завантажується як файл — саме так якість зберігається повністю, бо файл
+  // іде з браузера, а не з нашого сервера (Tesla блокує серверні запити).
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (!editingSchematic) return;
+      const items = event.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            event.preventDefault();
+            void uploadSchematicImageFile(file);
+            return;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  });
 
   const handlePinMouseDown = (idx: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1913,8 +1938,9 @@ export const SchematicManager: React.FC = () => {
               </button>
             </div>
             <p className="mt-1 text-[10px] text-gray-400 font-manrope leading-snug">
-              Копіюйте адресу самої картинки (правою кнопкою → «Копіювати адресу зображення»).
-              Файл збережеться в оригіналі, без стиснення.
+              Посилання працює лише там, де сервер віддає картинку без блокувань (epc.tesla.com
+              блокує — віддає 403). Для Tesla: скопіюйте картинку в браузері та натисніть
+              <strong> ⌘V / Ctrl+V </strong> будь-де на цій сторінці — завантажиться оригінал.
             </p>
           </div>
           {imageQualityHint && (
