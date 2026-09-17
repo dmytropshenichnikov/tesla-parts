@@ -34,6 +34,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     const handleLogout = () => {
       localStorage.removeItem('customerToken');
+      // Гараж належить акаунту, а не пристрою: після виходу (або протермінованої
+      // сесії) прибираємо його з браузера — на спільному пристрої наступна людина
+      // не побачить чужі авто. На сервері вони лишаються, тож нічого не губиться.
+      // Робимо це саме тут, бо провайдер змонтований завжди, а сторінка гаража — ні.
+      localStorage.removeItem('tesla_garage_all_cars');
+      localStorage.removeItem('tesla_garage_active_car');
+      window.dispatchEvent(new Event('garage-car-changed'));
       setIsCustomerLoggedIn(false);
       setCustomerProfile(null);
     };
