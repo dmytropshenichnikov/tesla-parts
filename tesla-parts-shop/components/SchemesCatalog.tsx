@@ -615,15 +615,12 @@ export const SchemesCatalog: React.FC = () => {
               <button
                 type="button"
                 onClick={() =>
-                  goToStep({
-                    model: null,
-                    generation: null,
-                    section: null,
-                    subsystem: null,
-                    all: null,
-                  })
+                  // Повертає на початок шляху ДЛЯ ЦЬОГО Ж АВТО (до вибору розділу),
+                  // а не до загального списку машин — авто змінюється окремим
+                  // посиланням «Змінити авто».
+                  goToStep({ section: null, subsystem: null, all: null })
                 }
-                title="Повернутись до вибору автомобіля"
+                title="Повернутись до вибору розділу для цього авто"
                 className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs hover:border-tesla-red/50 hover:bg-red-50/40 transition-colors cursor-pointer"
               >
                 <Car size={16} className="text-tesla-red flex-shrink-0" />
