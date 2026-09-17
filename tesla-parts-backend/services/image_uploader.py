@@ -4,6 +4,89 @@ from pathlib import Path
 from fastapi import UploadFile
 from typing import Optional
 
+def trim_and_whiten_image(path: Path, padding: float = 0.03) -> bool:
+    """Обрізає порожні поля навколо малюнка і вибілює світлий фон.
+
+    Робиться на сервері, щоб браузер не витрачав час на canvas — інакше картинка
+    встигала показатись із сірим фоном, а потім «перемальовувалась» у білу.
+    Повертає True, якщо файл змінився.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(path) as src:
+            img = src.convert("RGB")
+            width, height = img.size
+            if width < 8 or height < 8:
+                return False
+
+            # фон беремо з кута
+            corner = img.getpixel((0, 0))
+            corner_luma = 0.299 * corner[0] + 0.587 * corner[1] + 0.114 * corner[2]
+            # темний фон = фото, його не чіпаємо
+            if corner_luma < 210:
+                return False
+            whiten_threshold = corner_luma - 8
+            limit = min(232, whiten_threshold)
+
+            # межі малюнка (працюємо на зменшеній копії — швидко)
+            probe_w = min(width, 420)
+            probe_h = max(1, round(height * probe_w / width))
+            probe = img.resize((probe_w, probe_h))
+            px = probe.load()
+            min_x, min_y, max_x, max_y = probe_w, probe_h, -1, -1
+            for y in range(probe_h):
+                for x in range(probe_w):
+                    r, g, b = px[x, y]
+                    luma = 0.299 * r + 0.587 * g + 0.114 * b
+                    if luma < limit:
+                        if x < min_x:
+                            min_x = x
+                        if y < min_y:
+                            min_y = y
+                        if x > max_x:
+                            max_x = x
+                        if y > max_y:
+                            max_y = y
+            if max_x < 0 or max_y < 0:
+                return False
+
+            pad_x = round(probe_w * padding)
+            pad_y = round(probe_h * padding)
+            min_x = max(0, min_x - pad_x)
+            min_y = max(0, min_y - pad_y)
+            max_x = min(probe_w - 1, max_x + pad_x)
+            max_y = min(probe_h - 1, max_y + pad_y)
+
+            scale = width / probe_w
+            box = (
+                int(min_x * scale),
+                int(min_y * scale),
+                int((max_x + 1) * scale),
+                int((max_y + 1) * scale),
+            )
+            nothing_to_crop = (box[2] - box[0]) >= width * 0.96 and (box[3] - box[1]) >= height * 0.96
+            already_white = corner_luma >= 250
+            if nothing_to_crop and already_white:
+                return False
+
+            cropped = img.crop(box)
+            # вибілюємо фон
+            data = cropped.load()
+            cw, ch = cropped.size
+            for y in range(ch):
+                for x in range(cw):
+                    r, g, b = data[x, y]
+                    luma = 0.299 * r + 0.587 * g + 0.114 * b
+                    if luma >= whiten_threshold:
+                        data[x, y] = (255, 255, 255)
+            cropped.save(path, format="PNG")
+        return True
+    except Exception as e:  # pragma: no cover
+        print(f"Image trim skipped: {e}")
+        return False
+
+
 class ImageUploader:
     def __init__(self):
         self.base_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -142,6 +225,11 @@ class ImageUploader:
         
         # Return URL
         # Remove leading slash from base_url if present, and ensure folder path is correct
+        # Картки каталогу: обрізаємо поля й вибілюємо фон одразу на сервері.
+        # Креслення схем НЕ чіпаємо — координати точок прив'язані до оригіналу.
+        if folder.endswith("categories") or folder.endswith("subcategories"):
+            trim_and_whiten_image(file_path)
+
         base_url = self.base_url.rstrip("/")
         file_location = f"static/images/{folder}/{unique_filename}"
         return f"{base_url}/{file_location}"
