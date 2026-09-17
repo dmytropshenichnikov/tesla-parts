@@ -336,9 +336,14 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
    * коли варіант один (у нинішній адмінці його вже не виставляють).
    */
   const productPathFor = (hotspot: SchematicHotspot, variant?: HotspotVariant) => {
-    const variantCount = (hotspot.variants || []).length;
+    const variants = hotspot.variants || [];
+    const variantCount = variants.length;
+    // Для точки з одним варіантом беремо товар із самого варіанта: поле
+    // `product_id` на рівні точки в нинішній адмінці вже не заповнюється, тож
+    // без цього назва деталі лишалась би неклікабельною.
     const linkedProductId =
-      variant?.product_id || (variantCount <= 1 ? hotspot.product_id : null);
+      variant?.product_id ||
+      (variantCount <= 1 ? hotspot.product_id || variants[0]?.product_id || null : null);
     return linkedProductId ? `/product/${linkedProductId}` : null;
   };
 
