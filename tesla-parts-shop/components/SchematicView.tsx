@@ -267,7 +267,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       description: `Оригінальний парт-номер: ${hotspot.part_number || 'н/д'}. Вузол: ${schematic?.title || ''}`,
       inStock: variant?.inStock ?? true,
       detail_number: hotspot.part_number || undefined,
-      part_type: variant?.type || 'original'
+      part_type: hotspot.product?.part_type || variant?.type || 'original'
     };
 
     onAddToCart(cartProduct);

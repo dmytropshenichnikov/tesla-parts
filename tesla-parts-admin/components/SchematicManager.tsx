@@ -2168,7 +2168,14 @@ export const SchematicManager: React.FC = () => {
 
                         <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <span className="text-gray-400 block mb-0.5 font-medium">Тип</span>
+                            <span className="text-gray-400 block mb-0.5 font-medium">
+                              Тип
+                              {v.product_id && (
+                                <span className="text-[9px] text-emerald-600 block">
+                                  береться з товару
+                                </span>
+                              )}
+                            </span>
                             <select
                               value={v.type || 'original'}
                               onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'type', e.target.value)}
@@ -2478,7 +2485,11 @@ export const SchematicManager: React.FC = () => {
                             title={alreadyLinked ? 'Цей товар уже додано в цю точку' : 'Додати цей товар як варіант'}
                             onClick={() => {
                               if (selectedHotspotIdx === null) return;
-                              const isOriginal = Boolean(p.brand && /tesla/i.test(p.brand));
+                              // Тип беремо з товару каталогу (він же показується на
+                              // сайті). Бренд — лише як запасний варіант.
+                              const isOriginal = p.part_type
+                                ? p.part_type === 'original'
+                                : Boolean(p.brand && /tesla/i.test(p.brand));
                               const isUsed = Boolean(/вживан|б\/в|used/i.test(`${p.name} ${p.category || ''}`));
 
                               if (variantModalTarget === 'new') {

@@ -49,6 +49,10 @@ def _format_hotspot(
             # Картинка товару: у кошику показуємо фото деталі, а не схему вузла
             if product.image:
                 variant.image = product.image
+            # Тип («Оригінал»/«Аналог») теж беремо з товару каталогу — саме він
+            # показується на сторінці товару, тож на схемі й у кошику має бути той самий
+            if product.part_type:
+                variant.type = product.part_type
     
     product_read = None
     if hotspot.product:
