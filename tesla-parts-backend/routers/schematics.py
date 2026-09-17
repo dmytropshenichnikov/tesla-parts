@@ -220,15 +220,10 @@ def get_schematic_sections(
         bucket["count"] += 1
         bucket["subsystems"][subsystem_name] = bucket["subsystems"].get(subsystem_name, 0) + 1
 
-    # Картинки беремо з однойменних підкатегорій каталогу — і для розділу,
-    # і для кожної підсистеми: у каталозі вони вже завантажені адміністратором
+    # Порядок і картинки беремо ЛИШЕ з підкатегорій обраної категорії каталогу.
+    # Раніше картинка шукалась по всьому каталогу за назвою, тому чужа категорія
+    # «віддавала» своє фото (Highland показував кузов від Model 3 тощо).
     images_by_name: dict = {}
-    for sub in session.exec(select(Subcategory)).all():
-        if sub.image:
-            images_by_name.setdefault(sub.name.strip().lower(), sub.image)
-
-    # Порядок розділів і підсистем задає адміністратор у каталозі
-    # (перетягуванням підкатегорій), тому сортуємо саме за ним.
     catalog_order: dict = {}
     if model and model != "all" and model != "Всі моделі":
         clean = model.strip()
@@ -238,6 +233,12 @@ def get_schematic_sections(
             select(Category).where(func.lower(Category.name) == target.lower())
         ).first()
         if category:
+            category_subs = session.exec(
+                select(Subcategory).where(Subcategory.category_id == category.id)
+            ).all()
+            for sub in category_subs:
+                if sub.image:
+                    images_by_name.setdefault(sub.name.strip().lower(), sub.image)
             rows = session.exec(
                 select(Subcategory)
                 .where(Subcategory.category_id == category.id)
