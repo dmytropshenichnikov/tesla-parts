@@ -227,7 +227,12 @@ export const GaragePage: React.FC = () => {
         err?.message === 'Load failed' || err?.message === 'Failed to fetch'
           ? 'Не вдалося звʼязатися із сервером. Перевірте зʼєднання або скористайтесь ручним вибором моделі.'
           : (err?.message || 'Не вдалося знайти авто за номером');
+      // Пошук за номером залежить від зовнішнього сервісу: якщо він не знає номер
+      // або лежить, одразу ведемо людину на VIN — він розшифровується на нашому
+      // боці, тож працює завжди. Повідомлення лишаємо видимим у вкладці VIN.
       setPlateError(msg);
+      setVinError(msg);
+      setAddMode('vin');
       setPlateResult(null);
     } finally {
       setPlateLoading(false);

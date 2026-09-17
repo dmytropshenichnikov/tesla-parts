@@ -51,21 +51,32 @@ def lookup_by_plate(plate: str = Query(..., min_length=2, max_length=15, descrip
     try:
         req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=8) as resp:
-            if resp.status != 200:
-                raise HTTPException(
-                    status_code=502,
-                    detail="Сервіс перевірки номерів тимчасово недоступний. Спробуйте пізніше або введіть VIN вручну."
-                )
             res_data = json.loads(resp.read().decode('utf-8'))
-    except urllib.error.URLError:
-        raise HTTPException(
-            status_code=502,
-            detail="Помилка з'єднання із сервісом перевірки авто. Спробуйте пізніше або введіть VIN вручну."
-        )
+    except urllib.error.HTTPError as e:
+        # Сервіс перевірки віддає помилку не тільки коли сам падає, а й коли номера
+        # немає в реєстрі (перевірено: неіснуючий номер -> 500). Тому не лякаємо
+        # «сервіс недоступний», а чесно кажемо і пропонуємо точніший шлях — VIN.
+        if e.code >= 500:
+            detail = (
+                "Сервіс перевірки номерів не знайшов даних за цим номером "
+                "(можливо, він зараз недоступний). Введіть 17-значний VIN-код — "
+                "він розшифровується на нашому боці й працює завжди."
+            )
+        else:
+            detail = (
+                "Автомобіль за вказаним номером не знайдено в реєстрах. "
+                "Перевірте номер або введіть 17-значний VIN-код — за VIN підбір точніший."
+            )
+        raise HTTPException(status_code=404, detail=detail)
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
-            status_code=500,
-            detail="Не вдалося обробити відповідь сервісу перевірки. Спробуйте пізніше або введіть VIN вручну."
+            status_code=502,
+            detail=(
+                "Сервіс перевірки номерів зараз недоступний. Введіть 17-значний VIN-код — "
+                "він розшифровується на нашому боці й працює завжди."
+            ),
         )
 
     if not res_data.get("status") or not res_data.get("data"):

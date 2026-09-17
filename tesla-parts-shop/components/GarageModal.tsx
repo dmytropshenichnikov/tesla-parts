@@ -115,7 +115,10 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         err?.message === 'Load failed' || err?.message === 'Failed to fetch'
           ? 'Не вдалося звʼязатися із сервером. Перевірте зʼєднання або скористайтесь вибором вручну.'
           : (err?.message || 'Не вдалося знайти авто за номером');
+      // Номер не знайшли або сервіс лежить — перемикаємо на VIN: він розшифровується
+      // на нашому боці, тож працює навіть коли зовнішній сервіс відповідає помилкою.
       setError(msg);
+      setActiveTab('vin');
       setPlateResult(null);
     } finally {
       setLoading(false);
