@@ -113,15 +113,46 @@ export const SchemesCatalog: React.FC = () => {
    * Кожен крок — новий запис в історії, тому кнопка «Назад» (у браузері чи на
    * сторінці) повертає рівно на попередній крок, а не викидає на початок.
    */
-  const goToStep = (patch: Record<string, string | null>) => {
+  const goToStep = (patch: Record<string, string | null>, replace = false) => {
     const next = new URLSearchParams(window.location.search);
     Object.entries(patch).forEach(([key, value]) => {
       if (!value) next.delete(key);
       else next.set(key, value);
     });
-    setSearchParams(next, { replace: false });
+    setSearchParams(next, { replace });
   };
-  const stepBack = () => navigate(-1);
+  /**
+   * «Назад» крокує каскадом по нашій же послідовності, а не в історію браузера:
+   * підсистема → розділ → вибір авто. Інакше перехід із зовнішнього посилання
+   * викидав би зі схеми на попередню сторінку сайту.
+   */
+  const stepBack = () => {
+    if (activeSearch) {
+      setActiveSearch('');
+      setSearchInput('');
+      return;
+    }
+    if (showAllSchematics) {
+      goToStep({ all: null }, true);
+      return;
+    }
+    if (selectedSubsystem) {
+      goToStep({ subsystem: null }, true);
+      return;
+    }
+    if (selectedSection) {
+      goToStep({ section: null, subsystem: null, all: null }, true);
+      return;
+    }
+    if (selectedModel) {
+      goToStep(
+        { model: null, generation: null, section: null, subsystem: null, all: null },
+        true
+      );
+      return;
+    }
+    navigate('/schemes');
+  };
 
   // Автовідкриття єдиної схеми — тільки коли користувач САМ щойно обрав
   // підсистему. Інакше воно спрацьовувало й після «Назад» і закидало вперед.
