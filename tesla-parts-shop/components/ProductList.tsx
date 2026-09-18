@@ -15,6 +15,9 @@ interface ProductListProps {
   uahPerUsd: number;
   onAddToCart: (product: Product) => void;
   title?: string;
+  /** Модель, у якій зараз гортають каталог — передаємо далі, щоб на сторінці
+   *  товару відкривалась схема саме цієї моделі, а не першої-ліпшої */
+  browseModel?: string;
 }
 
 const ProductList: React.FC<ProductListProps> = ({
@@ -22,6 +25,7 @@ const ProductList: React.FC<ProductListProps> = ({
   currency,
   uahPerUsd,
   onAddToCart,
+  browseModel,
   title,
 }) => {
   const navigate = useNavigate();
@@ -214,7 +218,7 @@ const ProductList: React.FC<ProductListProps> = ({
             >
               {/* Product Photo & Stock Badge */}
               <Link
-                to={`/product/${product.id}`}
+                to={`/product/${product.id}${browseModel ? `?model=${encodeURIComponent(browseModel)}` : ''}`}
                 draggable={false}
                 onDragStart={(e) => e.preventDefault()}
                 className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50 cursor-pointer block"
@@ -276,7 +280,7 @@ const ProductList: React.FC<ProductListProps> = ({
                   {/* Full Product Title (Selectable & clickable) */}
                   <h3 className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors mb-2 select-text">
                     <Link
-                      to={`/product/${product.id}`}
+                      to={`/product/${product.id}${browseModel ? `?model=${encodeURIComponent(browseModel)}` : ''}`}
                       draggable={false}
                       onDragStart={(e) => e.preventDefault()}
                       className="hover:text-tesla-red select-text"

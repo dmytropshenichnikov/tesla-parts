@@ -1022,7 +1022,7 @@ export const SchemesCatalog: React.FC = () => {
             {subsystemParts.map((item) => (
               <Link
                 key={item.id}
-                to={`/product/${item.id}`}
+                to={`/product/${item.id}${selectedModel ? `?model=${encodeURIComponent(selectedModel)}` : ''}`}
                 className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div className="h-28 bg-[#fbfbfb] p-3 flex items-center justify-center border-b border-gray-50">

@@ -20,10 +20,11 @@ import {
   CheckCircle2,
   Layers,
   ArrowRight,
+  AlertCircle,
 } from 'lucide-react';
 import ViberIcon from './ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import SeoHead from './SeoHead';
 import { formatCurrency } from '../utils/currency';
 import { api } from '../services/api';
@@ -74,6 +75,9 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
+  // Модель, з якої прийшли в каталог (?model=Model Y) — щоб показати саме її схему
+  const [searchParams] = useSearchParams();
+  const browseModel = (searchParams.get('model') || '').trim();
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +97,33 @@ const ProductPage: React.FC<ProductPageProps> = ({
       cancelled = true;
     };
   }, [product?.id]);
+  /**
+   * Схеми сортуємо за тим, наскільки вони відповідають моделі, з якої прийшли.
+   * Раніше порядок був випадковий: з каталогу Model Y могла відкритись схема
+   * Model 3 Highland — а це інший вузол.
+   */
+  const key = (value?: string | null) => (value || '').trim().toLowerCase();
+  const sortedSchematics = useMemo(() => {
+    if (!browseModel) return productSchematics;
+    const want = key(browseModel);
+    const score = (usage: SchematicUsage) => {
+      const model = key(usage.model);
+      const gen = key(usage.generation);
+      const full = `${model} ${gen}`.trim();
+      if (full === want || model === want) return 0;      // точний збіг моделі
+      if (want.includes(model) || model.includes(want)) return 1; // та сама сім'я
+      return 2;                                            // інша модель
+    };
+    return [...productSchematics].sort((a, b) => score(a) - score(b));
+  }, [productSchematics, browseModel]);
+
+  const hasSchemeForBrowseModel =
+    !browseModel ||
+    productSchematics.some((usage) => {
+      const model = key(usage.model);
+      return model === key(browseModel) || `${model} ${key(usage.generation)}`.trim() === key(browseModel);
+    });
+
   const effectiveRate =
     uahPerUsd > 0 ? uahPerUsd : DEFAULT_EXCHANGE_RATE_UAH_PER_USD;
 
@@ -713,8 +744,19 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 Подивіться, у якому вузлі стоїть ця деталь — зі схемою та іншими
                 суміжними позиціями.
               </p>
+
+              {!hasSchemeForBrowseModel && (
+                <div className="mb-3 flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] font-manrope text-amber-900">
+                  <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600" />
+                  <span>
+                    Для <strong>Tesla {browseModel}</strong> схеми цього вузла ще немає — нижче
+                    схеми для інших моделей, вони можуть відрізнятися.
+                  </span>
+                </div>
+              )}
+
               <div className="space-y-2">
-                {productSchematics.map((usage, index) => (
+                {sortedSchematics.map((usage, index) => (
                   <Link
                     key={`${usage.schematic_id}-${usage.number}-${index}`}
                     to={`/schemes/${usage.schematic_id}`}
@@ -731,6 +773,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
                         {usage.model} {usage.generation} • {usage.section}
                         {usage.subsystem ? ` • ${usage.subsystem}` : ''}
                       </span>
+                      {browseModel && !hasSchemeForBrowseModel && (
+                        <span className="inline-block mt-1 text-[10px] font-montserrat font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          інша модель
+                        </span>
+                      )}
                     </span>
                     <ArrowRight
                       size={16}

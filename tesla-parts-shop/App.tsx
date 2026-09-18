@@ -1233,6 +1233,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
         products.length > 0 && (
           <ProductList
             title={subcategoriesToShow.length > 0 ? 'Товари' : undefined}
+            browseModel={category?.name}
             products={products}
             currency={currency}
             uahPerUsd={uahPerUsd}
