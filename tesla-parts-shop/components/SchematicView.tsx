@@ -287,15 +287,22 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   const handleSelectHotspot = (hotspot: SchematicHotspot) => {
     setActiveHotspotId(hotspot.id);
-    // Expand its variants
-    setExpandedVariants(prev => ({ ...prev, [hotspot.id]: true }));
+    // Клік по номеру перемикає: розкрити ↔ згорнути. Раніше список лише
+    // розкривався, і згорнути його було нічим.
+    const willExpand = !expandedVariants[hotspot.id];
+    setExpandedVariants(prev => ({ ...prev, [hotspot.id]: !prev[hotspot.id] }));
 
-    // Scroll corresponding part card into view
-    const cardEl = partRefs.current[hotspot.id];
-    if (cardEl) {
-      cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Прокручуємо до картки лише коли розкриваємо
+    if (willExpand) {
+      const cardEl = partRefs.current[hotspot.id];
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   };
+
+  /** Згорнути всі розкриті списки деталей */
+  const collapseAllVariants = () => setExpandedVariants({});
 
   const toggleVariants = (hotspotId: number) => {
     setExpandedVariants(prev => ({
@@ -761,14 +768,27 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         {/* RIGHT: Parts List (Деталі вузла) */}
         <div className="lg:col-span-6 xl:col-span-5 space-y-4">
           {/* Header of parts list */}
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center justify-between gap-2 px-1 flex-wrap">
             <h2 className="text-lg font-black font-montserrat text-gray-900">
               Деталі вузла
             </h2>
-            <span className="text-xs font-manrope text-gray-500">
-              <strong className="text-gray-800">{inStockCount}</strong> в наявності •{' '}
-              <strong className="text-gray-800">{totalVariantsCount - inStockCount}</strong> немає в наявності
-            </span>
+            <div className="flex items-center gap-3">
+              {Object.values(expandedVariants).some(Boolean) && (
+                <button
+                  type="button"
+                  onClick={collapseAllVariants}
+                  className="inline-flex items-center gap-1.5 text-xs font-montserrat font-bold text-gray-500 hover:text-tesla-red transition-colors cursor-pointer"
+                  title="Згорнути всі розкриті списки деталей"
+                >
+                  <ChevronUp size={14} />
+                  Згорнути все
+                </button>
+              )}
+              <span className="text-xs font-manrope text-gray-500">
+                <strong className="text-gray-800">{inStockCount}</strong> в наявності •{' '}
+                <strong className="text-gray-800">{totalVariantsCount - inStockCount}</strong> немає в наявності
+              </span>
+            </div>
           </div>
 
           {/* Cards List */}
@@ -890,7 +910,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                               : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                           }`}
                         >
-                          <span>Обрати</span>
+                          <span>{isExpanded ? 'Згорнути' : 'Обрати'}</span>
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       ) : hotspotAvailable ? (
