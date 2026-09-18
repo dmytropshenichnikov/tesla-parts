@@ -52,6 +52,67 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
   const imageUrl = (url: string) =>
     !url ? '' : url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 
+  // Одна схема — показуємо звичайну широку картку.
+  // Кілька схем (напр. на сторінці розділу «ЗОВНІШНЄ ОЗДОБЛЕННЯ») — компактний
+  // рядок, що гортається: раніше сім карток займали пів екрана.
+  if (schemes.length > 1) {
+    const first = schemes[0];
+    const allLink = `/schemes?model=${encodeURIComponent(first.model)}&generation=${encodeURIComponent(
+      first.generation || ''
+    )}&section=${encodeURIComponent(first.section || '')}&all=1`;
+
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-montserrat font-bold text-tesla-red uppercase tracking-wider">
+            <Layers size={12} />
+            Схеми цього вузла ({schemes.length})
+          </span>
+          <Link
+            to={allLink}
+            className="inline-flex items-center gap-1 text-xs font-montserrat font-bold text-tesla-red hover:underline"
+          >
+            Усі схеми розділу
+            <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
+          {schemes.map((scheme) => (
+            <Link
+              key={scheme.id}
+              to={`/schemes/${scheme.id}`}
+              className="group flex items-center gap-2.5 p-2.5 rounded-xl border border-tesla-red/25 bg-white hover:border-tesla-red hover:shadow-md transition-all shrink-0 w-[230px]"
+            >
+              <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                {scheme.image_url ? (
+                  <img
+                    src={imageUrl(scheme.image_url)}
+                    alt={scheme.title}
+                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <Layers size={20} className="text-gray-300" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="font-montserrat font-bold text-xs text-gray-900 truncate">
+                  {scheme.title}
+                </div>
+                <div className="text-[10px] text-gray-400 font-manrope mt-0.5 truncate">
+                  {pluralPoints(scheme.hotspots_count)}
+                  {scheme.subsystem && scheme.subsystem !== scheme.title
+                    ? ` • ${scheme.subsystem}`
+                    : ''}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-6 space-y-3">
       {schemes.map((scheme) => (
