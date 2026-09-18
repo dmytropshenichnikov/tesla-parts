@@ -677,12 +677,6 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                       return sortedProducts.map((product, idx) => (
                         <tr
                           key={product.id}
-                          draggable
-                          onDragStart={(e) => {
-                            setDragProductId(product.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/plain', product.id);
-                          }}
                           onDragOver={(e) => {
                             if (!dragProductId || dragProductId === product.id) return;
                             e.preventDefault();
@@ -709,9 +703,17 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                         >
                           <td className="px-3 py-2">
                             <div className="flex items-center gap-1">
+                              {/* тягнемо тільки за ручку, щоб можна було
+                                  виділяти й копіювати текст у рядку */}
                               <span
+                                draggable
+                                onDragStart={(e) => {
+                                  setDragProductId(product.id);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  e.dataTransfer.setData('text/plain', product.id);
+                                }}
                                 className="text-gray-300 hover:text-tesla-red cursor-grab active:cursor-grabbing"
-                                title="Перетягніть товар, щоб змінити порядок"
+                                title="Перетягніть за цю ручку, щоб змінити порядок"
                               >
                                 <GripVertical size={14} />
                               </span>

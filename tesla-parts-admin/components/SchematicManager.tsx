@@ -2228,19 +2228,6 @@ export const SchematicManager: React.FC = () => {
                       <div
                         key={varIdx}
                         data-variant-idx={varIdx}
-                        draggable
-                        onDragStart={(e) => {
-                          // Тягнемо за вільне місце рядка: усередині полів вводу
-                          // і кнопок перетягування має лишитись виділенням тексту.
-                          const target = e.target as HTMLElement;
-                          if (target.closest('input, textarea, select, button')) {
-                            e.preventDefault();
-                            return;
-                          }
-                          setDragVariantIdx(varIdx);
-                          e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('text/plain', String(varIdx));
-                        }}
                         onDragOver={(e) => {
                           if (dragVariantIdx === null || dragVariantIdx === varIdx) return;
                           e.preventDefault();
@@ -2267,9 +2254,17 @@ export const SchematicManager: React.FC = () => {
                         } ${dragVariantIdx === varIdx ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center justify-between gap-2">
+                          {/* draggable ТІЛЬКИ на ручці: інакше виділення тексту
+                              в полі назви починало перетягувати рядок */}
                           <span
+                            draggable
+                            onDragStart={(e) => {
+                              setDragVariantIdx(varIdx);
+                              e.dataTransfer.effectAllowed = 'move';
+                              e.dataTransfer.setData('text/plain', String(varIdx));
+                            }}
                             className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0"
-                            title="Перетягніть, щоб змінити порядок"
+                            title="Перетягніть за цю ручку, щоб змінити порядок"
                           >
                             <GripVertical size={14} />
                           </span>
