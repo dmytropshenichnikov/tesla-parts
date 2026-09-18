@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 from models import PromoCode, Customer, CustomerPromoCodeLink
 from database import get_session
 from schemas import PromoCodeCreate, PromoCodeRead, PromoCodeValidateRequest, PromoCodeValidateResponse
@@ -51,21 +51,28 @@ async def validate_promocode(
     session: Session = Depends(get_session),
     customer: Customer = Depends(get_optional_customer)
 ):
-    promocode = session.exec(select(PromoCode).where(PromoCode.code == request.code)).first()
-    
-    if not promocode or not promocode.is_active:
-        raise HTTPException(status_code=404, detail="Promocode not found or inactive")
-        
+    # Код шукаємо без урахування регістру та пробілів: «service5» = «SERVICE5»
+    code = (request.code or "").strip().upper()
+    promocode = session.exec(select(PromoCode).where(func.upper(PromoCode.code) == code)).first()
+
+    if not promocode:
+        raise HTTPException(status_code=404, detail="Промокод не знайдено")
+    if not promocode.is_active:
+        raise HTTPException(
+            status_code=404,
+            detail="Промокод вимкнено. Увімкніть його в адмінці: Промокоди → статус",
+        )
+
     if promocode.scope == "selected":
         if not customer:
-            raise HTTPException(status_code=401, detail="Authentication required for this promocode")
+            raise HTTPException(status_code=401, detail="Для цього промокоду потрібно увійти в акаунт")
         link = session.exec(select(CustomerPromoCodeLink).where(
             (CustomerPromoCodeLink.promocode_id == promocode.id) & 
             (CustomerPromoCodeLink.customer_id == customer.id)
         )).first()
         
         if not link:
-            raise HTTPException(status_code=400, detail="Promocode is not applicable to you")
+            raise HTTPException(status_code=400, detail="Цей промокод не діє для вашого акаунта")
             
     return PromoCodeValidateResponse(
         valid=True,

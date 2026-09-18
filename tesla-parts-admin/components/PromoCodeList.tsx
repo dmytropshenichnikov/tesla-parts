@@ -322,12 +322,21 @@ export const PromoCodeList: React.FC = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button onClick={() => toggleStatus(p)}>
-                    {p.is_active ? (
-                      <CheckCircle className="text-green-500" size={20} />
-                    ) : (
-                      <XCircle className="text-gray-300" size={20} />
-                    )}
+                  <button
+                    onClick={() => toggleStatus(p)}
+                    title={
+                      p.is_active
+                        ? 'Промокод працює. Натисніть, щоб вимкнути'
+                        : 'Промокод вимкнено — клієнти бачать «Промокод вимкнено». Натисніть, щоб увімкнути'
+                    }
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                      p.is_active
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {p.is_active ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                    {p.is_active ? 'Увімкнено' : 'Вимкнено'}
                   </button>
                 </td>
                 <td className="px-6 py-4 text-right flex justify-end gap-2">
