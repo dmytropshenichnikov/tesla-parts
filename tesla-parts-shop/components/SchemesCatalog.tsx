@@ -181,6 +181,20 @@ export const SchemesCatalog: React.FC = () => {
   // Крок «підсистема» показуємо завжди, якщо в розділі є підсистеми:
   // шлях такий самий, як у каталозі — авто → розділ → підсистема → схема
   const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 0;
+  // Якщо в посиланні прийшла підсистема, якої немає в цьому розділі (або взагалі
+  // сміттєве значення) — не показуємо порожній список, а повертаємось на крок
+  // вибору підсистеми. Інакше було «Схем не знайдено» і чип із дивним текстом.
+  useEffect(() => {
+    if (!selectedSection || !selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) return;
+    if (sectionsLoading || sections.length === 0) return;
+    const group = sections.find((item) => item.section === selectedSection);
+    if (!group) return;
+    const known = group.subsystems.some((item) => item.subsystem === selectedSubsystem);
+    if (!known) {
+      goToStep({ subsystem: null }, true);
+    }
+  }, [selectedSection, selectedSubsystem, sections, sectionsLoading]);
+
   // Якщо в обраній підсистемі рівно одна схема — відкриваємо її одразу.
   // Раніше треба було тицяти «ЗАХИСТИ ПЕРЕДНІ» → потім ще раз «ЗАХИСТИ ПЕРЕДНІ».
   useEffect(() => {

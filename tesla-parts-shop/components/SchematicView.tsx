@@ -447,8 +447,11 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const backToPath = schematic.section
     ? `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}`
     : `/schemes?${shopQuery}`;
+  // «Усі схеми розділу» — це прапорець all=1 разом із розділом.
+  // Раніше тут передавалась підсистема «all», якої не існує: у магазині така
+  // підсистема нічого не знаходила («all» у крихтах і «Схем не знайдено»).
   const allSchemesPath = schematic.section
-    ? `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}&subsystem=all`
+    ? `/schemes?${shopQuery}&section=${encodeURIComponent(schematic.section)}&all=1`
     : `/schemes?${shopQuery}&all=1`;
   const crumbChain = [
     { label: `${schematic.model} ${schematic.generation}`, to: `/schemes?${shopQuery}` },
