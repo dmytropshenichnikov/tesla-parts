@@ -161,6 +161,9 @@ class CategoryListSchema(BaseModel):
     sort_order: int
     meta_title: str | None = None
     meta_description: str | None = None
+    # Показувати модель у «Схемах запчастин (EPC)». Без цього поля адмінка
+    # завжди показувала «увімкнено», хоч би що було в базі.
+    show_in_schematics: bool = True
 
 class CategoryDetailSchema(CategoryListSchema):
     subcategories: List[SubcategoryNoProducts] = []
