@@ -343,16 +343,8 @@ export const SchemesCatalog: React.FC = () => {
       if (saved) {
         const parsed: SavedCar = JSON.parse(saved);
         setActiveCar(parsed);
-        // Автоматично підставляємо авто з гаража, якщо модель не задана в URL
-        if (!searchParams.get('model') && !searchParams.get('generation') && modelOptions.length > 0) {
-          const option = resolveOption(modelOptions, parsed.model, parsed.generation);
-          if (option) {
-            setSelectedModel(option.category);
-            setSelectedGen(ALL_GENERATIONS);
-            setSelectedSection('');
-            setSelectedSubsystem('');
-          }
-        }
+        // Гараж — лише підказка. Модель НЕ підставляємо автоматично, інакше
+        // з авто в гаражі неможливо подивитись схеми іншої машини.
       } else {
         setActiveCar(null);
       }
@@ -536,10 +528,39 @@ export const SchemesCatalog: React.FC = () => {
           <h2 className="font-montserrat font-black text-2xl sm:text-3xl md:text-4xl text-center text-tesla-dark mb-3">
             Оберіть модель вашого Tesla
           </h2>
-          <p className="text-sm text-gray-500 font-manrope mb-8 max-w-2xl mx-auto text-center">
+          <p className="text-sm text-gray-500 font-manrope mb-6 max-w-2xl mx-auto text-center">
             Схеми вузлів (EPC) відрізняються для кожної моделі та покоління. Оберіть своє авто —
             і ми покажемо лише сумісні вузли та деталі.
           </p>
+
+          {/* Авто з гаража — підказка, а не нав'язаний вибір: можна дивитись будь-яку модель */}
+          {activeCar && (() => {
+            const garageOption = resolveOption(modelOptions, activeCar.model, activeCar.generation);
+            if (!garageOption) return null;
+            return (
+              <div className="mb-8 mx-auto max-w-2xl flex flex-col sm:flex-row items-center justify-center gap-3 p-3 rounded-2xl bg-white border border-gray-200 shadow-sm">
+                <span className="inline-flex items-center gap-2 text-xs font-manrope text-gray-600">
+                  <Car size={16} className="text-tesla-red shrink-0" />
+                  Ваше авто з гаража: <strong className="font-montserrat text-gray-900">Tesla {activeCar.model}{activeCar.year ? ` (${activeCar.year})` : ''}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    goToStep({
+                      model: garageOption.category,
+                      generation: null,
+                      section: null,
+                      subsystem: null,
+                      all: null,
+                    })
+                  }
+                  className="px-4 py-2 rounded-xl bg-tesla-red hover:bg-red-700 text-white text-xs font-montserrat font-bold transition-colors cursor-pointer shrink-0 active:scale-95"
+                >
+                  Показати схеми для нього
+                </button>
+              </div>
+            );
+          })()}
 
           {modelOptions.length === 0 ? (
             <div className="py-10 text-center text-gray-400 font-manrope text-sm">
@@ -661,15 +682,22 @@ export const SchemesCatalog: React.FC = () => {
               )}
 
               <button
-                onClick={() =>
+                onClick={() => {
+                  // дублюємо скидання у стані: якщо модель була вибрана не через URL,
+                  // одного goToStep недостатньо
+                  setSelectedModel('');
+                  setSelectedGen(ALL_GENERATIONS);
+                  setSelectedSection('');
+                  setSelectedSubsystem('');
+                  setShowAllSchematics(false);
                   goToStep({
                     model: null,
                     generation: null,
                     section: null,
                     subsystem: null,
                     all: null,
-                  })
-                }
+                  });
+                }}
                 className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer ml-1"
               >
                 Змінити авто
@@ -887,6 +915,11 @@ export const SchemesCatalog: React.FC = () => {
             <button
               onClick={() => {
                 // Повертаємось до кроку вибору автомобіля
+                setSelectedModel('');
+                setSelectedGen(ALL_GENERATIONS);
+                setSelectedSection('');
+                setSelectedSubsystem('');
+                setShowAllSchematics(false);
                 goToStep({
                   model: null,
                   generation: null,
