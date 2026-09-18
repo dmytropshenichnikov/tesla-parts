@@ -655,8 +655,8 @@ export const SchemesCatalog: React.FC = () => {
                   // посиланням «Змінити авто».
                   goToStep({ section: null, subsystem: null, all: null })
                 }
-                title="Повернутись до вибору розділу для цього авто"
-                className="group inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs hover:border-tesla-red/50 hover:bg-red-50/40 transition-colors cursor-pointer"
+                title="Перейти до розділів цього авто"
+                className="group inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs hover:border-tesla-red/60 hover:text-tesla-red hover:bg-red-50/40 transition-colors cursor-pointer"
               >
                 <Car size={16} className="text-tesla-red flex-shrink-0" />
                 <span className="font-montserrat font-bold text-sm text-gray-900 group-hover:text-tesla-red transition-colors">
@@ -664,9 +664,9 @@ export const SchemesCatalog: React.FC = () => {
                     ? activeModelObj.category
                     : `Tesla ${selectedModel}`}
                 </span>
-                <ArrowLeft
+                <ChevronRight
                   size={14}
-                  className="text-gray-300 group-hover:text-tesla-red transition-all group-hover:-translate-x-0.5"
+                  className="text-gray-300 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all"
                 />
               </button>
 
