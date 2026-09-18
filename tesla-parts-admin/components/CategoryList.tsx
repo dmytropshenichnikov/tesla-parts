@@ -863,6 +863,9 @@ const CategoryList: React.FC = () => {
   const [dragCategoryOverId, setDragCategoryOverId] = useState<number | null>(null);
   const [dragSubcategoryId, setDragSubcategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Скільки схем реально є для кожної категорії — «око» показує саме це,
+  // а не абстрактне «показується на схемах».
+  const [schemeCounts, setSchemeCounts] = useState<Record<string, number>>({});
   const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
 
   // New Category State
@@ -893,7 +896,21 @@ const CategoryList: React.FC = () => {
 
   useEffect(() => {
     loadCategories();
+    loadSchemeCounts();
   }, []);
+
+  const loadSchemeCounts = async () => {
+    try {
+      const options = await ApiService.getSchematicModelOptions();
+      const map: Record<string, number> = {};
+      options.forEach((o) => {
+        map[o.category] = o.schematics_count || 0;
+      });
+      setSchemeCounts(map);
+    } catch (e) {
+      console.warn('Не вдалося отримати кількість схем', e);
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -1304,9 +1321,12 @@ const CategoryList: React.FC = () => {
           <span>
             Порядок моделей і підкатегорій змінюється <strong>перетягуванням рядка</strong> (або
             стрілками ↑↓). Він одразу застосовується в каталозі, на головній сторінці та в
-            розділі «Схеми запчастин». Іконка <strong>ока</strong> праворуч керує тим, чи
-            показувати категорію в «Схемах запчастин (EPC)» — саме так сховані «Аксесуари»,
-            і так само можна сховати будь-яку нову категорію.
+            розділі «Схеми запчастин».
+            <br />
+            <strong>Око з цифрою</strong> праворуч — скільки схем має модель і чи показувати їх у
+            розділі «Схеми запчастин (EPC)». Модель без схем позначена сірим і кнопка неактивна —
+            у схемах її все одно не буде. Ця кнопка <strong>не</strong> ховає модель із каталогу:
+            каталог і схеми — окремі розділи.
           </span>
         </div>
         {sortedCategories.map((category, idx) => (
@@ -1495,21 +1515,43 @@ const CategoryList: React.FC = () => {
                       <ArrowDown size={16} />
                     </button>
                   </div>
-                  <button
-                    onClick={() => handleToggleSchematics(category)}
-                    className={`p-2 rounded transition ${
-                      category.show_in_schematics === false
-                        ? 'text-gray-300 hover:text-tesla-red'
-                        : 'text-emerald-600 hover:bg-emerald-50'
-                    }`}
-                    title={
-                      category.show_in_schematics === false
-                        ? 'Не показується в «Схемах запчастин» — натисніть, щоб увімкнути'
-                        : 'Показується в «Схемах запчастин» — натисніть, щоб сховати'
-                    }
-                  >
-                    {category.show_in_schematics === false ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                  {(() => {
+                    const count = schemeCounts[category.name] ?? 0;
+                    const hidden = category.show_in_schematics === false;
+                    const hasSchemes = count > 0;
+                    return (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => hasSchemes && handleToggleSchematics(category)}
+                          disabled={!hasSchemes}
+                          className={`p-2 rounded transition ${
+                            !hasSchemes
+                              ? 'text-gray-200 cursor-not-allowed'
+                              : hidden
+                                ? 'text-gray-400 hover:text-tesla-red'
+                                : 'text-emerald-600 hover:bg-emerald-50'
+                          }`}
+                          title={
+                            !hasSchemes
+                              ? 'Схем для цієї моделі ще немає — у розділі «Схеми запчастин» вона не з’явиться, хоч би що тут натиснути. Кнопка лише ховає/показує вже створені схеми; каталог вона не змінює.'
+                              : hidden
+                                ? `Схем: ${count}. Модель прихована у «Схемах запчастин». Натисніть, щоб показати. Каталог це не змінює.`
+                                : `Схем: ${count}. Модель показується у «Схемах запчастин». Натисніть, щоб приховати. Каталог це не змінює.`
+                          }
+                        >
+                          {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        <span
+                          className={`text-[11px] font-montserrat font-bold w-4 text-center ${
+                            hasSchemes ? 'text-gray-500' : 'text-gray-300'
+                          }`}
+                          title="Кількість схем у цієї моделі"
+                        >
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <Link
                     to={`/products/new?category_id=${category.id}`}
                     className="text-gray-400 hover:text-green-600 p-2 rounded transition"
