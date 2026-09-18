@@ -280,7 +280,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
       />
 
       {/* Top Navigation & Breadcrumb */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
         <button
           onClick={() => {
             if (window.history.length > 1) {
@@ -319,7 +319,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-gray-100 overflow-hidden mb-8">
         <div className="flex flex-col md:flex-row">
           {/* Left Column: Image Gallery */}
-          <div className="md:w-1/2 p-3 sm:p-6 bg-[#fafafa] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
+          <div className="md:w-1/2 p-3 sm:px-6 sm:pt-5 sm:pb-6 bg-[#fafafa] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
             <div>
               <div
                 className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-square"
@@ -402,11 +402,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
           </div>
 
           {/* Right Column: Product Details & Purchase */}
-          <div className="md:w-1/2 p-4 sm:p-6 md:p-8 flex flex-col justify-between">
+          <div className="md:w-1/2 p-4 pt-3 sm:p-6 sm:pt-4 md:px-8 md:pt-5 md:pb-8 flex flex-col justify-between">
             <div>
               {/* Бейджі «В наявності» / «Аналог» тут більше не дублюємо — вони вже
                   є на фото. Лишаємо тільки мобільні теги моделей. */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
+              <div className="sm:hidden flex flex-wrap items-center gap-2 mb-2.5">
                 {/* Mobile models tags */}
                 {models.map((model, idx) => (
                   <span
