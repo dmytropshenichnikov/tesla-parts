@@ -103,32 +103,33 @@ const ProductPage: React.FC<ProductPageProps> = ({
    * Model 3 Highland — а це інший вузол.
    */
   const key = (value?: string | null) => (value || '').trim().toLowerCase();
+  /** 0 — точний збіг моделі й покоління, 1 — базова комплектація, 2 — та сама
+   *  модель з іншим поколінням, 3 — схожа назва, 4 — інша модель. */
+  const schemeScore = (usage: SchematicUsage, want: string) => {
+    const model = key(usage.model);
+    const gen = key(usage.generation);
+    const full = `${model} ${gen}`.trim();
+    if (full === want) return 0;
+    if (model === want && (gen === '' || gen === 'стандартна')) return 1;
+    if (model === want) return 2;
+    if (want.includes(model) || model.includes(want)) return 3;
+    return 4;
+  };
+
   const sortedSchematics = useMemo(() => {
     if (!browseModel) return productSchematics;
     const want = key(browseModel);
-    const score = (usage: SchematicUsage) => {
-      const model = key(usage.model);
-      const gen = key(usage.generation);
-      const full = `${model} ${gen}`.trim();
-      if (full === want) return 0;                      // «Model 3 Highland» = «Model 3 Highland»
-      if (model === want && (gen === '' || gen === 'стандартна')) return 1; // базова комплектація
-      if (model === want) return 2;                     // та сама модель, інше покоління
-      if (want.includes(model) || model.includes(want)) return 3;
-      return 4;                                         // інша модель
-    };
-    return [...productSchematics].sort((a, b) => score(a) - score(b));
+    return [...productSchematics].sort((a, b) => schemeScore(a, want) - schemeScore(b, want));
   }, [productSchematics, browseModel]);
 
-  /** Схема, що належить саме тій моделі, з якої прийшли (або null) */
+  /** Найкраща схема саме тієї моделі, з якої прийшли (або null) */
   const sameModelScheme = useMemo(() => {
     if (!browseModel) return null;
     const want = key(browseModel);
-    return (
-      productSchematics.find((usage) => {
-        const model = key(usage.model);
-        return model === want || `${model} ${key(usage.generation)}`.trim() === want;
-      }) || null
-    );
+    const best = [...productSchematics]
+      .map((usage) => ({ usage, score: schemeScore(usage, want) }))
+      .sort((a, b) => a.score - b.score)[0];
+    return best && best.score <= 2 ? best.usage : null;
   }, [productSchematics, browseModel]);
 
   const hasSchemeForBrowseModel = !browseModel || Boolean(sameModelScheme);
