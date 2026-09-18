@@ -119,12 +119,28 @@ const ProductPage: React.FC<ProductPageProps> = ({
     return [...productSchematics].sort((a, b) => score(a) - score(b));
   }, [productSchematics, browseModel]);
 
-  const hasSchemeForBrowseModel =
-    !browseModel ||
-    productSchematics.some((usage) => {
-      const model = key(usage.model);
-      return model === key(browseModel) || `${model} ${key(usage.generation)}`.trim() === key(browseModel);
-    });
+  /** Схема, що належить саме тій моделі, з якої прийшли (або null) */
+  const sameModelScheme = useMemo(() => {
+    if (!browseModel) return null;
+    const want = key(browseModel);
+    return (
+      productSchematics.find((usage) => {
+        const model = key(usage.model);
+        return model === want || `${model} ${key(usage.generation)}`.trim() === want;
+      }) || null
+    );
+  }, [productSchematics, browseModel]);
+
+  const hasSchemeForBrowseModel = !browseModel || Boolean(sameModelScheme);
+
+  /**
+   * Велика кнопка під «Купити» веде ТІЛЬКИ на схему обраної моделі.
+   * Якщо такої схеми ще немає — не підсовуємо чужу модель, а чесно кажемо про це
+   * (схеми інших моделей лишаються нижче, у блоці «Є на схемах»).
+   */
+  const primaryScheme = browseModel ? sameModelScheme : sortedSchematics[0] || null;
+  const showNoSchemeNotice =
+    Boolean(browseModel) && !sameModelScheme && productSchematics.length > 0;
 
   const effectiveRate =
     uahPerUsd > 0 ? uahPerUsd : DEFAULT_EXCHANGE_RATE_UAH_PER_USD;
@@ -565,9 +581,9 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
                 {/* Перехід на схему вузла: доступний одразу під кнопкою купівлі,
                     без прокрутки — саме те, що потрібно, коли деталь шукали зі схеми. */}
-                {sortedSchematics.length > 0 && (
+                {primaryScheme && (
                   <Link
-                    to={`/schemes/${sortedSchematics[0].schematic_id}`}
+                    to={`/schemes/${primaryScheme.schematic_id}`}
                     className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-red-100 bg-red-50/60 hover:bg-red-50 hover:border-tesla-red transition-colors group"
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
@@ -579,11 +595,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
                           Ця деталь на схемі
                         </span>
                         <span className="block font-montserrat font-bold text-sm text-gray-900 truncate">
-                          {sortedSchematics[0].title}
+                          {primaryScheme.title}
                           <span className="font-manrope font-normal text-gray-500">
-                            {' '}• {sortedSchematics[0].model} {sortedSchematics[0].generation}
+                            {' '}• {primaryScheme.model} {primaryScheme.generation}
                           </span>
-                          {sortedSchematics.length > 1
+                          {!browseModel && sortedSchematics.length > 1
                             ? ` та ще ${sortedSchematics.length - 1}`
                             : ''}
                         </span>
@@ -594,6 +610,26 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       className="text-tesla-red shrink-0 group-hover:translate-x-0.5 transition-transform"
                     />
                   </Link>
+                )}
+
+                {/* Схеми цієї моделі ще немає — не ведемо на чужу модель */}
+                {showNoSchemeNotice && (
+                  <div className="flex items-start gap-3 px-3.5 py-3 rounded-xl border border-gray-200 bg-gray-50">
+                    <span className="w-8 h-8 rounded-lg bg-white text-gray-400 flex items-center justify-center shrink-0 shadow-2xs">
+                      <Layers size={16} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-manrope text-gray-500">
+                        Схема цього вузла
+                      </span>
+                      <span className="block font-montserrat font-bold text-xs text-gray-700">
+                        Для Tesla {browseModel} схема ще не створена
+                      </span>
+                      <span className="block text-[10px] font-manrope text-gray-400 mt-0.5">
+                        Схеми інших моделей — нижче, у блоці «Є на схемах»
+                      </span>
+                    </span>
+                  </div>
                 )}
 
                 {/* Quick Consultation Messengers */}
