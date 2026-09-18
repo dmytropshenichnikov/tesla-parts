@@ -674,9 +674,6 @@ export const SchemesCatalog: React.FC = () => {
                     className="group inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
                   >
                     {selectedSection}
-                    <span className="text-gray-300 group-hover:text-tesla-red transition-colors text-base leading-none">
-                      ×
-                    </span>
                   </button>
                 </>
               )}
