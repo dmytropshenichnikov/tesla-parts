@@ -1335,8 +1335,9 @@ const CategoryList: React.FC = () => {
             розділі «Схеми запчастин».
             <br />
             Показувати модель у розділі «Схеми запчастин (EPC)» можна в <strong>редакторі
-            категорії (олівець ✏️)</strong> — там же видно, скільки схем має модель. Це
-            <strong>не</strong> ховає модель із каталогу: каталог і схеми — окремі розділи.
+            категорії (олівець ✏️)</strong> — там же видно, скільки схем має модель. Працює й для
+            моделей без схем (можна сховати картку заздалегідь). Це <strong>не</strong> ховає
+            модель із каталогу: каталог і схеми — окремі розділи.
           </span>
         </div>
         {sortedCategories.map((category, idx) => (
@@ -1457,25 +1458,25 @@ const CategoryList: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Показувати модель у «Схемах запчастин» — тут, у редакторі */}
+                  {/* Показувати модель у «Схемах запчастин» — тут, у редакторі.
+                      Працює незалежно від того, чи є вже схеми: це перемикач
+                      самої картки моделі в розділі «Схеми». */}
                   {(() => {
                     const count = schemeCounts[category.name] ?? 0;
-                    const hasSchemes = count > 0;
+                    const schemesWord =
+                      count === 1 ? 'схема' : count >= 2 && count <= 4 ? 'схеми' : 'схем';
                     return (
                       <div className="mt-4 p-3 rounded-lg border border-gray-200 bg-gray-50/70">
-                        <label
-                          className={`flex items-start gap-3 ${hasSchemes ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                        >
+                        <label className="flex items-start gap-3 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={hasSchemes ? editShowInSchematics : false}
-                            disabled={!hasSchemes}
+                            checked={editShowInSchematics}
                             onChange={(e) => setEditShowInSchematics(e.target.checked)}
                             className="mt-0.5 w-4 h-4 accent-emerald-600"
                           />
                           <span className="min-w-0">
                             <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                              {editShowInSchematics && hasSchemes ? (
+                              {editShowInSchematics ? (
                                 <Eye size={16} className="text-emerald-600" />
                               ) : (
                                 <EyeOff size={16} className="text-gray-400" />
@@ -1483,13 +1484,14 @@ const CategoryList: React.FC = () => {
                               Показувати модель у «Схемах запчастин (EPC)»
                             </span>
                             <span className="block text-xs text-gray-500 mt-1 font-manrope">
-                              {hasSchemes ? (
-                                <>У цієї моделі <strong>{count}</strong> {count === 1 ? 'схема' : count < 5 ? 'схеми' : 'схем'}. Вимкніть —
-                                  і вони зникнуть із розділу «Схеми», але <strong>каталог не зміниться</strong>.</>
+                              {count > 0 ? (
+                                <>У цієї моделі <strong>{count}</strong> {schemesWord}. </>
                               ) : (
-                                <>Схем для цієї моделі ще немає — у розділі «Схеми» вона не з’явиться,
-                                  поки ви не створите схему. <strong>Каталог</strong> це не змінює.</>
+                                <>Схем у цієї моделі ще немає. </>
                               )}
+                              Перемикач показує або ховає <strong>саму картку моделі</strong> в
+                              розділі «Схеми» — незалежно від того, скільки там схем (можна сховати
+                              й модель без схем). <strong>Каталог</strong> це не змінює.
                             </span>
                           </span>
                         </label>
