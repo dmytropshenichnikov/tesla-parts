@@ -168,6 +168,9 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
   const [newFile, setNewFile] = useState<File | null>(null);
 
   // Edit State
+  // Перетягування товарів у списку підкатегорії (як у каталозі)
+  const [dragProductId, setDragProductId] = useState<string | null>(null);
+  const [dragProductOverId, setDragProductOverId] = useState<string | null>(null);
   const [editName, setEditName] = useState(subcategory.name);
   const [editCode, setEditCode] = useState(subcategory.code || '');
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -624,6 +627,9 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                 <span className="text-xs font-bold uppercase text-gray-500">
                   Товари в підкатегорії
                 </span>
+                <span className="hidden sm:inline text-[10px] text-gray-400 font-manrope normal-case">
+                  порядок — перетягуванням рядка або стрілками ↑↓
+                </span>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -653,10 +659,63 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                           a.name.localeCompare(b.name)
                       );
 
+                      /** Перетягнутий товар стає на місце того, на який кинули */
+                      const moveProductTo = (targetId: string) => {
+                        const sourceId = dragProductId;
+                        setDragProductId(null);
+                        setDragProductOverId(null);
+                        if (!sourceId || sourceId === targetId) return;
+                        const from = sortedProducts.findIndex((p) => p.id === sourceId);
+                        const to = sortedProducts.findIndex((p) => p.id === targetId);
+                        if (from < 0 || to < 0) return;
+                        const ordered = [...sortedProducts];
+                        const [moved] = ordered.splice(from, 1);
+                        ordered.splice(to, 0, moved);
+                        onReorderProducts(ordered.map((p) => p.id));
+                      };
+
                       return sortedProducts.map((product, idx) => (
-                        <tr key={product.id} className="hover:bg-gray-50">
+                        <tr
+                          key={product.id}
+                          draggable
+                          onDragStart={(e) => {
+                            setDragProductId(product.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', product.id);
+                          }}
+                          onDragOver={(e) => {
+                            if (!dragProductId || dragProductId === product.id) return;
+                            e.preventDefault();
+                            setDragProductOverId(product.id);
+                          }}
+                          onDragLeave={() =>
+                            setDragProductOverId((prev) =>
+                              prev === product.id ? null : prev
+                            )
+                          }
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            moveProductTo(product.id);
+                          }}
+                          onDragEnd={() => {
+                            setDragProductId(null);
+                            setDragProductOverId(null);
+                          }}
+                          className={`transition-colors ${
+                            dragProductOverId === product.id
+                              ? 'bg-red-50 ring-1 ring-red-200'
+                              : 'hover:bg-gray-50'
+                          } ${dragProductId === product.id ? 'opacity-40' : ''}`}
+                        >
                           <td className="px-3 py-2">
-                            <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="text-gray-300 hover:text-tesla-red cursor-grab active:cursor-grabbing"
+                                title="Перетягніть товар, щоб змінити порядок"
+                              >
+                                <GripVertical size={14} />
+                              </span>
+                              <div className="flex flex-col items-center">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -697,6 +756,7 @@ const SubcategoryItem: React.FC<SubcategoryItemProps> = ({
                               >
                                 <ArrowDown size={14} />
                               </button>
+                              </div>
                             </div>
                           </td>
                           <td className="px-3 py-2">
