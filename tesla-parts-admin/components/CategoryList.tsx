@@ -868,6 +868,8 @@ const CategoryList: React.FC = () => {
   // Скільки схем реально є для кожної категорії — «око» показує саме це,
   // а не абстрактне «показується на схемах».
   const [schemeCounts, setSchemeCounts] = useState<Record<string, number>>({});
+  // Перемикач «показувати у схемах» живе у формі редагування (олівець)
+  const [editShowInSchematics, setEditShowInSchematics] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
 
   // New Category State
@@ -973,6 +975,7 @@ const CategoryList: React.FC = () => {
   const startEditCategory = (category: Category) => {
     setEditingCategory(category.id);
     setEditCategoryName(category.name);
+    setEditShowInSchematics(category.show_in_schematics !== false);
     setEditCategoryFile(null);
     setEditCategoryMetaTitle(category.meta_title || '');
     setEditCategoryMetaDescription(category.meta_description || '');
@@ -980,6 +983,9 @@ const CategoryList: React.FC = () => {
 
   const handleUpdateCategory = async () => {
     if (!editingCategory || !editCategoryName.trim()) return;
+    // Який стан «у схемах» був до редагування — щоб зберегти лише за зміни
+    const wasVisible =
+      categories.find((c) => c.id === editingCategory)?.show_in_schematics !== false;
     try {
       await ApiService.updateCategory(
         editingCategory,
@@ -989,6 +995,9 @@ const CategoryList: React.FC = () => {
         editCategoryMetaTitle,
         editCategoryMetaDescription
       );
+      if (wasVisible !== editShowInSchematics) {
+        await ApiService.setCategorySchematicsVisibility(editingCategory, editShowInSchematics);
+      }
       setEditingCategory(null);
       setEditCategoryFile(null);
       loadCategories();
@@ -1325,10 +1334,9 @@ const CategoryList: React.FC = () => {
             стрілками ↑↓). Він одразу застосовується в каталозі, на головній сторінці та в
             розділі «Схеми запчастин».
             <br />
-            <strong>Око з цифрою</strong> праворуч — скільки схем має модель і чи показувати їх у
-            розділі «Схеми запчастин (EPC)». Модель без схем позначена сірим і кнопка неактивна —
-            у схемах її все одно не буде. Ця кнопка <strong>не</strong> ховає модель із каталогу:
-            каталог і схеми — окремі розділи.
+            Показувати модель у розділі «Схеми запчастин (EPC)» можна в <strong>редакторі
+            категорії (олівець ✏️)</strong> — там же видно, скільки схем має модель. Це
+            <strong>не</strong> ховає модель із каталогу: каталог і схеми — окремі розділи.
           </span>
         </div>
         {sortedCategories.map((category, idx) => (
@@ -1448,6 +1456,46 @@ const CategoryList: React.FC = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Показувати модель у «Схемах запчастин» — тут, у редакторі */}
+                  {(() => {
+                    const count = schemeCounts[category.name] ?? 0;
+                    const hasSchemes = count > 0;
+                    return (
+                      <div className="mt-4 p-3 rounded-lg border border-gray-200 bg-gray-50/70">
+                        <label
+                          className={`flex items-start gap-3 ${hasSchemes ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasSchemes ? editShowInSchematics : false}
+                            disabled={!hasSchemes}
+                            onChange={(e) => setEditShowInSchematics(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 accent-emerald-600"
+                          />
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                              {editShowInSchematics && hasSchemes ? (
+                                <Eye size={16} className="text-emerald-600" />
+                              ) : (
+                                <EyeOff size={16} className="text-gray-400" />
+                              )}
+                              Показувати модель у «Схемах запчастин (EPC)»
+                            </span>
+                            <span className="block text-xs text-gray-500 mt-1 font-manrope">
+                              {hasSchemes ? (
+                                <>У цієї моделі <strong>{count}</strong> {count === 1 ? 'схема' : count < 5 ? 'схеми' : 'схем'}. Вимкніть —
+                                  і вони зникнуть із розділу «Схеми», але <strong>каталог не зміниться</strong>.</>
+                              ) : (
+                                <>Схем для цієї моделі ще немає — у розділі «Схеми» вона не з’явиться,
+                                  поки ви не створите схему. <strong>Каталог</strong> це не змінює.</>
+                              )}
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div
@@ -1517,43 +1565,9 @@ const CategoryList: React.FC = () => {
                       <ArrowDown size={16} />
                     </button>
                   </div>
-                  {(() => {
-                    const count = schemeCounts[category.name] ?? 0;
-                    const hidden = category.show_in_schematics === false;
-                    const hasSchemes = count > 0;
-                    return (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => hasSchemes && handleToggleSchematics(category)}
-                          disabled={!hasSchemes}
-                          className={`p-2 rounded transition ${
-                            !hasSchemes
-                              ? 'text-gray-200 cursor-not-allowed'
-                              : hidden
-                                ? 'text-gray-400 hover:text-tesla-red'
-                                : 'text-emerald-600 hover:bg-emerald-50'
-                          }`}
-                          title={
-                            !hasSchemes
-                              ? 'Схем для цієї моделі ще немає — у розділі «Схеми запчастин» вона не з’явиться, хоч би що тут натиснути. Кнопка лише ховає/показує вже створені схеми; каталог вона не змінює.'
-                              : hidden
-                                ? `Схем: ${count}. Модель прихована у «Схемах запчастин». Натисніть, щоб показати. Каталог це не змінює.`
-                                : `Схем: ${count}. Модель показується у «Схемах запчастин». Натисніть, щоб приховати. Каталог це не змінює.`
-                          }
-                        >
-                          {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                        <span
-                          className={`text-[11px] font-montserrat font-bold w-4 text-center ${
-                            hasSchemes ? 'text-gray-500' : 'text-gray-300'
-                          }`}
-                          title="Кількість схем у цієї моделі"
-                        >
-                          {count}
-                        </span>
-                      </div>
-                    );
-                  })()}
+                  {/* «Око» (показувати у схемах) переїхало у форму редагування —
+                      тут лишаємо тільки дії з товарами/редагуванням/видаленням.
+                      Кількість схем видно в самій формі редагування. */}
                   <Link
                     to={`/products/new?category_id=${category.id}`}
                     className="text-gray-400 hover:text-green-600 p-2 rounded transition"
