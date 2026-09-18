@@ -565,9 +565,9 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
                 {/* Перехід на схему вузла: доступний одразу під кнопкою купівлі,
                     без прокрутки — саме те, що потрібно, коли деталь шукали зі схеми. */}
-                {productSchematics.length > 0 && (
+                {sortedSchematics.length > 0 && (
                   <Link
-                    to={`/schemes/${productSchematics[0].schematic_id}`}
+                    to={`/schemes/${sortedSchematics[0].schematic_id}`}
                     className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-red-100 bg-red-50/60 hover:bg-red-50 hover:border-tesla-red transition-colors group"
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
@@ -579,9 +579,12 @@ const ProductPage: React.FC<ProductPageProps> = ({
                           Ця деталь на схемі
                         </span>
                         <span className="block font-montserrat font-bold text-sm text-gray-900 truncate">
-                          {productSchematics[0].title}
-                          {productSchematics.length > 1
-                            ? ` та ще ${productSchematics.length - 1}`
+                          {sortedSchematics[0].title}
+                          <span className="font-manrope font-normal text-gray-500">
+                            {' '}• {sortedSchematics[0].model} {sortedSchematics[0].generation}
+                          </span>
+                          {sortedSchematics.length > 1
+                            ? ` та ще ${sortedSchematics.length - 1}`
                             : ''}
                         </span>
                       </span>
