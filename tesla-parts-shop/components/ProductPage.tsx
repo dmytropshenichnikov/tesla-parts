@@ -110,9 +110,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
       const model = key(usage.model);
       const gen = key(usage.generation);
       const full = `${model} ${gen}`.trim();
-      if (full === want || model === want) return 0;      // точний збіг моделі
-      if (want.includes(model) || model.includes(want)) return 1; // та сама сім'я
-      return 2;                                            // інша модель
+      if (full === want) return 0;                      // «Model 3 Highland» = «Model 3 Highland»
+      if (model === want && (gen === '' || gen === 'стандартна')) return 1; // базова комплектація
+      if (model === want) return 2;                     // та сама модель, інше покоління
+      if (want.includes(model) || model.includes(want)) return 3;
+      return 4;                                         // інша модель
     };
     return [...productSchematics].sort((a, b) => score(a) - score(b));
   }, [productSchematics, browseModel]);
