@@ -659,22 +659,11 @@ export const SchemesCatalog: React.FC = () => {
               {selectedSection && (
                 <>
                   <ChevronRight size={14} className="text-gray-300 shrink-0" />
-                  <button
-                    onClick={() => {
-                      // Крок назад РІВНО на один: якщо вже обрано підсистему —
-                      // повертаємось до списку підсистем цього ж розділу
-                      // (раніше скидало й розділ, тож доводилось натискати двічі).
-                      if (selectedSubsystem) {
-                        goToStep({ subsystem: null, all: null });
-                      } else {
-                        goToStep({ section: null, subsystem: null, all: null });
-                      }
-                    }}
-                    title={selectedSubsystem ? 'До підсистем цього розділу' : 'Обрати інший розділ'}
-                    className="group inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red hover:text-tesla-red transition-colors cursor-pointer"
-                  >
+                  {/* Просто позначка поточного кроку: не клікається й нічого не
+                      закриває. Щоб змінити розділ — «Змінити розділ» або «Назад». */}
+                  <span className="inline-flex items-center px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 select-none">
                     {selectedSection}
-                  </button>
+                  </span>
                 </>
               )}
 
