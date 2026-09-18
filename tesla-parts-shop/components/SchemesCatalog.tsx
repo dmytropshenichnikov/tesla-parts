@@ -659,11 +659,30 @@ export const SchemesCatalog: React.FC = () => {
               {selectedSection && (
                 <>
                   <ChevronRight size={14} className="text-gray-300 shrink-0" />
-                  {/* Просто позначка поточного кроку: не клікається й нічого не
-                      закриває. Щоб змінити розділ — «Змінити розділ» або «Назад». */}
-                  <span className="inline-flex items-center px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 select-none">
+                  {/* Клік ЗАВОДИТЬ у розділ (як чип моделі — у модель): лишаємо
+                      розділ обраним і показуємо його підсистеми. Нічого не закриває. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedSubsystem) {
+                        goToStep({ subsystem: null, all: null });
+                        return;
+                      }
+                      if (showAllSchematics) {
+                        goToStep({ all: null });
+                        return;
+                      }
+                      // ми вже всередині цього розділу — нічого не скидаємо
+                    }}
+                    title="Перейти до підсистем цього розділу"
+                    className="group inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-gray-200 shadow-2xs font-montserrat font-bold text-sm text-gray-900 hover:border-tesla-red/60 hover:text-tesla-red hover:bg-red-50/40 transition-colors cursor-pointer"
+                  >
                     {selectedSection}
-                  </span>
+                    <ChevronRight
+                      size={14}
+                      className="text-gray-300 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all"
+                    />
+                  </button>
                 </>
               )}
 
