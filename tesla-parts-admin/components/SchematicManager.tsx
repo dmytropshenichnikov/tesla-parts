@@ -2139,17 +2139,19 @@ export const SchematicManager: React.FC = () => {
                     Номер на схемі
                   </label>
                   <input
-                    type="number"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={
                       numberDraft[selectedHotspotIdx!] !== undefined
                         ? numberDraft[selectedHotspotIdx!]
-                        : selectedHotspot.number
+                        : String(selectedHotspot.number)
                     }
                     onChange={(e) =>
                       setNumberDraft((prev) => ({
                         ...prev,
-                        [selectedHotspotIdx!]: e.target.value,
+                        // лишаємо тільки цифри: поле можна повністю очистити
+                        [selectedHotspotIdx!]: e.target.value.replace(/[^0-9]/g, ''),
                       }))
                     }
                     onBlur={() => {
