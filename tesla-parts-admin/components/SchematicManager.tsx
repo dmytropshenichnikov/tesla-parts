@@ -2514,7 +2514,7 @@ export const SchematicManager: React.FC = () => {
       {/* Modal: Add or Link Product to Variant */}
       {isVariantModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/70">
               <div className="flex items-center gap-2">
@@ -2689,8 +2689,8 @@ export const SchematicManager: React.FC = () => {
                               <Package size={16} />
                             </div>
                           )}
-                          <div className="truncate">
-                            <div className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-red-600 transition-colors truncate">
+                          <div className="min-w-0">
+                            <div className="font-montserrat font-bold text-xs text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-snug">
                               {p.name}
                             </div>
                             <div className="flex items-center gap-2 text-[11px] text-gray-400 font-manrope">
