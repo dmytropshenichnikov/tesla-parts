@@ -263,6 +263,9 @@ export const SchematicManager: React.FC = () => {
   // інакше здається, що «додав, а нічого не з'явилось»
   const variantsListRef = useRef<HTMLDivElement | null>(null);
   const [flashVariantIdx, setFlashVariantIdx] = useState<number | null>(null);
+  // Номер точки на схемі: даємо очистити поле й вписати нове число
+  // (раніше порожнє значення одразу перетворювалось на «1»)
+  const [numberDraft, setNumberDraft] = useState<Record<number, string>>({});
 
   // Add/Link Variant Modal state
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
@@ -1097,6 +1100,11 @@ export const SchematicManager: React.FC = () => {
       setSuccessMsg(`Парт-номер ${text} скопійовано`);
     }
   };
+
+  // Перейшли на іншу точку — чернетка номера не має «переїхати» на неї
+  useEffect(() => {
+    setNumberDraft({});
+  }, [selectedHotspotIdx]);
 
   useEffect(() => {
     if (flashVariantIdx === null) return;
@@ -2132,10 +2140,41 @@ export const SchematicManager: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={selectedHotspot.number}
-                    onChange={(e) => handleUpdateHotspot(selectedHotspotIdx, 'number', parseInt(e.target.value) || 1)}
+                    min={1}
+                    value={
+                      numberDraft[selectedHotspotIdx!] !== undefined
+                        ? numberDraft[selectedHotspotIdx!]
+                        : selectedHotspot.number
+                    }
+                    onChange={(e) =>
+                      setNumberDraft((prev) => ({
+                        ...prev,
+                        [selectedHotspotIdx!]: e.target.value,
+                      }))
+                    }
+                    onBlur={() => {
+                      const raw = numberDraft[selectedHotspotIdx!];
+                      if (raw === undefined) return;
+                      const parsed = parseInt(raw, 10);
+                      handleUpdateHotspot(
+                        selectedHotspotIdx,
+                        'number',
+                        Number.isFinite(parsed) && parsed > 0 ? parsed : selectedHotspot.number
+                      );
+                      setNumberDraft((prev) => {
+                        const next = { ...prev };
+                        delete next[selectedHotspotIdx!];
+                        return next;
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope"
                   />
+                  <span className="block text-[10px] text-gray-400 font-manrope mt-1">
+                    Можна очистити поле й вписати будь-який номер, напр. 7
+                  </span>
                 </div>
                 <div>
                   <label className="block text-xs font-bold font-montserrat text-gray-700 mb-1">
