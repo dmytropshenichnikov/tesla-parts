@@ -2170,6 +2170,7 @@ export const SchematicManager: React.FC = () => {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                     }}
+                    onFocus={(e) => e.target.select()}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-manrope"
                   />
                   <span className="block text-[10px] text-gray-400 font-manrope mt-1">
