@@ -1011,6 +1011,21 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                           </div>
                         </div>
                       ))}
+
+                      {/* Явна кнопка «Згорнути» — щоб з телефона було очевидно, як закрити список */}
+                      <div className="pt-1 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleVariants(h.id);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-[11px] font-montserrat font-bold text-gray-500 hover:text-tesla-red hover:border-tesla-red/40 transition-colors cursor-pointer"
+                        >
+                          <ChevronUp size={13} />
+                          Згорнути
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
