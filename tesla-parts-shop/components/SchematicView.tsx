@@ -286,11 +286,12 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   }, [schematic?.model, schematic?.section]);
 
   const handleSelectHotspot = (hotspot: SchematicHotspot) => {
-    setActiveHotspotId(hotspot.id);
     // Клік по номеру перемикає: розкрити ↔ згорнути. Раніше список лише
     // розкривався, і згорнути його було нічим.
     const willExpand = !expandedVariants[hotspot.id];
     setExpandedVariants(prev => ({ ...prev, [hotspot.id]: !prev[hotspot.id] }));
+    // Розкриваємо — позначаємо деталь; згортаємо — позначку знімаємо
+    setActiveHotspotId(willExpand ? hotspot.id : null);
 
     // Прокручуємо до картки лише коли розкриваємо
     if (willExpand) {
@@ -301,14 +302,20 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     }
   };
 
-  /** Згорнути всі розкриті списки деталей */
-  const collapseAllVariants = () => setExpandedVariants({});
+  /** Згорнути всі розкриті списки деталей — і зняти позначку вибору */
+  const collapseAllVariants = () => {
+    setExpandedVariants({});
+    setActiveHotspotId(null);
+  };
 
   const toggleVariants = (hotspotId: number) => {
+    const willExpand = !expandedVariants[hotspotId];
     setExpandedVariants(prev => ({
       ...prev,
       [hotspotId]: !prev[hotspotId]
     }));
+    // Згортаємо — прибираємо червону позначку з рядка
+    setActiveHotspotId((prev) => (willExpand ? hotspotId : prev === hotspotId ? null : prev));
   };
 
   /** «1 варіант / 2 варіанти / 5 варіантів» */
