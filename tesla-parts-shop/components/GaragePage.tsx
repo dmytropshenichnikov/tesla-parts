@@ -980,8 +980,9 @@ export const GaragePage: React.FC = () => {
         )}
       </div>
 
-      {/* SAVED CARS FLEET LIST */}
-      {allCars.length > 1 && (
+      {/* SAVED CARS FLEET LIST — показуємо вже з 1 авто, інакше єдину
+          машину не можна ні побачити, ні видалити */}
+      {allCars.length > 0 && (
         <div className="mb-8 sm:mb-12">
           <h3 className="text-base sm:text-xl font-black font-montserrat text-gray-950 mb-3 sm:mb-4">
             Збережені автомобілі у вашому парку ({allCars.length})
