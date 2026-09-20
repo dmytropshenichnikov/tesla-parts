@@ -73,7 +73,11 @@ export const getCarTargetInfo = (car: SavedCar) => {
 
 export const GaragePage: React.FC = () => {
   const navigate = useNavigate();
-  const { customerProfile } = useAuth();
+  const { customerProfile, isCustomerLoggedIn } = useAuth();
+  // Стан синхронізації з акаунтом: без цього ПК з протермінованою сесією
+  // виглядав «порожнім гаражем» без жодного пояснення
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Active car & all saved cars
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
@@ -238,7 +242,12 @@ export const GaragePage: React.FC = () => {
    * браузері авто вже збережені — переносимо їх в акаунт (import).
    */
   const syncGarageWithServer = async () => {
-    if (!localStorage.getItem('customerToken')) return;
+    if (!localStorage.getItem('customerToken')) {
+      setSyncError(null);
+      return;
+    }
+    setSyncing(true);
+    setSyncError(null);
     try {
       // Локальні авто ЗАВЖДИ відправляємо на сервер — ендпоінт ідемпотентний,
       // тож дублі не створюються, а авто, додане до входу (як гість), не
@@ -265,6 +274,9 @@ export const GaragePage: React.FC = () => {
       window.dispatchEvent(new Event('garage-car-changed'));
     } catch (e) {
       console.error('Не вдалося синхронізувати гараж із акаунтом', e);
+      setSyncError('Не вдалося завантажити авто з акаунта. Перевірте звʼязок і спробуйте ще раз.');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -979,6 +991,31 @@ export const GaragePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Пояснення стану акаунта: чому гараж порожній на цьому пристрої */}
+      {isCustomerLoggedIn && allCars.length === 0 && (
+        <div className="mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-amber-200 bg-amber-50/70 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-start gap-2.5 text-xs sm:text-sm text-amber-900 font-manrope flex-1">
+            <AlertCircle size={16} className="shrink-0 mt-0.5 text-amber-600" />
+            <div>
+              <div className="font-montserrat font-bold">У цьому браузері авто ще не завантажені</div>
+              <div className="mt-0.5">
+                Автомобілі з вашого акаунта зберігаються на сервері й підтягуються сюди
+                автоматично. Якщо їх не видно — натисніть «Оновити».
+              </div>
+              {syncError && <div className="mt-1 text-red-700">{syncError}</div>}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void syncGarageWithServer()}
+            disabled={syncing}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white rounded-xl text-xs font-montserrat font-bold transition-colors cursor-pointer shrink-0"
+          >
+            {syncing ? 'Оновлення…' : 'Оновити'}
+          </button>
+        </div>
+      )}
 
       {/* SAVED CARS FLEET LIST — показуємо вже з 1 авто, інакше єдину
           машину не можна ні побачити, ні видалити */}
