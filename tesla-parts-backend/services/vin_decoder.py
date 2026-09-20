@@ -49,22 +49,50 @@ def decode_tesla_vin(vin: str) -> Optional[Dict[str, Any]]:
     plant_char = clean_vin[10]
     plant = PLANT_CODES.get(plant_char, 'Fremont, USA')
     
-    # 8th digit (index 7): Motor / Drive Unit
-    motor_char = clean_vin[7]
+    # 8-й символ (індекс 7): мотор / привід.
+    # ВАЖЛИВО: коди різні для різних моделей. Раніше таблиця була спільна, і
+    # Model Y з кодом «K» отримувала «Tri-Motor AWD (Plaid / Cyberbeast)» —
+    # таких машин не існує (Plaid — це Model S/X, Cyberbeast — Cybertruck).
+    motor_char = clean_vin[7].upper()
     drive = "Dual Motor AWD"
     trim = ""
-    if motor_char in ['A', 'D', 'J', 'R', 'S', '1']:
-        drive = "Rear-Wheel Drive (RWD)"
-        trim = "Standard Range / 60 kWh"
-    elif motor_char in ['3', '4', 'C', 'F']:
-        drive = "Performance AWD"
-        trim = "Performance"
-    elif motor_char in ['P', 'K', '5']:
-        drive = "Tri-Motor AWD (Plaid / Cyberbeast)"
-        trim = "Plaid"
-    elif motor_char in ['2', 'B', 'E', 'M', 'N']:
-        drive = "Dual Motor AWD"
-        trim = "Long Range AWD"
+
+    if model == "Model 3":
+        if motor_char in {'A', 'R', 'S'}:          # Wire/Hairpin, одиночний
+            drive, trim = "Rear-Wheel Drive (RWD)", "Standard Range"
+        elif motor_char in {'C', 'L', 'T', 'P'}:   # подвійний Performance
+            drive, trim = "Performance AWD", "Performance"
+        elif motor_char in {'B', 'K', 'E', 'M', 'N', '2'}:  # подвійний
+            drive, trim = "Dual Motor AWD", "Long Range AWD"
+        else:
+            drive, trim = "Dual Motor AWD", ""
+    elif model == "Model Y":
+        if motor_char in {'D', 'R', 'S'}:          # одиночний
+            drive, trim = "Rear-Wheel Drive (RWD)", "Standard Range"
+        elif motor_char in {'F', 'L'}:             # Performance
+            drive, trim = "Performance AWD", "Performance"
+        elif motor_char in {'E', 'K', 'B', 'M', 'N', '2'}:  # подвійний
+            drive, trim = "Dual Motor AWD", "Long Range AWD"
+        else:
+            drive, trim = "Dual Motor AWD", ""
+    elif model in ["Model S", "Model X"]:
+        if motor_char == '6':
+            drive, trim = "Plaid Tri-Motor AWD", "Plaid"
+        elif motor_char == '5':
+            drive, trim = "Dual Motor AWD", "Long Range AWD"
+        elif motor_char in {'3', '4', 'P'}:
+            drive, trim = "Performance AWD", "Performance"
+        elif motor_char in {'1', 'A', 'J', 'R', 'S'}:
+            drive, trim = "Rear-Wheel Drive (RWD)", "Standard Range"
+        elif motor_char in {'2', 'B', 'E', 'K'}:
+            drive, trim = "Dual Motor AWD", "Long Range AWD"
+        else:
+            drive, trim = "Dual Motor AWD", ""
+    elif model == "Cybertruck":
+        if motor_char == 'E':
+            drive, trim = "Cyberbeast Tri-Motor AWD", "Cyberbeast"
+        else:
+            drive, trim = "All-Wheel Drive (AWD)", "AWD"
 
     # Generation deduction
     generation = "Classic"
