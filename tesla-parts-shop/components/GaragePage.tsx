@@ -164,6 +164,54 @@ export const GaragePage: React.FC = () => {
     }
   };
 
+  /**
+   * Тихо освіжаємо описи авто, які вже в гаражі: якщо декодер VIN виправили
+   * після того, як авто додали, у памʼятрі лишався старий (хибний) підпис —
+   * напр. «Tri-Motor AWD (Plaid / Cyberbeast)» для Model Y.
+   */
+  useEffect(() => {
+    if (allCars.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      let changed = false;
+      const updated: SavedCar[] = [];
+      for (const car of allCars) {
+        if (!car.vin || car.vin.length !== 17) {
+          updated.push(car);
+          continue;
+        }
+        try {
+          const res = await api.decodeVin(car.vin);
+          if (res?.is_valid) {
+            const next: SavedCar = {
+              ...car,
+              drive: res.drive || car.drive,
+              description: res.description || car.description,
+            };
+            if (next.drive !== car.drive || next.description !== car.description) changed = true;
+            updated.push(next);
+          } else {
+            updated.push(car);
+          }
+        } catch {
+          updated.push(car);
+        }
+      }
+      if (cancelled || !changed) return;
+
+      localStorage.setItem('tesla_garage_all_cars', JSON.stringify(updated));
+      const nextActive = updated.find((c) => c.id === activeCar?.id) || activeCar;
+      if (nextActive) localStorage.setItem('tesla_garage_active_car', JSON.stringify(nextActive));
+      setAllCars(updated);
+      if (nextActive) setActiveCar(nextActive);
+      window.dispatchEvent(new CustomEvent('garage-car-changed'));
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCars.length]);
+
   const loadModels = async () => {
     try {
       const data = await api.getVinModels();
