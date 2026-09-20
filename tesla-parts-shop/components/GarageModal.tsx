@@ -44,11 +44,14 @@ export const GarageModal: React.FC<GarageModalProps> = ({
 
   // Currently active car in garage
   const [currentCar, setCurrentCar] = useState<SavedCar | null>(null);
+  // Увесь автопарк — щоб видалення одного авто залишало інше і тут, і на сторінці
+  const [fleet, setFleet] = useState<SavedCar[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       loadSavedCar();
+      loadFleet();
       loadModels();
       setError(null);
       setDecodedCar(null);
@@ -71,6 +74,16 @@ export const GarageModal: React.FC<GarageModalProps> = ({
       }
     } catch (e) {
       console.error('Failed to parse saved car:', e);
+    }
+  };
+
+  const loadFleet = () => {
+    try {
+      const allStr = localStorage.getItem('tesla_garage_all_cars');
+      setFleet(allStr ? JSON.parse(allStr) : []);
+    } catch (e) {
+      console.error('Failed to parse garage fleet:', e);
+      setFleet([]);
     }
   };
 
@@ -224,11 +237,54 @@ export const GarageModal: React.FC<GarageModalProps> = ({
     saveCarToGarage(car);
   };
 
+  /** Видалити ОДНЕ конкретне авто: воно зникає зі списку, а перше з решти
+   *  стає активним. Раніше тут стирався лише активний ключ — і здавалось,
+   *  що зникли одразу всі авто. */
+  const removeCarFromFleet = (carId: string) => {
+    try {
+      const allStr = localStorage.getItem('tesla_garage_all_cars');
+      const list: SavedCar[] = allStr ? JSON.parse(allStr) : [];
+      const target = list.find((c) => c.id === carId) || null;
+      const updated = list.filter((c) => c.id !== carId);
+      localStorage.setItem('tesla_garage_all_cars', JSON.stringify(updated));
+
+      const nextActive =
+        currentCar?.id === carId ? (updated[0] || null) : (currentCar || updated[0] || null);
+      if (nextActive) {
+        localStorage.setItem('tesla_garage_active_car', JSON.stringify(nextActive));
+      } else {
+        localStorage.removeItem('tesla_garage_active_car');
+      }
+      setFleet(updated);
+      setCurrentCar(nextActive);
+      if (onCarSaved) onCarSaved(nextActive);
+      window.dispatchEvent(new Event('garage-car-changed'));
+
+      // Залогіненим — видаляємо й на сервері саме це авто
+      if (target?.serverId && localStorage.getItem('customerToken')) {
+        api
+          .deleteGarageCar(target.serverId)
+          .catch((e) => console.error('Не вдалося видалити авто в акаунті', e));
+      }
+    } catch (e) {
+      console.error('Failed to remove car from garage:', e);
+    }
+  };
+
   const handleRemoveCar = () => {
-    localStorage.removeItem('tesla_garage_active_car');
-    window.dispatchEvent(new Event('garage-car-changed'));
-    setCurrentCar(null);
-    if (onCarSaved) onCarSaved(null);
+    if (currentCar) removeCarFromFleet(currentCar.id);
+  };
+
+  /** Зробити авто активним і тут, і на сторінці */
+  const selectCarAsActive = (car: SavedCar) => {
+    try {
+      localStorage.setItem('tesla_garage_active_car', JSON.stringify(car));
+      setCurrentCar(car);
+      if (onCarSaved) onCarSaved(car);
+      window.dispatchEvent(new Event('garage-car-changed'));
+    } catch (e) {
+      console.error('Failed to set active car:', e);
+    }
   };
 
   if (!isOpen) return null;
@@ -318,6 +374,55 @@ export const GarageModal: React.FC<GarageModalProps> = ({
             </div>
           );
         })()}
+        {/* Інші авто в гаражі: видно решту парку, можна перемкнути або видалити.
+            Без цього після видалення активного авто модалка виглядала порожньою,
+            хоча авто лишились. */}
+        {fleet.filter((c) => c.id !== currentCar?.id).length > 0 && (
+          <div className="mx-5 mt-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 font-montserrat mb-1.5">
+              Інші авто в гаражі
+            </div>
+            <div className="space-y-2">
+              {fleet
+                .filter((c) => c.id !== currentCar?.id)
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center gap-2.5 p-2.5 bg-white rounded-2xl border border-gray-200/80"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-tesla-red shrink-0 overflow-hidden">
+                      <TeslaCarIcon model={c.model} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-montserrat font-bold text-gray-900 text-[13px] leading-tight truncate">
+                        Tesla {c.model}
+                      </div>
+                      <div className="text-[11px] text-gray-500 font-manrope truncate">
+                        {c.year}
+                        {c.generation ? ` • ${c.generation}` : ''}
+                        {c.plate ? ` • ${c.plate}` : ''}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => selectCarAsActive(c)}
+                      className="text-[11px] font-montserrat font-bold text-tesla-red hover:underline cursor-pointer shrink-0"
+                    >
+                      Зробити активним
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeCarFromFleet(c.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Видалити авто з гаража"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="p-5 pt-4">
