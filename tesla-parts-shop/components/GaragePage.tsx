@@ -119,6 +119,24 @@ export const GaragePage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Повернулись на вкладку/застосунок (напр. додали авто з іншого пристрою) —
+  // тихо підтягуємо актуальний гараж з акаунта. Так не потрібно нічого чекати
+  // й перезавантажувати сторінку.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && localStorage.getItem('customerToken')) {
+        void syncGarageWithServer();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Після входу гараж підтягуємо з акаунта (а локальні авто переносимо в нього),
   // після виходу — повертаємось до того, що лежить у браузері.
   useEffect(() => {
