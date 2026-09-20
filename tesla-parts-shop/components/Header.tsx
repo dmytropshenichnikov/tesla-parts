@@ -72,11 +72,19 @@ const Header: React.FC<HeaderProps> = ({
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileSearchClosing, setIsMobileSearchClosing] = useState(false);
   const [isGarageOpen, setIsGarageOpen] = useState(false);
+  // Авто з гаража — показуємо їх ПРЯМО в меню, без заходу в гараж
+  const [garageCars, setGarageCars] = useState<SavedCar[]>([]);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
 
   useEffect(() => {
     const loadCar = () => {
       try {
+        try {
+          const allStr = localStorage.getItem('tesla_garage_all_cars');
+          setGarageCars(allStr ? JSON.parse(allStr) : []);
+        } catch {
+          setGarageCars([]);
+        }
         const saved = localStorage.getItem('tesla_garage_active_car');
         setActiveCar(saved ? JSON.parse(saved) : null);
       } catch (e) {
@@ -689,6 +697,58 @@ const Header: React.FC<HeaderProps> = ({
                   </span>
                   <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
                 </button>
+
+                {/* Авто з гаража одразу тут: видно, скільки їх і яке активне.
+                    Тап по авто робить його активним, без заходу в гараж. */}
+                {garageCars.length > 0 && (
+                  <div className="mb-2 -mt-0.5 space-y-1">
+                    {garageCars.map((car) => {
+                      const isActive = activeCar?.id === car.id;
+                      return (
+                        <button
+                          key={car.id}
+                          type="button"
+                          onClick={() => {
+                            if (!isActive) {
+                              localStorage.setItem('tesla_garage_active_car', JSON.stringify(car));
+                              window.dispatchEvent(new Event('garage-car-changed'));
+                            }
+                            handleAnimatedCloseDrawer();
+                            navigate('/schemes');
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl border text-left transition-all active:scale-[0.98] cursor-pointer ${
+                            isActive
+                              ? 'border-tesla-red/40 bg-red-50/60'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <span className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-tesla-red shrink-0">
+                            <Car size={15} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-montserrat font-bold text-xs text-gray-900 truncate">
+                              Tesla {car.model}
+                            </span>
+                            <span className="block text-[10px] text-gray-500 font-manrope truncate">
+                              {car.year}
+                              {car.generation ? ` • ${car.generation.split(' (')[0]}` : ''}
+                              {car.plate ? ` • ${car.plate}` : ''}
+                            </span>
+                          </span>
+                          {isActive ? (
+                            <span className="text-[10px] font-montserrat font-bold text-tesla-red shrink-0">
+                              активне
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-montserrat font-bold text-gray-400 shrink-0">
+                              обрати
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <Link
                   to="/reviews"
