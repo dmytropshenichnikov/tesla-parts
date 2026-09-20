@@ -20,7 +20,10 @@ MODEL_CODES = {
     '3': 'Model 3',
     'X': 'Model X',
     'Y': 'Model Y',
-    'T': 'Cybertruck',
+    # 4-й символ: C — Cybertruck, T — Semi (раніше Cybertruck був під «T»,
+    # через що його VIN не розпізнавався)
+    'C': 'Cybertruck',
+    'T': 'Semi',
     'R': 'Roadster'
 }
 
