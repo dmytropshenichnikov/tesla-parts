@@ -684,7 +684,11 @@ def cascade_category_rename(session: Session, old_name: str, new_name: str) -> i
         return 0
     names = [c.name for c in session.exec(select(Category)).all() if c.name]
     old_base = _base_category_name(old, names)
-    new_base = _base_category_name(new, names)
+    # Нове ім'я міряємо БЕЗ старого: інакше «КУЗОВ» → «КУЗОВ НОВИЙ»
+    # виглядало б як «база → варіант» (старе ім'я — префікс нового),
+    # хоча це звичайне перейменування бази.
+    names_without_old = [n for n in names if (n or "").strip().lower() != old.lower()]
+    new_base = _base_category_name(new, names_without_old)
     updated = 0
     if not old_base and not new_base:
         # База → база: забираємо ВСІ рядки зі старою моделлю,
