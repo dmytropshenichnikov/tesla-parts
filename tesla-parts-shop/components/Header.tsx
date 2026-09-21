@@ -21,6 +21,7 @@ import { GarageModal } from './GarageModal';
 import TeslaPartsCenterLogo from './ShopLogo';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/currency';
+import { api } from '../services/api';
 import { slugify } from '../utils/slugify';
 import { getCarTargetInfo } from './GaragePage';
 import ViberIcon from './ViberIcon';
@@ -74,23 +75,73 @@ const Header: React.FC<HeaderProps> = ({
   const [isGarageOpen, setIsGarageOpen] = useState(false);
   // Авто з гаража — показуємо їх ПРЯМО в меню, без заходу в гараж
   const [garageCars, setGarageCars] = useState<SavedCar[]>([]);
+  // Щоб не смикати API при кожному відкритті меню — не частіше разу на хвилину
+  const lastGarageSyncRef = useRef(0);
   const [activeCar, setActiveCar] = useState<SavedCar | null>(null);
 
-  useEffect(() => {
-    const loadCar = () => {
+  /** Гараж із памʼяті — миттєво, без мережі */
+  const loadCar = () => {
+    try {
       try {
-        try {
-          const allStr = localStorage.getItem('tesla_garage_all_cars');
-          setGarageCars(allStr ? JSON.parse(allStr) : []);
-        } catch {
-          setGarageCars([]);
-        }
-        const saved = localStorage.getItem('tesla_garage_active_car');
-        setActiveCar(saved ? JSON.parse(saved) : null);
-      } catch (e) {
-        console.error(e);
+        const allStr = localStorage.getItem('tesla_garage_all_cars');
+        setGarageCars(allStr ? JSON.parse(allStr) : []);
+      } catch {
+        setGarageCars([]);
       }
-    };
+      const saved = localStorage.getItem('tesla_garage_active_car');
+      setActiveCar(saved ? JSON.parse(saved) : null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  /** Свіжий список авто для меню: якщо залогінений — підтягуємо з акаунта
+   *  (там можуть бути авто, додані з іншого пристрою), інакше — з памʼяті.
+   *  Без цього в меню висіли застарілі N авто, а нове зʼявлялось лише після
+   *  заходу на сторінку гаража. */
+  const syncGarageListForMenu = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastGarageSyncRef.current < 60_000) {
+      loadCar();
+      return;
+    }
+    lastGarageSyncRef.current = now;
+    const token = localStorage.getItem('customerToken');
+    if (!token) {
+      loadCar();
+      return;
+    }
+    try {
+      const allStr = localStorage.getItem('tesla_garage_all_cars');
+      const activeStr = localStorage.getItem('tesla_garage_active_car');
+      const localCars: SavedCar[] = allStr ? JSON.parse(allStr) : [];
+      const activeVin: string | undefined = activeStr ? JSON.parse(activeStr)?.vin : undefined;
+      const serverCars =
+        localCars.length > 0
+          ? await api.importGarage(localCars, activeVin)
+          : await api.getGarageCars();
+      if (Array.isArray(serverCars) && serverCars.length > 0) {
+        localStorage.setItem('tesla_garage_all_cars', JSON.stringify(serverCars));
+        const prevActive: SavedCar | null = activeStr ? JSON.parse(activeStr) : null;
+        const nextActive =
+          serverCars.find((c) => prevActive && c.id === prevActive.id) ||
+          serverCars.find((c) => c.isActive) ||
+          serverCars[0];
+        if (nextActive) {
+          localStorage.setItem('tesla_garage_active_car', JSON.stringify(nextActive));
+        }
+        setGarageCars(serverCars);
+        setActiveCar(nextActive);
+        window.dispatchEvent(new Event('garage-car-changed'));
+      } else {
+        loadCar();
+      }
+    } catch {
+      loadCar();
+    }
+  };
+
+  useEffect(() => {
     loadCar();
     const handleOpenGarage = () => setIsGarageOpen(true);
     window.addEventListener('garage-car-changed', loadCar);
@@ -130,6 +181,8 @@ const Header: React.FC<HeaderProps> = ({
     if (isDrawerOpen) {
       setIsDrawerRendered(true);
       setIsDrawerClosing(false);
+      // Меню відкрили — список авто має бути свіжим (авто могли додати з ПК)
+      void syncGarageListForMenu();
     } else if (isDrawerRendered) {
       setIsDrawerClosing(true);
       const timer = setTimeout(() => {
