@@ -19,6 +19,7 @@ from schemas import (
 from services.image_uploader import image_uploader
 from services.pricing import get_exchange_rate, compute_price_fields
 from dependencies import get_current_admin # Import get_current_admin
+from routers.schematics import cascade_category_rename, cascade_subcategory_rename
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -566,7 +567,14 @@ async def update_category(
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
-    
+
+    old_name = category.name or ""
+    if (name or "").strip() and (name or "").strip() != old_name.strip():
+        # Схеми зберігають model/generation текстом (без category_id),
+        # тому перейменування тягне їх за собою — інакше схеми «зникають»
+        # з фільтрів адмінки, а сайт показує їх під старою назвою.
+        # Каскад ДО присвоєння: scope рахується за старими іменами.
+        cascade_category_rename(session, old_name, name)
     category.name = name
     if sort_order is not None:
         category.sort_order = sort_order
@@ -604,7 +612,13 @@ async def update_subcategory(
     subcategory = session.get(Subcategory, subcategory_id)
     if not subcategory:
         raise HTTPException(status_code=404, detail="Subcategory not found")
-        
+
+    old_name = subcategory.name or ""
+    if (name or "").strip() and (name or "").strip() != old_name.strip():
+        # Розділ/підсистема схем — це тексти з імен підкатегорій каталогу,
+        # тому перейменування тягне схеми за собою (лише своєї категорії).
+        # Каскад ДО присвоєння: scope рахується за старими іменами.
+        cascade_subcategory_rename(session, subcategory, old_name, name)
     subcategory.name = name
     subcategory.code = code
     # Only update parent_id if it's provided (or explicitly None if we want to move to root, but Form(None) makes it hard to distinguish missing vs null. 

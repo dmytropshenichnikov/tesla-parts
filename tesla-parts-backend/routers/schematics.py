@@ -652,6 +652,138 @@ def _owns_name_conditions(model_name: str, generation: Optional[str], all_names:
     return conditions
 
 
+def _category_scope_conditions(session: Session, category_name: str) -> tuple:
+    """Умови вибірки схем, що належать категорії каталогу.
+
+    Та сама логіка, що у for-subcategory: базова категорія забирає лише
+    СВОЇ схеми (без поколінь-варіантів), категорія-варіант — свої.
+    """
+    names = [c.name for c in session.exec(select(Category)).all() if c.name]
+    base = _base_category_name(category_name, names)
+    target = base or category_name
+    variant = category_name[len(base):].strip() if base else None
+    return target, variant, _owns_name_conditions(target, variant, names)
+
+
+def cascade_category_rename(session: Session, old_name: str, new_name: str) -> int:
+    """Каскад перейменування категорії каталогу на тексти схем.
+
+    Схеми зберігають model/generation ТЕКСТОМ (без category_id) — копію
+    імені категорії на момент створення. Без каскаду перейменована
+    категорія перестає знаходити свої схеми: в адмінці фільтр
+    `GET /schematics?model=<нова назва>` повертає 0 («схема зникла»),
+    а сайт далі показує схему під старою назвою (дані групуються
+    з тексту самих схем).
+
+    Викликати ДО присвоєння нового імені — scope рахується за старими.
+    Повертає кількість оновлених схем.
+    """
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old == new:
+        return 0
+    names = [c.name for c in session.exec(select(Category)).all() if c.name]
+    old_base = _base_category_name(old, names)
+    new_base = _base_category_name(new, names)
+    updated = 0
+    if not old_base and not new_base:
+        # База → база: забираємо ВСІ рядки зі старою моделлю,
+        # включно з поколіннями (у Highland model теж «Model 3»).
+        rows = session.exec(
+            select(Schematic).where(func.lower(Schematic.model) == old.lower())
+        ).all()
+        for item in rows:
+            item.model = new
+            session.add(item)
+            updated += 1
+    elif old_base and new_base:
+        # Варіант → варіант («Model 3 Highland» → «Model 3 Classic»):
+        # міняємо базу і замінюємо суфікс у поколінні.
+        old_suffix = old[len(old_base):].strip()
+        new_suffix = new[len(new_base):].strip()
+        if not old_suffix:
+            return 0
+        rows = session.exec(
+            select(Schematic).where(
+                func.lower(Schematic.model) == old_base.lower(),
+                func.lower(Schematic.generation).like(f"%{old_suffix.lower()}%"),
+            )
+        ).all()
+        for item in rows:
+            item.model = new_base
+            if new_suffix and old_suffix.lower() != new_suffix.lower():
+                item.generation = re.sub(
+                    re.escape(old_suffix), new_suffix, item.generation or "",
+                    flags=re.IGNORECASE,
+                )
+            session.add(item)
+            updated += 1
+    elif not old_base and new_base:
+        # База → варіант (рідкість): забираємо лише СВОЇ схеми —
+        # без рядків, що належать іншим категоріям-варіантам.
+        conditions = _owns_name_conditions(old, None, names)
+        query = select(Schematic)
+        for condition in conditions:
+            query = query.where(condition)
+        new_suffix = new[len(new_base):].strip()
+        for item in session.exec(query).all():
+            item.model = new_base
+            generation = (item.generation or "").strip()
+            if (not generation or generation == DEFAULT_GENERATION) and new_suffix:
+                item.generation = new_suffix
+            session.add(item)
+            updated += 1
+    else:
+        # Варіант → база: покоління лишаємо як є, міняємо лише модель.
+        old_suffix = old[len(old_base):].strip()
+        if not old_suffix:
+            return 0
+        rows = session.exec(
+            select(Schematic).where(
+                func.lower(Schematic.model) == old_base.lower(),
+                func.lower(Schematic.generation).like(f"%{old_suffix.lower()}%"),
+            )
+        ).all()
+        for item in rows:
+            item.model = new
+            session.add(item)
+            updated += 1
+    return updated
+
+
+def cascade_subcategory_rename(session: Session, subcategory: Subcategory, old_name: str, new_name: str) -> int:
+    """Каскад перейменування підкатегорії на section/subsystem схем.
+
+    Верхній рівень підкатегорій = розділ схеми, діти = підсистема.
+    Оновлюємо лише схеми ТІЄЇ Ж категорії (scope як у for-subcategory),
+    щоб однакові назви в інших моделях не чіпались.
+    Викликати ДО присвоєння нового імені. Повертає кількість схем.
+    """
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old == new:
+        return 0
+    category = session.get(Category, subcategory.category_id) if subcategory.category_id else None
+    if not category or not (category.name or "").strip():
+        return 0
+    _, _, scope = _category_scope_conditions(session, category.name)
+    query = select(Schematic)
+    for condition in scope:
+        query = query.where(condition)
+    if subcategory.parent_id is None:
+        query = query.where(func.lower(Schematic.section) == old.lower())
+        field = "section"
+    else:
+        query = query.where(func.lower(Schematic.subsystem) == old.lower())
+        field = "subsystem"
+    updated = 0
+    for item in session.exec(query).all():
+        setattr(item, field, new)
+        session.add(item)
+        updated += 1
+    return updated
+
+
 @router.get("/model-options")
 def get_schematic_model_options(session: Session = Depends(get_session)):
     """Опції моделей і поколінь для редактора схем — побудовані з категорій."""
