@@ -109,8 +109,7 @@ export const SchemesCatalog: React.FC = () => {
    */
   const stepBack = () => {
     if (activeSearch) {
-      setActiveSearch('');
-      setSearchInput('');
+      resetSearch();
       return;
     }
     if (showAllSchematics) {
@@ -245,6 +244,11 @@ export const SchemesCatalog: React.FC = () => {
     setSelectedSection(searchParams.get('section') || '');
     setSelectedSubsystem(searchParams.get('subsystem') || '');
     setShowAllSchematics(searchParams.get('all') === '1');
+    // Рядок пошуку теж живе в URL: посиланням на знайдену схему можна
+    // поділитись, а «Назад» повертає до результатів пошуку.
+    const queryParam = searchParams.get('q') || '';
+    setActiveSearch(queryParam);
+    setSearchInput(queryParam);
     if (!modelParam && !genParam) {
       setSelectedModel('');
       setSelectedGen(ALL_GENERATIONS);
@@ -412,6 +416,23 @@ export const SchemesCatalog: React.FC = () => {
       return;
     }
     setActiveSearch(val);
+    // Пошук за номером деталі — наскрізний по ВСІХ моделях: клієнт хоче
+    // знайти, де стоїть деталь, а не звузити її до обраного авто. Тому
+    // скидаємо кроки шляху й тримаємо пошук в URL (крок в історії).
+    goToStep({
+      q: val || null,
+      model: null,
+      generation: null,
+      section: null,
+      subsystem: null,
+      all: null,
+    });
+  };
+
+  const resetSearch = () => {
+    setActiveSearch('');
+    setSearchInput('');
+    goToStep({ q: null });
   };
 
   const getFullImageUrl = (url: string) => {
@@ -740,10 +761,7 @@ export const SchemesCatalog: React.FC = () => {
                 </span>
               </div>
               <button
-                onClick={() => {
-                  setActiveSearch('');
-                  setSearchInput('');
-                }}
+                onClick={resetSearch}
                 className="text-xs font-bold font-montserrat text-tesla-red hover:underline cursor-pointer"
               >
                 Скинути пошук
@@ -957,6 +975,14 @@ export const SchemesCatalog: React.FC = () => {
                 });
                 setActiveSearch('');
                 setSearchInput('');
+                goToStep({
+                  q: null,
+                  model: null,
+                  generation: null,
+                  section: null,
+                  subsystem: null,
+                  all: null,
+                });
               }}
               className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-tesla-red text-white rounded-xl text-xs font-montserrat font-bold cursor-pointer"
             >
