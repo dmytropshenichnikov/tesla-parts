@@ -470,6 +470,24 @@ const App: React.FC = () => {
     }
   };
 
+  /**
+   * Каталог: запит пошуку живе в URL (`/search?q=…`).
+   * Так посиланням на знайдені деталі можна поділитись, а перезавантаження
+   * сторінки не губить результати. Синхронізуємо лише коли змінився САМ URL,
+   * щоб не «відкочувати» те, що людина набирає в полі.
+   */
+  const appliedUrlQueryRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (location.pathname !== '/search') {
+      appliedUrlQueryRef.current = null;
+      return;
+    }
+    const urlQuery = new URLSearchParams(location.search).get('q') || '';
+    if (appliedUrlQueryRef.current === urlQuery) return;
+    appliedUrlQueryRef.current = urlQuery;
+    setSearchQuery(urlQuery);
+  }, [location.pathname, location.search]);
+
   const sortedCategories = useMemo(
     () => [...categories].sort(compareBySortOrder),
     [categories]

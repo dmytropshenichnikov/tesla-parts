@@ -954,27 +954,40 @@ export const SchemesCatalog: React.FC = () => {
         ) : schematics.length === 0 ? (
           <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-gray-300 p-8">
             <Layers size={48} className="mx-auto text-gray-300 mb-3" />
-            <h3 className="font-montserrat font-bold text-gray-700 text-lg">Схем не знайдено</h3>
+            <h3 className="font-montserrat font-bold text-gray-700 text-lg">
+              {activeSearch ? `За запитом «${activeSearch}» схем не знайдено` : 'Схем не знайдено'}
+            </h3>
             <p className="text-gray-400 font-manrope text-sm mt-1 max-w-md mx-auto">
-              Спробуйте змінити фільтр моделі чи покоління або скиньте рядок пошуку.
+              {activeSearch
+                ? 'Можливо, цю деталь ще не додано на схеми або номер вказано інакше. Спробуйте пошук у каталозі — там ті самі деталі з цінами.'
+                : 'Спробуйте змінити фільтр моделі чи покоління або скиньте рядок пошуку.'}
             </p>
+            {activeSearch ? (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  to={`/search?q=${encodeURIComponent(activeSearch)}`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-tesla-red text-white rounded-xl text-xs font-montserrat font-bold cursor-pointer"
+                >
+                  <Search size={14} />
+                  Шукати в каталозі
+                </Link>
+                <button
+                  onClick={resetSearch}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-montserrat font-bold cursor-pointer hover:bg-gray-200 transition-colors"
+                >
+                  Скинути пошук
+                </button>
+              </div>
+            ) : (
             <button
               onClick={() => {
                 // Повертаємось до кроку вибору автомобіля
+                resetSearch();
                 setSelectedModel('');
                 setSelectedGen(ALL_GENERATIONS);
                 setSelectedSection('');
                 setSelectedSubsystem('');
                 setShowAllSchematics(false);
-                goToStep({
-                  model: null,
-                  generation: null,
-                  section: null,
-                  subsystem: null,
-                  all: null,
-                });
-                setActiveSearch('');
-                setSearchInput('');
                 goToStep({
                   q: null,
                   model: null,
@@ -988,6 +1001,7 @@ export const SchemesCatalog: React.FC = () => {
             >
               Обрати інше авто
             </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
