@@ -56,10 +56,29 @@ $(git status --short)"
 fi
 
 log "Підтягую зміни з origin"
-git fetch --all --prune
+# GitHub інколи відмовляє на секунду («Permission denied (publickey)»), і тоді
+# `git fetch` тихо лишає СТАРИЙ origin/main: скрипт далі збирав старий код і
+# писав «Готово». Тому пробуємо кілька разів і падаємо, якщо не вдалось.
+fetch_ok=0
+for attempt in 1 2 3 4 5; do
+  if git fetch --all --prune; then
+    fetch_ok=1
+    break
+  fi
+  warn "не вдалось підтягнути з origin (спроба $attempt/5) — повторюю за 5 с"
+  sleep 5
+done
+[ "$fetch_ok" -eq 1 ] || die "не вдалось оновити код з origin — деплой скасовано, щоб не залити стару версію.
+     Перевір доступ до GitHub із сервера:  ssh -T git@github.com"
 
 log "Оновлюю $BRANCH"
 git merge --ff-only "origin/$BRANCH" >/dev/null || die "гілка $BRANCH розійшлася з origin/$BRANCH — потрібне ручне втручання"
+
+# Страховка від «тихого» деплою не того коду: те, що зібрали, мусить бути
+# рівно тим, що лежить в origin.
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$BRANCH")" ]; then
+  die "HEAD ($(git log --oneline -1)) не збігається з origin/$BRANCH ($(git log --oneline -1 "origin/$BRANCH"))"
+fi
 
 # --- 2. Страховка: не загубити роботу з feature-гілки ------------------------
 if ! git diff --quiet HEAD "origin/$UPSTREAM_BRANCH"; then
