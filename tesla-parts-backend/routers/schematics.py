@@ -3,6 +3,7 @@ import re
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlmodel import Session, select, func, col
+from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 
 from database import get_session
@@ -10,6 +11,7 @@ from models import Schematic, SchematicHotspot, Product, Category, Subcategory
 from schemas import (
     SchematicRead,
     SchematicSummary,
+    SchematicMatchedPart,
     SchematicCreate,
     SchematicUpdate,
     SchematicHotspotRead,
@@ -26,6 +28,57 @@ router = APIRouter(prefix="/schematics", tags=["schematics"])
 # у кошику та на сторінці товару завжди збігались.
 _ORIGINAL_RE = re.compile(r"ориг[іи]нал|original", re.IGNORECASE)
 _ANALOG_RE = re.compile(r"аналог", re.IGNORECASE)
+
+# --- Пошук деталі за парт-номером --------------------------------------------
+# Парт-номер пишуть по-різному: «1499151-00-C», «149915100C», «1499151 00 C».
+# Тому додатково порівнюємо «стиснуті» значення — без розділових знаків.
+_COMPACT_SQL_RE = r"[^0-9a-zа-яіїєґ]"
+_COMPACT_PY_RE = re.compile(_COMPACT_SQL_RE)
+# Мінімальна довжина стиснутого запиту, щоб не ловити все підряд на «1» чи «a».
+_COMPACT_MIN_LEN = 3
+
+
+def _compact_part(value: Optional[str]) -> str:
+    """«1499151-00-C» → «149915100c» (для порівняння номерів без розділювачів)."""
+    return _COMPACT_PY_RE.sub("", (value or "").lower())
+
+
+def _sql_compact(column):
+    """Те саме стиснення, але на боці Postgres (для WHERE)."""
+    return func.regexp_replace(
+        func.lower(func.coalesce(column, "")), _COMPACT_SQL_RE, "", "g"
+    )
+
+
+def _variant_parts(variants_json: Optional[str]) -> List[dict]:
+    """Варіанти деталі зі схеми: [{name, product_id, ...}, ...]."""
+    if not variants_json:
+        return []
+    try:
+        parsed = json.loads(variants_json)
+    except (ValueError, TypeError):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
+def _variant_code(name: str) -> str:
+    """«110681800A - Датчик температури…» → «110681800A»."""
+    head = (name or "").split(" - ")[0].strip()
+    return head if head and head.upper() == head else ""
+
+
+def _search_term_matches(term: str, compact: str, *values: Optional[str]) -> bool:
+    """Чи збігається запит хоч з одним значенням (звичайно або без розділювачів)."""
+    low = term.lower()
+    for value in values:
+        if not value:
+            continue
+        text = value.lower()
+        if low in text:
+            return True
+        if len(compact) >= _COMPACT_MIN_LEN and compact in _compact_part(value):
+            return True
+    return False
 
 
 def _resolve_part_type(product) -> Optional[str]:
@@ -150,15 +203,17 @@ def list_schematics(
     if subsystem:
         query = query.where(Schematic.subsystem == subsystem)
     if q:
-        search_pattern = f"%{q.strip().lower()}%"
-        query = query.where(
-            func.lower(Schematic.title).like(search_pattern) |
-            func.lower(Schematic.subsystem).like(search_pattern)
-        )
-    
+        query = query.where(_search_condition(q.strip()))
+
     query = query.order_by(Schematic.sort_order, Schematic.id)
     schematics = session.exec(query).all()
-    
+
+    matched_by_schematic: dict = {}
+    if q:
+        matched_by_schematic = _matched_parts_for(
+            session, [s.id for s in schematics], q.strip()
+        )
+
     results = []
     for s in schematics:
         count = session.exec(
@@ -175,10 +230,109 @@ def list_schematics(
                 image_url=s.image_url,
                 sort_order=s.sort_order,
                 created_at=s.created_at,
-                hotspots_count=count
+                hotspots_count=count,
+                matched_parts=[
+                    SchematicMatchedPart(**item)
+                    for item in matched_by_schematic.get(s.id, [])
+                ]
             )
         )
     return results
+
+
+def _search_condition(term: str):
+    """Умова пошуку схеми за рядком.
+
+    Шукаємо не лише в назві схеми/підсистеми, а й у ДЕТАЛЯХ на ній: парт-номер,
+    назва точки та варіанти (саме так клієнт шукає «де стоїть ця деталь»).
+    Без цього пошук за кодом товару не знаходив нічого — скарга клієнта.
+    """
+    pattern = f"%{term.lower()}%"
+    compact = _compact_part(term)
+
+    # Деталі схеми, що збігаються напряму.
+    hotspot_ids = select(SchematicHotspot.schematic_id).where(
+        func.lower(SchematicHotspot.name).like(pattern)
+        | func.lower(func.coalesce(SchematicHotspot.part_number, "")).like(pattern)
+        | func.lower(func.coalesce(SchematicHotspot.variants_json, "")).like(pattern)
+    )
+
+    conditions = [
+        func.lower(Schematic.title).like(pattern),
+        func.lower(Schematic.subsystem).like(pattern),
+        Schematic.id.in_(hotspot_ids),
+    ]
+
+    if len(compact) >= _COMPACT_MIN_LEN:
+        compact_pattern = f"%{compact}%"
+        # Товари каталогу, чий номер/назва збігається.
+        product_ids = select(Product.id).where(
+            _sql_compact(Product.detail_number).like(compact_pattern)
+            | _sql_compact(Product.cross_number).like(compact_pattern)
+            | func.lower(Product.name).like(pattern)
+            | func.lower(func.coalesce(Product.search_keywords, "")).like(pattern)
+        )
+        compact_hotspot_ids = select(SchematicHotspot.schematic_id).where(
+            _sql_compact(SchematicHotspot.part_number).like(compact_pattern)
+            | _sql_compact(SchematicHotspot.variants_json).like(compact_pattern)
+            | SchematicHotspot.product_id.in_(product_ids)
+        )
+        conditions.append(Schematic.id.in_(compact_hotspot_ids))
+
+    return or_(*conditions)
+
+
+def _matched_parts_for(session: Session, schematic_ids: List[int], term: str) -> dict:
+    """Які саме деталі збіглися зі запитом — щоб у магазині показати причину.
+
+    Повертає {schematic_id: [{"number", "part_number", "name", "code"}, ...]}.
+    """
+    if not schematic_ids:
+        return {}
+    compact = _compact_part(term)
+    hotspots = session.exec(
+        select(SchematicHotspot)
+        .where(SchematicHotspot.schematic_id.in_(schematic_ids))
+        .order_by(SchematicHotspot.schematic_id, SchematicHotspot.number)
+    ).all()
+    if not hotspots:
+        return {}
+
+    product_ids = {h.product_id for h in hotspots if h.product_id}
+    products = {}
+    if product_ids:
+        for product in session.exec(select(Product).where(Product.id.in_(product_ids))).all():
+            products[product.id] = product
+
+    matched: dict = {}
+    for hotspot in hotspots:
+        product = products.get(hotspot.product_id) if hotspot.product_id else None
+        hit = _search_term_matches(
+            term, compact,
+            hotspot.part_number,
+            hotspot.name,
+            product.detail_number if product else None,
+            product.cross_number if product else None,
+            product.name if product else None,
+            product.search_keywords if product else None,
+        )
+        code = (hotspot.part_number or "").strip()
+        if not hit:
+            for variant in _variant_parts(hotspot.variants_json):
+                name = variant.get("name") or ""
+                if _search_term_matches(term, compact, name):
+                    hit = True
+                    code = code or _variant_code(name) or name.split(" - ")[0].strip()
+                    break
+        if not hit:
+            continue
+        matched.setdefault(hotspot.schematic_id, []).append({
+            "number": hotspot.number,
+            "part_number": code or None,
+            "name": hotspot.name,
+            "product_id": hotspot.product_id,
+        })
+    return matched
 
 def _category_for_images(
     model_name: str,

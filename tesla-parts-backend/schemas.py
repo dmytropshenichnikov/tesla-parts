@@ -386,10 +386,23 @@ class SchematicRead(SchematicBase):
     hotspots: List[SchematicHotspotRead] = []
 
 
+class SchematicMatchedPart(BaseModel):
+    """Деталь схеми, що збіглася з пошуковим запитом.
+
+    Потрібно, щоб у магазині було видно ПРИЧИНУ: зайшов за кодом товару —
+    бачиш, на якій точці схеми ця деталь стоїть.
+    """
+    number: int
+    part_number: str | None = None
+    name: str | None = None
+    product_id: str | None = None
+
+
 class SchematicSummary(SchematicBase):
     id: int
     created_at: datetime | None = None
     hotspots_count: int = 0
+    matched_parts: List[SchematicMatchedPart] = []
 
 
 class VinDecodeResult(BaseModel):

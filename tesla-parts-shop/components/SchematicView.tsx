@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight,
   ChevronDown,
@@ -32,6 +32,29 @@ interface SchematicViewProps {
   onAddToCart: (product: Product) => void;
 }
 
+/** «1499151-00-C» → «149915100c»: порівняння номерів без розділювачів. */
+const compactCode = (value?: string) =>
+  (value || '').toLowerCase().replace(/[^0-9a-zа-яіїєґ]/g, '');
+
+/** Чи належить точка схеми запиту з пошуку (парт-номер / назва / варіант). */
+const hotspotMatchesPart = (hotspot: SchematicHotspot, term: string): boolean => {
+  if (!term) return false;
+  const low = term.toLowerCase();
+  const compact = compactCode(term);
+  const values = [
+    hotspot.part_number || '',
+    hotspot.name || '',
+    ...(hotspot.variants || []).map((variant) => variant.name || ''),
+  ];
+  return values.some((value) => {
+    if (!value) return false;
+    return (
+      value.toLowerCase().includes(low) ||
+      (compact.length >= 3 && compactCode(value).includes(compact))
+    );
+  });
+};
+
 export const SchematicView: React.FC<SchematicViewProps> = ({
   currency,
   uahPerUsd,
@@ -39,6 +62,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Парт-номер, за яким прийшли з пошуку (`/schemes/36?part=110681800A`) —
+  // щоб одразу підсвітити саме цю деталь, а не змушувати шукати її очима.
+  const [searchParams] = useSearchParams();
+  const partParam = (searchParams.get('part') || '').trim();
   const [schematic, setSchematic] = useState<Schematic | null>(null);
   // Сусідні підсистеми того самого розділу — щоб перемкнутись на «ЗАХИСТИ ЗАДНІ»
   // одним кліком прямо зі схеми, не повертаючись у список.
@@ -284,6 +311,22 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       cancelled = true;
     };
   }, [schematic?.model, schematic?.section]);
+
+  // Прийшли з пошуку за номером деталі (`?part=…`) — одразу розкриваємо й
+  // підсвічуємо саме цю точку та прокручуємо до неї список.
+  useEffect(() => {
+    if (!partParam || !schematic) return;
+    const target = schematic.hotspots.find((hotspot) =>
+      hotspotMatchesPart(hotspot, partParam)
+    );
+    if (!target) return;
+    setActiveHotspotId(target.id);
+    setExpandedVariants((prev) => ({ ...prev, [target.id]: true }));
+    const timer = window.setTimeout(() => {
+      partRefs.current[target.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [partParam, schematic]);
 
   const handleSelectHotspot = (hotspot: SchematicHotspot) => {
     // Клік по номеру перемикає: розкрити ↔ згорнути. Раніше список лише

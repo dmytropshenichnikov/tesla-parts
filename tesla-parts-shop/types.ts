@@ -199,6 +199,13 @@ export interface SchematicUsage {
   part_number?: string | null;
 }
 
+export interface SchematicMatchedPart {
+  number: number;
+  part_number?: string | null;
+  name?: string | null;
+  product_id?: string | null;
+}
+
 export interface SchematicSummary {
   id: number;
   title: string;
@@ -210,6 +217,8 @@ export interface SchematicSummary {
   sort_order: number;
   created_at?: string;
   hotspots_count: number;
+  /** Деталі, що збіглися з пошуковим запитом (показуємо причину пошуку). */
+  matched_parts?: SchematicMatchedPart[];
 }
 
 export interface Schematic {
