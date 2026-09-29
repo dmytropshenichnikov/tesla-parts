@@ -18,7 +18,8 @@ import {
   Plus,
   Minus,
   RotateCcw,
-  Maximize2
+  Maximize2,
+  X
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicHotspot, HotspotVariant, Currency, Product, SavedCar, SchematicSubsystem } from '../types';
@@ -82,6 +83,29 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const frameRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Полноекранний режим схеми з РЕАЛІЗАЦІЄЮ через CSS (fixed-оверлей), а не через
+   * Fullscreen API: на мобільних Safari/iOS `element.requestFullscreen()` не
+   * підтримується взагалі (там він є лише для <video>), тому кнопка «на весь
+   * екран» там нічого не робила. Той самий DOM-вузол просто фіксується на весь
+   * в'юпорт — масштаб, пан і точки деталей працюють далі без перестворення.
+   */
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [expanded]);
+
   // Роздільність самого файлу та ширина, у якій він показаний при 100%:
   // співвідношення = межа, до якої збільшення лишається різким (1 піксель = 1 піксель)
   const [naturalWidth, setNaturalWidth] = useState(0);
@@ -646,21 +670,37 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
       {/* Two-column layout: Left = Diagram, Right = Parts list */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         {/* LEFT: Schematic diagram with hotspots */}
-        <div className="lg:col-span-6 xl:col-span-7 bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm lg:sticky lg:top-24">
+        <div
+          className={`lg:col-span-6 xl:col-span-7 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col ${
+            expanded
+              ? 'fixed inset-0 z-[110] m-0 p-1.5 sm:p-3 border-0 bg-black/95'
+              : 'bg-white p-3 sm:p-5 border border-gray-100 lg:sticky lg:top-24'
+          }`}
+        >
           <div className="flex items-center justify-between mb-2 lg:hidden">
-            <span className="font-montserrat font-bold text-xs text-gray-800">
+            <span
+              className={`font-montserrat font-bold text-xs ${
+                expanded ? 'text-white' : 'text-gray-800'
+              }`}
+            >
               Схема вузла ({pluralParts(hotspotGroups.length)})
             </span>
-            <span className="text-[11px] text-gray-400 font-manrope">
-              Клікніть номер для вибору
+            <span
+              className={`text-[11px] font-manrope ${
+                expanded ? 'text-gray-300' : 'text-gray-400'
+              }`}
+            >
+              {expanded ? 'Esc — вийти' : 'Клікніть номер для вибору'}
             </span>
           </div>
 
           <div
             ref={frameRef}
-            className={`relative w-full border border-gray-100 rounded-xl sm:rounded-2xl overflow-hidden bg-[#fafafa] select-none min-h-[220px] sm:min-h-[400px] ${
-              zoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''
-            }`}
+            className={`relative w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#fafafa] select-none ${
+              expanded
+                ? 'flex-1 min-h-0 border-0'
+                : 'border border-gray-100 min-h-[220px] sm:min-h-[400px]'
+            } ${zoom > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
             onPointerDown={onPanStart}
             onPointerMove={onPanMove}
             onPointerUp={onPanEnd}
@@ -725,21 +765,22 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
               </span>
             </div>
 
-            {/* На весь екран */}
+            {/* На весь екран. Раніше тут був Fullscreen API, який на мобільних
+                Safari/iOS не підтримується — кнопка мовчки не працювала. Тепер це
+                наш оверлей: той самий DOM фіксується на весь в'юпорт (зум, пан і
+                точки працюють далі), працює скрізь — і на телефоні, і на десктопі. */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                const el = frameRef.current?.parentElement;
-                if (!el) return;
-                if (document.fullscreenElement) document.exitFullscreen();
-                else el.requestFullscreen?.().catch(() => {});
+                setExpanded((v) => !v);
               }}
-              title="На весь екран"
+              title={expanded ? 'Закрити повний екран' : 'На весь екран'}
+              aria-label={expanded ? 'Закрити повний екран' : 'На весь екран'}
               onDoubleClick={(e) => e.stopPropagation()}
-              className="absolute right-2 top-2 z-30 w-8 h-8 flex items-center justify-center rounded-xl bg-white/95 backdrop-blur border border-gray-200 shadow-md text-gray-600 hover:text-tesla-red transition-colors cursor-pointer"
+              className="absolute right-2 top-2 z-30 w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl bg-white/95 backdrop-blur border border-gray-200 shadow-md text-gray-600 hover:text-tesla-red transition-colors cursor-pointer"
             >
-              <Maximize2 size={15} />
+              {expanded ? <X size={16} /> : <Maximize2 size={15} />}
             </button>
 
             {/* Все, що масштабується разом: креслення + точки деталей */}
@@ -809,7 +850,11 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             <span className="sm:hidden">
               Натисніть на червоний номер — деталь підсвітиться у списку
             </span>
-            <span className="font-semibold text-gray-600 hidden sm:inline">
+            <span
+              className={`font-semibold hidden sm:inline ${
+                expanded ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
               {pluralParts(hotspotGroups.length)} на схемі
             </span>
           </div>
