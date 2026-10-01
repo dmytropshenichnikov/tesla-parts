@@ -164,6 +164,17 @@ export const SchemesCatalog: React.FC = () => {
   const [searchInput, setSearchInput] = useState<string>('');
   const [activeSearch, setActiveSearch] = useState<string>('');
   const [vinBanner, setVinBanner] = useState<string | null>(null);
+  // Ключ поточного вибірника — рахуємо ПІД ЧАС РЕНДЕРУ зі стану, а не всередині
+  // fetch-ефекту: той завершується достроково (напр. після «Назад», коли список
+  // схем не вантажимо), і ключ-порівняння ставав простроченим з обох боків —
+  // автовідкриття знову стріляло по старому списку.
+  const selectionKey = [
+    selectedModel, selectedGen, selectedSection,
+    selectedSubsystem, showAllSchematics ? 'all' : '', activeSearch,
+  ].join('|');
+  useEffect(() => {
+    selectionKeyRef.current = selectionKey;
+  });
 
   // Garage state
   const [isGarageOpen, setIsGarageOpen] = useState(false);
@@ -218,11 +229,11 @@ export const SchemesCatalog: React.FC = () => {
     if (!selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) return;
     if (showAllSchematics || activeSearch || loading) return;
     if (schematics.length !== 1) return;
-    if (loadedKeyRef.current !== selectionKeyRef.current) return;
+    if (loadedKeyRef.current !== selectionKey) return;
     const only = schematics[0];
     autoOpenArmed.current = false;
     if (only?.id) navigate(`/schemes/${only.id}`, { replace: true });
-  }, [schematics, loading, selectedSubsystem, showAllSchematics, activeSearch, navigate]);
+  }, [schematics, loading, selectedSubsystem, showAllSchematics, activeSearch, selectionKey, navigate]);
 
   // Список схем показуємо, коли шлях пройдено або користувач попросив усі схеми
   const canShowSchemes =
@@ -373,11 +384,7 @@ export const SchemesCatalog: React.FC = () => {
     // Фіксуємо, ПІД ЯКИЙ вибірник йде запит: відповідь, що прийшла пізніше за
     // наступний клік (out-of-order), ігноруємо — інакше старий список лягав
     // у стан і автовідкриття вело на чужу схему.
-    selectionKeyRef.current = [
-      selectedModel, selectedGen, selectedSection,
-      selectedSubsystem, showAllSchematics ? 'all' : '', activeSearch,
-    ].join('|');
-    loadSchematics(selectionKeyRef.current);
+    loadSchematics(selectionKey);
   }, [selectedModel, selectedGen, activeSearch, selectedSection, selectedSubsystem, showAllSchematics]);
 
   const loadActiveCar = () => {
