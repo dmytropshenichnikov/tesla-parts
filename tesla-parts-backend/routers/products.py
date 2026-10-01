@@ -220,14 +220,25 @@ def read_products(
                 )
             )
 
-    # 3b. Model-aware ranking: якщо в запиті є модель («тяга передня Model 3»),
-    # товари цієї моделі йдуть першими. Без цього одноцифровий токен «3»
-    # матчився через парт-номери (там скрізь є цифра 3) — і Model S/X
-    # виявлялись вище за Model 3 при запиті саме про Model 3.
+    # 3b. Model-aware ranking + filter: якщо в запиті є модель («тяга передня
+    # Model 3»), товари цієї моделі йдуть першими, а чужі моделі відсікаються.
+    # Без цього одноцифровий токен «3» матчився через парт-номери (там скрізь
+    # є цифра 3) — і Model S/X лізли у видачу про Model 3.
+    # Фільтр — за БАЗОВОЮ моделлю («Model 3» ріже і Highland-товари, і звичайні;
+    # товар базової моделі підходить і поколінню — та сама логіка, що в гаражі).
+    # Товари без вказаної моделі (універсальні) лишаємо — вони підходять усім.
     model_rank = None
     if search:
         wanted_model = _detect_model_in_query(search)
         if wanted_model:
+            base_model = wanted_model.replace(" Highland", "").replace(" Juniper", "")
+            query = query.where(
+                or_(
+                    col(Product.category).ilike(f"%{base_model}%"),
+                    col(Product.category).is_(None),
+                    col(Product.category) == "",
+                )
+            )
             model_rank = case(
                 (col(Product.category).ilike(f"%{wanted_model}%"), 0),
                 else_=1,
