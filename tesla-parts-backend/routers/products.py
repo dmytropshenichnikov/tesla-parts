@@ -5,7 +5,7 @@ import shutil
 import os
 import re
 from sqlalchemy.orm import selectinload
-from sqlalchemy import func
+from sqlalchemy import func, case
 from database import get_session
 from models import Product, ProductImage, ProductSubcategoryLink, Category
 from schemas import ProductCreate, ProductRead, ProductBulkDeleteRequest, ProductReorderRequest
@@ -27,6 +27,41 @@ def _slugify(value: str) -> str:
         return ""
     value = value.lower().strip()
     return re.sub(r'\s+', '-', value)
+
+
+def _detect_model_in_query(search: str) -> Optional[str]:
+    """Витягує модель Tesla із пошукового запиту для ранжування.
+
+    Повертає назву категорії («Model 3 Highland») або None.
+    Покоління уточнює модель: «model 3» + «highland» → «Model 3 Highland»,
+    інакше — базова модель. Нічого не фільтрує, лише порядок видачі.
+    """
+    text = f" {(search or '').lower()} "
+    # Прибираємо розділювачі, щоб ловити і «model-3», і «model3»
+    compact = re.sub(r'[\s\-_]+', '', text)
+
+    base: Optional[str] = None
+    for key, name in (
+        ("model3", "Model 3"),
+        ("modely", "Model Y"),
+        ("models", "Model S"),
+        ("modelx", "Model X"),
+    ):
+        if key in compact:
+            base = name
+            break
+    if base is None:
+        # Саме покоління без моделі («highland рычаг») — теж підказка
+        if "highland" in compact:
+            return "Model 3 Highland"
+        if "juniper" in compact:
+            return "Model Y Juniper"
+        return None
+    if base == "Model 3" and "highland" in compact:
+        return "Model 3 Highland"
+    if base == "Model Y" and "juniper" in compact:
+        return "Model Y Juniper"
+    return base
 
 
 def _split_categories(category_str: Optional[str]) -> List[str]:
@@ -185,13 +220,34 @@ def read_products(
                 )
             )
 
+    # 3b. Model-aware ranking: якщо в запиті є модель («тяга передня Model 3»),
+    # товари цієї моделі йдуть першими. Без цього одноцифровий токен «3»
+    # матчився через парт-номери (там скрізь є цифра 3) — і Model S/X
+    # виявлялись вище за Model 3 при запиті саме про Model 3.
+    model_rank = None
+    if search:
+        wanted_model = _detect_model_in_query(search)
+        if wanted_model:
+            model_rank = case(
+                (col(Product.category).ilike(f"%{wanted_model}%"), 0),
+                else_=1,
+            )
+
     # 4. Sorting
-    # Priority: Sort Order (DESC), In Stock (DESC), then Name (ASC)
-    query = query.order_by(
-        col(Product.sort_order).asc(),
-        col(Product.inStock).desc(), 
-        col(Product.name).asc()
-    )
+    # Priority: Model match, Sort Order (DESC), In Stock (DESC), then Name (ASC)
+    if model_rank is not None:
+        query = query.order_by(
+            model_rank,
+            col(Product.sort_order).asc(),
+            col(Product.inStock).desc(),
+            col(Product.name).asc(),
+        )
+    else:
+        query = query.order_by(
+            col(Product.sort_order).asc(),
+            col(Product.inStock).desc(),
+            col(Product.name).asc()
+        )
 
     # 5. Pagination
     query = query.offset(offset).limit(limit)

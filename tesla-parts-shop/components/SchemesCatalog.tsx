@@ -137,6 +137,13 @@ export const SchemesCatalog: React.FC = () => {
   // Автовідкриття єдиної схеми — тільки коли користувач САМ щойно обрав
   // підсистему. Інакше воно спрацьовувало й після «Назад» і закидало вперед.
   const autoOpenArmed = useRef(false);
+  // Ключ вибірника, за яким реально завантажено поточний список схем.
+  // Без нього ефект нижче спрацьовував зі СТАРИМ списком (довжина 1 від
+  // попередньої підсистеми) до завершення нового fetch — і відкривав ЧУЖУ схему
+  // (напр. Model 3 замість Model Y). Ефекти одного коміту йдуть по черзі:
+  // автовідкриття перше, fetch — після, тож `loading` ще false, а дані старі.
+  const loadedKeyRef = useRef('');
+  const selectionKeyRef = useRef('');
   const [schematics, setSchematics] = useState<SchematicSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,9 +184,17 @@ export const SchemesCatalog: React.FC = () => {
 
   const activeSection = sections.find((s) => s.section === selectedSection) || null;
   const activeSectionSubsystems = activeSection ? activeSection.subsystems : [];
+  // Бекенд кладе схеми БЕЗ підсистеми в кошик «Інше» — це не справжній крок
+  // вибору. Якщо в розділі немає ЖОДНОЇ реальної підсистеми, крок пропускаємо
+  // і показуємо схеми одразу (інакше був тупиковий екран «Оберіть підсистему: ІНШЕ»).
+  const isFallbackSubsystem = (name?: string | null) =>
+    (name || '').trim().toLowerCase() === 'інше';
+  const realSubsystems = activeSectionSubsystems.filter(
+    (s) => !isFallbackSubsystem(s.subsystem)
+  );
   // Крок «підсистема» показуємо завжди, якщо в розділі є підсистеми:
   // шлях такий самий, як у каталозі — авто → розділ → підсистема → схема
-  const needsSubsystemStep = Boolean(activeSection) && activeSectionSubsystems.length > 0;
+  const needsSubsystemStep = Boolean(activeSection) && realSubsystems.length > 0;
   // Якщо в посиланні прийшла підсистема, якої немає в цьому розділі (або взагалі
   // сміттєве значення) — не показуємо порожній список, а повертаємось на крок
   // вибору підсистеми. Інакше було «Схем не знайдено» і чип із дивним текстом.
@@ -196,11 +211,14 @@ export const SchemesCatalog: React.FC = () => {
 
   // Якщо в обраній підсистемі рівно одна схема — відкриваємо її одразу.
   // Раніше треба було тицяти «ЗАХИСТИ ПЕРЕДНІ» → потім ще раз «ЗАХИСТИ ПЕРЕДНІ».
+  // ВАЖЛИВО: список має відповідати ПОТОЧНОМУ вибірнику (loadedKeyRef), інакше
+  // після кліку відкривалась схема з ПОПЕРЕДНЬОЇ підсистеми (інша модель/розділ).
   useEffect(() => {
     if (!autoOpenArmed.current) return;
     if (!selectedSubsystem || selectedSubsystem === ALL_SUBSYSTEMS) return;
     if (showAllSchematics || activeSearch || loading) return;
     if (schematics.length !== 1) return;
+    if (loadedKeyRef.current !== selectionKeyRef.current) return;
     const only = schematics[0];
     autoOpenArmed.current = false;
     if (only?.id) navigate(`/schemes/${only.id}`, { replace: true });
@@ -352,7 +370,14 @@ export const SchemesCatalog: React.FC = () => {
     if (!selectedModel && !activeSearch) return;
     // Поки користувач обирає розділ/підсистему, список схем не вантажимо
     if (selectedModel && !activeSearch && !canShowSchemes) return;
-    loadSchematics();
+    // Фіксуємо, ПІД ЯКИЙ вибірник йде запит: відповідь, що прийшла пізніше за
+    // наступний клік (out-of-order), ігноруємо — інакше старий список лягав
+    // у стан і автовідкриття вело на чужу схему.
+    selectionKeyRef.current = [
+      selectedModel, selectedGen, selectedSection,
+      selectedSubsystem, showAllSchematics ? 'all' : '', activeSearch,
+    ].join('|');
+    loadSchematics(selectionKeyRef.current);
   }, [selectedModel, selectedGen, activeSearch, selectedSection, selectedSubsystem, showAllSchematics]);
 
   const loadActiveCar = () => {
@@ -371,7 +396,7 @@ export const SchemesCatalog: React.FC = () => {
     }
   };
 
-  const loadSchematics = async () => {
+  const loadSchematics = async (requestKey?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -394,11 +419,17 @@ export const SchemesCatalog: React.FC = () => {
         generation: apiGen,
         section: selectedSection || undefined,
         subsystem:
-          selectedSubsystem && selectedSubsystem !== ALL_SUBSYSTEMS
+          selectedSubsystem &&
+          selectedSubsystem !== ALL_SUBSYSTEMS &&
+          !isFallbackSubsystem(selectedSubsystem)
             ? selectedSubsystem
             : undefined,
         q: activeSearch || undefined
       });
+      // Відповідь із запізненням (користувач вже клікнув далі) — викидаємо,
+      // щоб старий список не підміняв свіжий і не відкривав чужу схему.
+      if (requestKey && requestKey !== selectionKeyRef.current) return;
+      loadedKeyRef.current = requestKey || selectionKeyRef.current;
       setSchematics(data);
     } catch (err: any) {
       setError(err.message || 'Помилка завантаження схем');

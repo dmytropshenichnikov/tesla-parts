@@ -197,16 +197,12 @@ const ScrollToTop = () => {
   }, []);
 
   useLayoutEffect(() => {
-    const toTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    toTop();
-    // Контент нового кроку дорендерюється не одразу (картки, картинки) —
-    // тримаємо сторінку вгорі, поки верстка не стабілізується
-    const raf = requestAnimationFrame(toTop);
-    const timers = [150, 400, 800].map((delay) => window.setTimeout(toTop, delay));
-    return () => {
-      cancelAnimationFrame(raf);
-      timers.forEach((t) => window.clearTimeout(t));
-    };
+    // Скролимо вгору ОДРАЗУ при зміні кроку — і більше нічого. Раніше тут були
+    // відкладені таймери (150/400/800мс), які смикали сторінку вгору ВЖЕ ПІСЛЯ
+    // того, як користувач почав скролити новий крок («скаче вгору під час скролу»).
+    // scrollRestoration='manual' (вище) вже прибирає відновлення старої позиції,
+    // тож повторні смикання не потрібні: контент довантажується вниз.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname, search]);
 
   return null;
