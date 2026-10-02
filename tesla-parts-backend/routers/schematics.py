@@ -111,10 +111,11 @@ def _format_hotspot(
         except Exception:
             variants = []
 
-    # Варіант, привʼязаний до товару каталогу, показує АКТУАЛЬНІ ціну й
-    # наявність із каталогу, а не знімок на момент привʼязки. Саме тому зміна
-    # ціни в каталозі одразу видна на схемах. Назву, тип і стан НЕ чіпаємо —
-    # це підписи адміністратора (напр. «Оригінал б/у (Осталось мало)»).
+    # Варіант, привʼязаний до товару каталогу, показує АКТУАЛЬНІ ціну,
+    # наявність і НАЗВУ з каталогу, а не знімок на момент привʼязки. Саме тому
+    # зміна ціни чи перейменування в каталозі одразу видно на схемах.
+    # (Раніше назва лишалась знімком — після перейменування товару схеми
+    # показували стару назву.)
     if products_by_id:
         for variant in variants:
             product = products_by_id.get(variant.product_id) if variant.product_id else None
@@ -132,6 +133,16 @@ def _format_hotspot(
             resolved_type = _resolve_part_type(product)
             if resolved_type:
                 variant.type = resolved_type
+            # Назва — з товару. Артикул не дублюємо: назва товару в каталозі
+            # його вже містить («189618900A - Комплект ...») — перевіряємо префікс.
+            live_name = (product.name or "").strip()
+            detail_no = (product.detail_number or "").strip()
+            if detail_no and live_name and not live_name.lower().startswith(detail_no.lower()):
+                live_name = f"{detail_no} - {live_name}"
+            elif not live_name:
+                live_name = detail_no
+            if live_name:
+                variant.name = live_name
     
     product_read = None
     if hotspot.product:

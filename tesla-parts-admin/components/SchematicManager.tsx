@@ -2347,10 +2347,20 @@ export const SchematicManager: React.FC = () => {
                           </span>
                           <input
                             type="text"
-                            value={v.name}
+                            value={v.product_id && linkedProd ? linkedProd.name : v.name}
+                            readOnly={Boolean(v.product_id && linkedProd)}
                             onChange={(e) => handleUpdateVariant(selectedHotspotIdx, varIdx, 'name', e.target.value)}
                             placeholder="напр. Оригинал б/у"
-                            className="font-montserrat font-bold bg-white px-2 py-1 border border-gray-200 rounded-md text-gray-800 text-xs flex-1"
+                            title={
+                              v.product_id && linkedProd
+                                ? 'Назва береться з товару каталогу — змініть її в картці товару'
+                                : 'Власна назва (товар не привʼязано)'
+                            }
+                            className={`font-montserrat font-bold px-2 py-1 border rounded-md text-xs flex-1 ${
+                              v.product_id && linkedProd
+                                ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                                : 'bg-white border-gray-200 text-gray-800'
+                            }`}
                           />
                           <div className="flex items-center gap-0.5 shrink-0">
                             <button
