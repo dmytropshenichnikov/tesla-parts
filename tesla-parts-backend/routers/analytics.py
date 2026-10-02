@@ -144,3 +144,27 @@ def clear_search_queries(session: Session = Depends(get_session)):
     session.exec(delete(SearchQueryLog))
     session.commit()
     return {"status": "cleared"}
+
+
+@router.delete("/search-queries/by-query", dependencies=[Depends(get_current_admin)])
+def delete_search_queries_by_text(
+    query: str = Query(..., min_length=1, description="Текст запиту — видаляються всі його входження"),
+    session: Session = Depends(get_session),
+):
+    """Видалити ВСІ записи з таким текстом (для групових вкладок «Не знайдено»/«Популярні»)."""
+    result = session.exec(
+        delete(SearchQueryLog).where(func.lower(SearchQueryLog.query) == query.strip().lower())
+    )
+    session.commit()
+    return {"status": "deleted", "deleted": result.rowcount if hasattr(result, "rowcount") else None}
+
+
+@router.delete("/search-queries/{query_id}", dependencies=[Depends(get_current_admin)])
+def delete_search_query(query_id: int, session: Session = Depends(get_session)):
+    """Видалити ОДИН запис з історії (для вкладки «Стрічка пошуків»)."""
+    entry = session.get(SearchQueryLog, query_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Запит не знайдено")
+    session.delete(entry)
+    session.commit()
+    return {"status": "deleted", "id": query_id}

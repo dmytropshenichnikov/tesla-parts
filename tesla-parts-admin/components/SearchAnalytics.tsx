@@ -15,6 +15,8 @@ export const SearchAnalytics: React.FC = () => {
   const [report, setReport] = useState<SearchReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'recent' | 'zero' | 'popular'>('recent');
+  // Ключ рядка, що зараз видаляється (id або текст запиту) — блокуємо повторні кліки
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const loadReport = async () => {
     setLoading(true);
@@ -41,6 +43,52 @@ export const SearchAnalytics: React.FC = () => {
       loadReport();
     } catch (e) {
       alert('Не вдалося очистити історію');
+    }
+  };
+
+  // Видалити один запис зі стрічки (менеджер вже опрацював запит і не хоче
+  // відволікатись на нього знову)
+  const handleDeleteOne = async (id: number) => {
+    const key = `id:${id}`;
+    if (deleting) return;
+    setDeleting(key);
+    try {
+      await ApiService.deleteSearchQuery(id);
+      setReport((prev) =>
+        prev ? { ...prev, recent: prev.recent.filter((item) => item.id !== id) } : prev
+      );
+    } catch (e) {
+      alert('Не вдалося видалити запит');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // Видалити всю групу з таким текстом (для вкладок «Не знайдено»/«Популярні»)
+  const handleDeleteGroup = async (query: string) => {
+    const key = `q:${query}`;
+    if (deleting) return;
+    if (!window.confirm(`Видалити з історії всі входження запиту «${query}»?`)) {
+      return;
+    }
+    setDeleting(key);
+    try {
+      await ApiService.deleteSearchQueriesByText(query);
+      const same = (text: string) => text.toLowerCase() === query.toLowerCase();
+      setReport((prev) =>
+        prev
+          ? {
+              ...prev,
+              zero_results: prev.zero_results.filter((item) => !same(item.query)),
+              popular: prev.popular.filter((item) => !same(item.query)),
+              recent: prev.recent.filter((item) => !same(item.query)),
+            }
+          : prev
+      );
+    } catch (e) {
+      alert('Не вдалося видалити запити');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -221,6 +269,14 @@ export const SearchAnalytics: React.FC = () => {
                             <Plus size={14} />
                             Створити товар
                           </Link>
+                          <button
+                            onClick={() => handleDeleteGroup(item.query)}
+                            disabled={deleting === `q:${item.query}`}
+                            className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-md transition disabled:opacity-50"
+                            title="Видалити запит з історії"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -247,6 +303,7 @@ export const SearchAnalytics: React.FC = () => {
                       <th className="py-3 px-4 text-center">Кількість пошуків</th>
                       <th className="py-3 px-4 text-center">Знайдено товарів</th>
                       <th className="py-3 px-4">Останній пошук</th>
+                      <th className="py-3 px-4 text-right">Дія</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -274,6 +331,16 @@ export const SearchAnalytics: React.FC = () => {
                         <td className="py-3 px-4 text-gray-500 text-xs">
                           {formatDate(item.last_searched)}
                         </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleDeleteGroup(item.query)}
+                            disabled={deleting === `q:${item.query}`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-md transition disabled:opacity-50"
+                            title="Видалити запит з історії"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -298,6 +365,7 @@ export const SearchAnalytics: React.FC = () => {
                       <th className="py-3 px-4">Час запиту</th>
                       <th className="py-3 px-4">Пошуковий запит</th>
                       <th className="py-3 px-4 text-center">Результат</th>
+                      <th className="py-3 px-4 text-right">Дія</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -319,6 +387,16 @@ export const SearchAnalytics: React.FC = () => {
                               ✕ 0 знайдено
                             </span>
                           )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => handleDeleteOne(item.id)}
+                            disabled={deleting === `id:${item.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-md transition disabled:opacity-50"
+                            title="Видалити цей запит з історії"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </td>
                       </tr>
                     ))}

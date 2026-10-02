@@ -1170,6 +1170,25 @@ export const ApiService = {
     if (!res.ok) throw new Error('Failed to clear search queries');
   },
 
+  deleteSearchQuery: async (id: number): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/analytics/search-queries/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Не вдалося видалити запит');
+  },
+
+  deleteSearchQueriesByText: async (query: string): Promise<void> => {
+    const res = await _authenticatedFetch(
+      `${API_URL}/analytics/search-queries/by-query?query=${encodeURIComponent(query)}`,
+      {
+        method: 'DELETE',
+        headers: getHeaders(),
+      }
+    );
+    if (!res.ok) throw new Error('Не вдалося видалити запити');
+  },
+
   // --- Schematics API ---
   getSchematics: async (params?: {
     model?: string;
