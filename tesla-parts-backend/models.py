@@ -1,11 +1,25 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Column, ForeignKey, String, DateTime
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 def get_kyiv_time():
     return datetime.now(ZoneInfo("Europe/Kyiv")).replace(tzinfo=None)
+
+
+def naive_created_at(*, index: bool = False):
+    """Naive wall-clock (Київ) — як усі created_at-колонки в БД.
+
+    sqlmodel ≥0.0.24 мапить `datetime` на aware UTCDateTime і падає на naive
+    значеннях («Datetime values must have timezone information»), ламаючи ВСІ
+    записи. Явна naive-колонка повертає стару поведінку один в один.
+    """
+    return Field(sa_column=Column(DateTime(timezone=False), default=get_kyiv_time, nullable=False, index=index))
+
+
+def naive_nullable_dt():
+    return Field(sa_column=Column(DateTime(timezone=False), nullable=True, default=None))
 
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -62,7 +76,7 @@ class Product(SQLModel, table=True):
     meta_description: Optional[str] = None
     is_popular: bool = Field(default=False, index=True)
     part_type: Optional[str] = Field(default=None, index=True) # 'original', 'analog', or None (auto)
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
     
     subcategory: Optional[Subcategory] = Relationship(back_populates="products")
     linked_subcategories: List[Subcategory] = Relationship(
@@ -87,7 +101,7 @@ class Order(SQLModel, table=True):
     delivery_branch: str
     payment_method: str
     totalUSD: float
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
     status: str = Field(default="new")
     ttn: Optional[str] = None # Added TTN field
     note: Optional[str] = None # Added note field
@@ -138,7 +152,7 @@ class StaticPageSEO(SQLModel, table=True):
 class Review(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     image_url: str
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
     sort_order: int = Field(default=0, index=True)
 
 class CustomerPromoCodeLink(SQLModel, table=True):
@@ -152,7 +166,7 @@ class CustomerEmailListLink(SQLModel, table=True):
 class EmailList(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
 
     customers: List["Customer"] = Relationship(
         back_populates="email_lists", link_model=CustomerEmailListLink
@@ -169,13 +183,13 @@ class Customer(SQLModel, table=True):
     hashed_password: Optional[str] = None
     is_verified: bool = Field(default=False)
     verification_token: Optional[str] = None
-    token_expires_at: Optional[datetime] = None
+    token_expires_at: Optional[datetime] = naive_nullable_dt()
     reset_token_hash: Optional[str] = None
-    reset_token_expires: Optional[datetime] = None
+    reset_token_expires: Optional[datetime] = naive_nullable_dt()
     discount_type: Optional[str] = None
     discount_value: Optional[float] = None
     cart_data: Optional[str] = None
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
 
     promocodes: List["PromoCode"] = Relationship(
         back_populates="customers", link_model=CustomerPromoCodeLink
@@ -204,7 +218,7 @@ class GarageCar(SQLModel, table=True):
     body_type: Optional[str] = None
     description: Optional[str] = None
     is_active: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
 
 
 class PromoCode(SQLModel, table=True):
@@ -214,7 +228,7 @@ class PromoCode(SQLModel, table=True):
     discount_value: float
     scope: str # 'everyone', 'selected'
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
 
     customers: List[Customer] = Relationship(
         back_populates="promocodes", link_model=CustomerPromoCodeLink
@@ -225,7 +239,7 @@ class SearchQueryLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     query: str = Field(index=True)
     results_count: int = Field(default=0, index=True)
-    created_at: datetime = Field(default_factory=get_kyiv_time, index=True)
+    created_at: datetime = naive_created_at(index=True)
 
 
 class Schematic(SQLModel, table=True):
@@ -237,7 +251,7 @@ class Schematic(SQLModel, table=True):
     subsystem: str = Field(index=True)
     image_url: str
     sort_order: int = Field(default=0, index=True)
-    created_at: datetime = Field(default_factory=get_kyiv_time)
+    created_at: datetime = naive_created_at()
 
     hotspots: List["SchematicHotspot"] = Relationship(back_populates="schematic", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
