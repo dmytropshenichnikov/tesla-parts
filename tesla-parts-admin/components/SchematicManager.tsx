@@ -24,7 +24,8 @@ import {
   Copy,
   GripVertical,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Link2
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Schematic, SchematicSummary, SchematicHotspot, HotspotVariant, Product, SchematicModelOption, SchematicSectionOption, CatalogTreeCategory } from '../types';
@@ -891,13 +892,30 @@ export const SchematicManager: React.FC = () => {
     // Тільки функціональне оновлення: у межах одного обробника (напр. «додати
     // варіант» + автозаповнення парт-номера) два виклики читали один і той самий
     // застарілий стан і другий перетирав перший — варіант «не додавався».
+    //
+    // Точки з ОДНАКОВИМ номером — це одна позиція (та сама деталь у різних
+    // місцях схеми; сайт їх теж зливає в один рядок). Тому зміна полів деталі
+    // (номер, парт-номер, назва, товар, варіанти) в одній точці застосовується
+    // до ВСІХ її копій — інакше копії розходяться і доводиться видаляти
+    // точку й копіювати заново. Позиція (x/y), id і порядок не чіпаються.
+    const SYNCED_FIELDS: (keyof SchematicHotspot)[] = [
+      'number', 'part_number', 'name', 'product_id', 'product', 'variants', 'variants_json',
+    ];
     setEditingSchematic((prev) => {
       if (!prev) return prev;
       const updated = [...prev.hotspots];
-      updated[index] = {
-        ...updated[index],
-        [field]: value
-      };
+      const target = updated[index];
+      if (!target) return prev;
+      const oldNumber = target.number;
+      const cloneValue = (v: any) =>
+        field === 'variants' ? (v || []).map((item: any) => ({ ...item })) : v;
+      updated[index] = { ...target, [field]: cloneValue(value) };
+      if (SYNCED_FIELDS.includes(field)) {
+        updated.forEach((h, i) => {
+          if (i === index || h.number !== oldNumber) return;
+          updated[i] = { ...h, [field]: cloneValue(value) };
+        });
+      }
       return { ...prev, hotspots: updated };
     });
   };
@@ -2133,6 +2151,23 @@ export const SchematicManager: React.FC = () => {
 
           {selectedHotspot && selectedHotspotIdx !== null ? (
             <div className="space-y-4">
+              {(() => {
+                const copies = editingSchematic
+                  ? editingSchematic.hotspots.filter(
+                      (h, i) => i !== selectedHotspotIdx && h.number === selectedHotspot.number
+                    ).length
+                  : 0;
+                return copies > 0 ? (
+                  <div className="flex items-start gap-2 text-[11px] font-manrope text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2.5 py-2">
+                    <Link2 size={13} className="shrink-0 mt-0.5" />
+                    <span>
+                      Ця деталь стоїть ще в {copies} {copies === 1 ? 'місці' : 'місцях'} схеми
+                      під тим самим номером — зміни парт-номера, назви та варіантів
+                      застосуються до всіх копій автоматично.
+                    </span>
+                  </div>
+                ) : null;
+              })()}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold font-montserrat text-gray-700 mb-1">
