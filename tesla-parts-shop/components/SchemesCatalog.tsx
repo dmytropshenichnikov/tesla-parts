@@ -76,12 +76,16 @@ const resolveOption = (
  * час завантаження в адмінці, тому тут просто показуємо файл — без жодних
  * перемальовувань у браузері (раніше через це картинка встигала блимнути сірим).
  */
+/**
+ * Картинка вузла. БЕЗ ховер-зуму: картки в каталозі схем не мають «підстрибувати»
+ * при наведенні (прохання з відео) — лишається тільки підсвітка рамки/тіні самої картки.
+ */
 const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
   <img
     src={src}
     alt={alt}
     loading="lazy"
-    className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+    className="max-w-full max-h-full w-auto h-auto object-contain"
   />
 );
 
@@ -653,7 +657,7 @@ export const SchemesCatalog: React.FC = () => {
                       all: null,
                     })
                   }
-                  className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98] text-left"
+                  className="group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-300 ease-out active:scale-[0.98] text-left"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10 group-hover:via-black/30 transition-all duration-300 z-10" />
@@ -662,7 +666,7 @@ export const SchemesCatalog: React.FC = () => {
                       src={o.image}
                       alt={o.category}
                       loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
+                      className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center">
@@ -877,7 +881,7 @@ export const SchemesCatalog: React.FC = () => {
                   onClick={() =>
                     goToStep({ section: group.section, subsystem: null, all: null })
                   }
-                  className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+                  className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-colors duration-200 hover:border-tesla-red hover:shadow-lg active:scale-[0.98] cursor-pointer"
                 >
                   {/* Картинка велика — і без сірих полів: розмір задає сама картинка */}
                   <div className="w-[42%] min-w-[104px] max-w-[190px] h-[118px] sm:h-[145px] shrink-0 flex items-center justify-center">
@@ -942,7 +946,7 @@ export const SchemesCatalog: React.FC = () => {
                   autoOpenArmed.current = true;
                   goToStep({ subsystem: sub.subsystem });
                 }}
-                className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-all duration-200 hover:border-tesla-red hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer"
+                className="group flex items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white text-left transition-colors duration-200 hover:border-tesla-red hover:shadow-lg active:scale-[0.98] cursor-pointer"
               >
                 <div className="w-[42%] min-w-[104px] max-w-[190px] h-[118px] sm:h-[145px] shrink-0 flex items-center justify-center">
                   {sub.image ? (
@@ -1052,7 +1056,7 @@ export const SchemesCatalog: React.FC = () => {
               <Link
                 key={s.id}
                 to={`/schemes/${s.id}${matchedCode ? `?part=${encodeURIComponent(matchedCode)}` : ''}`}
-                className="group bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer"
+                className="group bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-xl transition-shadow duration-300 flex flex-col cursor-pointer"
               >
                 {/* Diagram Thumbnail */}
                 <div className="relative h-52 bg-[#fbfbfb] p-6 flex items-center justify-center border-b border-gray-50 overflow-hidden">
@@ -1060,7 +1064,7 @@ export const SchemesCatalog: React.FC = () => {
                     <img
                       src={getFullImageUrl(s.image_url)}
                       alt={s.title}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
+                      className="max-h-full max-w-full object-contain"
                     />
                   ) : (
                     <Layers size={40} className="text-gray-300" />
@@ -1149,14 +1153,14 @@ export const SchemesCatalog: React.FC = () => {
               <Link
                 key={item.id}
                 to={`/product/${item.id}${selectedModel ? `?model=${encodeURIComponent(selectedModel)}` : ''}`}
-                className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-lg transition-shadow duration-300"
               >
                 <div className="h-28 bg-[#fbfbfb] p-3 flex items-center justify-center border-b border-gray-50">
                   {item.image ? (
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      className="max-h-full max-w-full object-contain"
                     />
                   ) : (
                     <Package size={28} className="text-gray-300" />

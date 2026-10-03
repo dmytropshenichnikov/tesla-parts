@@ -418,9 +418,18 @@ def get_schematic_sections(
     for item in schematics:
         section_name = (item.section or "Інше").strip()
         subsystem_name = (item.subsystem or "Інше").strip()
-        bucket = grouped.setdefault(section_name, {"section": section_name, "count": 0, "subsystems": {}})
+        bucket = grouped.setdefault(section_name, {"section": section_name, "count": 0, "subsystems": {}, "image": None})
         bucket["count"] += 1
-        bucket["subsystems"][subsystem_name] = bucket["subsystems"].get(subsystem_name, 0) + 1
+        # Запасне фото: перше фото схеми цього розділу/підсистеми. Якщо фото
+        # підкатегорії немає (видалили підкатегорію або назви не збігаються),
+        # картка візьме фото схеми — заливка картинки в схему одразу повертає
+        # превью, а не лишає порожню плашку.
+        if not bucket["image"] and item.image_url:
+            bucket["image"] = item.image_url
+        sub = bucket["subsystems"].setdefault(subsystem_name, {"count": 0, "image": None})
+        sub["count"] += 1
+        if not sub["image"] and item.image_url:
+            sub["image"] = item.image_url
 
     # Порядок і картинки беремо ЛИШЕ з підкатегорій обраної категорії каталогу.
     # Раніше картинка шукалась по всьому каталогу за назвою, тому чужа категорія
@@ -454,15 +463,17 @@ def get_schematic_sections(
     for bucket in grouped.values():
         sections.append({
             "section": bucket["section"],
-            "image": images_by_name.get(bucket["section"].strip().lower()),
+            # Спочатку фото підкатегорії каталогу, інакше — фото схеми
+            # (див. fallback вище): картка не лишається порожньою.
+            "image": images_by_name.get(bucket["section"].strip().lower()) or bucket.get("image"),
             "count": bucket["count"],
             "subsystems": [
                 {
                     "subsystem": name,
-                    "count": count,
-                    "image": images_by_name.get(name.strip().lower()),
+                    "count": info["count"],
+                    "image": images_by_name.get(name.strip().lower()) or info.get("image"),
                 }
-                for name, count in sorted(bucket["subsystems"].items())
+                for name, info in sorted(bucket["subsystems"].items())
             ],
         })
 
