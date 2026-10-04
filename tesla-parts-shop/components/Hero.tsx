@@ -54,7 +54,7 @@ const Hero: React.FC<HeroProps> = () => {
             <Link
               key={category.id}
               to={`/category/${slugify(category.name)}`}
-              className={`group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 ease-out hover:-translate-y-1 active:scale-[0.98] ${
+              className={`group relative h-64 md:h-96 rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-300 ease-out active:scale-[0.98] ${
                 isMine ? 'ring-2 ring-tesla-red ring-offset-2' : ''
               }`}
               style={{
@@ -65,7 +65,7 @@ const Hero: React.FC<HeroProps> = () => {
               <img
                 src={category.image || 'https://via.placeholder.com/800'}
                 alt={category.name}
-                className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ease-out"
+                className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
               />
               {isMine && (
                 <span className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 bg-tesla-red text-white text-[11px] font-bold font-montserrat uppercase tracking-wide px-2.5 py-1 rounded-full shadow-md">

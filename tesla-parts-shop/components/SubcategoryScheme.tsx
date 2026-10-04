@@ -89,7 +89,7 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
                   <img
                     src={imageUrl(scheme.image_url)}
                     alt={scheme.title}
-                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    className="max-h-full max-w-full object-contain transition-transform duration-300"
                   />
                 ) : (
                   <Layers size={20} className="text-gray-300" />
@@ -126,7 +126,7 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
               <img
                 src={imageUrl(scheme.image_url)}
                 alt={scheme.title}
-                className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                className="max-h-full max-w-full object-contain transition-transform duration-300"
               />
             ) : (
               <Layers size={28} className="text-gray-300" />

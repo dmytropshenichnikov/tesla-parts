@@ -211,7 +211,7 @@ const ProductList: React.FC<ProductListProps> = ({
             <div
               key={product.id}
               onClick={(e) => handleCardClick(e, product.id)}
-              className="bg-white rounded-2xl shadow-xs hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group overflow-hidden select-text"
+              className="bg-white rounded-2xl shadow-xs hover:shadow-md active:scale-[0.99] transition-shadow duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group overflow-hidden select-text"
               style={{
                 WebkitTapHighlightColor: 'transparent',
               }}
@@ -228,7 +228,7 @@ const ProductList: React.FC<ProductListProps> = ({
                   alt={product.name}
                   loading="lazy"
                   draggable={false}
-                  className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 pointer-events-none"
+                  className="max-h-full max-w-full object-contain transition-transform duration-300 pointer-events-none"
                 />
                 
                 {/* Badges on photo: Stock status & Part type together in one corner */}

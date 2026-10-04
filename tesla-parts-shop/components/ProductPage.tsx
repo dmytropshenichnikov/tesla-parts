@@ -378,7 +378,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 <img
                   src={selectedImage}
                   alt={product.name}
-                  className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                  className="max-h-full max-w-full object-contain transition-transform duration-500"
                 />
 
                 {/* Badges on photo: Stock & Part Type together in top-left */}
