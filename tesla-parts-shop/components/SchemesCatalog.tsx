@@ -939,7 +939,11 @@ export const SchemesCatalog: React.FC = () => {
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeSectionSubsystems.map((sub) => (
+            {/* Кошик «Інше» (схеми без підсистеми) тут НЕ показуємо — це
+                службова мітка, а не вибір для клієнта. Такі схеми видно через
+                «Усі підсистеми розділу». Адмінка взагалі не дає зберегти схему
+                без підсистеми, якщо в розділу є підрозділи. */}
+            {realSubsystems.map((sub) => (
               <button
                 key={sub.subsystem}
                 onClick={() => {
