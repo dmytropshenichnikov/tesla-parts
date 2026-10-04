@@ -681,10 +681,17 @@ def get_schematics_by_product(
     by_id = {s.id: s for s in schematics}
 
     results = []
+    # Одна схема — один рядок: деталь може стояти в кількох точках одного вузла
+    # (дві точки №4), але в «Є на схемах» схема не має дублюватись.
+    # Бейдж показує найменший номер точки.
+    seen_schematics = set()
     for hotspot in sorted(hits, key=lambda h: (h.schematic_id, h.number, h.sort_order)):
+        if hotspot.schematic_id in seen_schematics:
+            continue
         schematic = by_id.get(hotspot.schematic_id)
         if not schematic:
             continue
+        seen_schematics.add(hotspot.schematic_id)
         results.append({
             "schematic_id": schematic.id,
             "title": schematic.title,
