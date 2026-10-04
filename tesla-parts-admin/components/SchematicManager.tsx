@@ -361,9 +361,14 @@ export const SchematicManager: React.FC = () => {
         section: filterSection || undefined,
         q: searchQuery || undefined
       });
+      // Порівнюємо БЕЗ урахування регістру/пробілів: назва підсистеми в схемі —
+      // вільний текст («Передній приводний блок»), а в каталозі підкатегорії
+      // часто великими літерами («ПЕРЕДНІЙ ПРИВОДНИЙ БЛОК»). Строге ===
+      // давало порожній список («Схем не знайдено»), хоча на сайті схема є.
+      const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
       setSchematics(
         filterSubsystem
-          ? data.filter((item) => item.subsystem === filterSubsystem)
+          ? data.filter((item) => norm(item.subsystem) === norm(filterSubsystem))
           : data
       );
     } catch (err: any) {
