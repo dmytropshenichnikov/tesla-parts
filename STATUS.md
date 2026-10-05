@@ -658,3 +658,22 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
 - Відоме обмеження (не чіпали): ПЕРЕНЕСЕННЯ підкатегорії в іншу категорію/розділ
   каскаду не має — привʼязку треба поправити в редакторі схеми. Також
   `DELETE /schematics/{id}` не видаляє рядки хотспотів (сироти в БД).
+
+## Виправлення 05.10 — блимання карток «Вузли та схеми» при оновленні
+- Симптом (відео): при оновленні списку картки блимають у 3 етапи: картки →
+  текст «Завантаження схем...» → картки з сірими боксами → картинки доїжджають по одній.
+- Причина: `tesla-parts-shop/components/SchemesCatalog.tsx` — кожен `loadSchematics`
+  робить `setLoading(true)`, а рендер `{loading ? "Завантаження схем..." : ...}`
+  повністю замінює блок карток текстом навіть коли старі картки можна лишити.
+- Патч (тільки цей файл, коміт `58b35ea`): умову скелетона змінено на
+  `{loading && schematics.length === 0 ? (` — старі картки лишаються під час refetch
+  (stale-while-revalidate), скелетон тільки при першому завантаженні; `setLoading`,
+  guard `loadedKeyRef/selectionKeyRef` і фіксовані `h-52` бокси НЕ чіпались.
+  Плюс `decoding="async"` в `NodeImage` і в `<img>` картки схеми.
+- Перевірка: `npx tsc --noEmit` 0 помилок, `npm run build` OK (2.44s).
+  Push `main` + `HEAD:feature/improvements`, деплой `./deploy/deploy.sh` —
+  shop/admin/api 200.
+- Жива перевірка (Playwright + системний Chrome, `/tmp/pwtest/flick_check.mjs`,
+  затримка API 1200мс): клік по підсистемі B після A → хронологія
+  `cards(3) → cards(2)`, текст «Завантаження схем...» НЕ зʼявлявся — PASS,
+  один перехід «старі картки → нові картки». Скріншоти: `flick_A/B/B_mid.png`.
