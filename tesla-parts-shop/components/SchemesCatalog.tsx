@@ -85,6 +85,7 @@ const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
     src={src}
     alt={alt}
     loading="lazy"
+    decoding="async"
     className="max-w-full max-h-full w-auto h-auto object-contain"
   />
 );
@@ -993,7 +994,7 @@ export const SchemesCatalog: React.FC = () => {
           </h2>
         </div>
 
-        {loading ? (
+        {loading && schematics.length === 0 ? (
           <div className="py-20 text-center text-gray-400 font-manrope">
             Завантаження схем...
           </div>
@@ -1068,6 +1069,7 @@ export const SchemesCatalog: React.FC = () => {
                     <img
                       src={getFullImageUrl(s.image_url)}
                       alt={s.title}
+                      decoding="async"
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (
