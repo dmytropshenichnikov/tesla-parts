@@ -735,7 +735,7 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
 - [x] Коміт + push main і feature/improvements, деплой, 200
 - [x] Жива перевірка: пошук «компл» в області Model Y знаходить комплекти;
       2-й варіант не перезаписує/не підтягує парт-номер після очищення
-- [ ] STATUS.md + push
+- [x] STATUS.md + push
 ## Результат (06.10, коміт bb3560b)
 - Правка 1: `productMatchesModelAnyPlacement` (SchematicManager.tsx) + фільтр
   області «модель» перевіряє ВСІ підкатегорії товару; dead-хелпер
@@ -749,3 +749,7 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
   «Комплект для заміни сайлентблоків...» (раніше: 0, «Знайдено: 5–6», тепер: 13);
   TEST2 PASS — прив'язка 3-го варіанта в пам'яті НЕ чіпає порожній парт-номер.
   Скріншоти: case2_picker.png, case2_after_link.png.
+- Повторна верифікація на проді 06.10 ~11:20 (`case2_verify.mjs`, 0 PUT): TEST1 PASS
+  (обидва комплекти знаходяться в області «Уся модель Model Y»), TEST2 PASS
+  (після прив'язки 3-го варіанта парт-номер точки лишається порожнім).
+  Відповідь клієнту за форматом (відео/фото → причина → зроблено → статус) надано.
