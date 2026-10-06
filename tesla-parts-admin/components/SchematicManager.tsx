@@ -450,12 +450,29 @@ export const SchematicManager: React.FC = () => {
    * у категорії-моделі. Це надійніше за вільний текст `product.category`,
    * який міг розходитись із реальним деревом каталогу.
    */
-  const productMatchesModelExact = (product: Product, models: string[]) => {
+  /**
+   * Збіг за БУДЬ-ЯКОЮ підкатегорією товару (основна + лінки в інші моделі).
+   * Загальні позиції (напр. «Комплект...» для Model 3/Y/Juniper/Highland) лежать
+   * одразу в кількох моделях: класифікація лише за першою підкатегорією ховає
+   * товар з області «Уся модель», хоча він там реально є. Якщо жоден id
+   * не резолвиться в дерево каталогу — відкат до текстової перевірки, як раніше.
+   */
+  const productMatchesModelAnyPlacement = (product: Product, models: string[]) => {
     const wanted = models.map((m) => (m || '').trim().toLowerCase()).filter(Boolean);
     if (wanted.length === 0) return true;
-    const placement = resolveProductPlacement(product);
-    if (!placement) return false;
-    return wanted.includes(placement.categoryName.toLowerCase());
+    const ids = [
+      ...(product.subcategory_ids || []),
+      ...(product.subcategory_id ? [product.subcategory_id] : []),
+    ];
+    let resolvedAny = false;
+    for (const id of ids) {
+      const entry = subcategoryIndex.get(id);
+      if (!entry) continue;
+      resolvedAny = true;
+      if (wanted.includes(entry.categoryName.toLowerCase())) return true;
+    }
+    if (!resolvedAny) return productMatchesModel(product, models);
+    return false;
   };
 
   /**
@@ -494,11 +511,9 @@ export const SchematicManager: React.FC = () => {
       } else if (pickerScope !== 'all' && filterBySchematicModel) {
         // Каталог — джерело істини. Вільний текст лишаємо запасним варіантом
         // лише для товарів, які ще не розкладені по підкатегоріях.
-        const placement = resolveProductPlacement(product);
-        const matches = placement
-          ? productMatchesModelExact(product, modelScope)
-          : productMatchesModel(product, modelScope);
-        if (!matches) return false;
+        // Перевіряємо ВСІ підкатегорії товару: загальні позиції для кількох
+        // моделей інакше ховаються, якщо їхня основна підкатегорія — інша модель.
+        if (!productMatchesModelAnyPlacement(product, modelScope)) return false;
       }
       if (tokens.length === 0) return true;
 
@@ -2812,10 +2827,14 @@ export const SchematicManager: React.FC = () => {
                                 // Показуємо, що саме додали: підсвітка + прокрутка
                                 setFlashVariantIdx(currentVars.length);
 
-                                // Парт-номер точки заповнюємо лише якщо порожній.
+                                // Парт-номер точки заповнюємо лише при прив'язці ПЕРШОГО
+                                // варіанта і лише якщо поле порожнє. Інакше кожне
+                                // додавання 2-го/3-го товару (напр. 4 види мастила
+                                // в одній точці) знову підтягує чужий артикул,
+                                // який доводиться щоразу видаляти вручну.
                                 // Назву точки НЕ чіпаємо: у схемах вона = назва вузла
                                 // («ЗАХИСТИ ЗАДНІ»), а не назва товару.
-                                if (!selectedHotspot.part_number && p.detail_number) {
+                                if (currentVars.length === 0 && !selectedHotspot.part_number && p.detail_number) {
                                   handleUpdateHotspot(selectedHotspotIdx, 'part_number', p.detail_number);
                                 }
                               } else {
