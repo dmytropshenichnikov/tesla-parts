@@ -397,7 +397,10 @@ export const SchemesCatalog: React.FC = () => {
     // наступний клік (out-of-order), ігноруємо — інакше старий список лягав
     // у стан і автовідкриття вело на чужу схему.
     loadSchematics(selectionKey);
-  }, [selectedModel, selectedGen, activeSearch, selectedSection, selectedSubsystem, showAllSchematics]);
+    // canShowSchemes у залежностях: на reload дерево розділів під'їжджає
+    // ПІСЛЯ відновлення шляху з URL, і без цього fetch не перезапускався —
+    // список схем вічно висів на «Завантаження схем...».
+  }, [selectedModel, selectedGen, activeSearch, selectedSection, selectedSubsystem, showAllSchematics, canShowSchemes]);
 
   const loadActiveCar = () => {
     try {
