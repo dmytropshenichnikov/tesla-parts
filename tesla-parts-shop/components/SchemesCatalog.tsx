@@ -240,11 +240,18 @@ export const SchemesCatalog: React.FC = () => {
     if (only?.id) navigate(`/schemes/${only.id}`, { replace: true });
   }, [schematics, loading, selectedSubsystem, showAllSchematics, activeSearch, selectionKey, navigate]);
 
+  // Дерево розділів ще не завантажено — не знаємо, чи потрібен крок підсистеми.
+  // Поки не готові, список схем НЕ показуємо і НЕ вантажимо: інакше на reload
+  // сторінки з розділом в URL між картками підсистем на долю секунди блимає
+  // чужий блок «Вузли та схеми (0)» + «Завантаження схем...» (відео 12.10).
+  const sectionsReady = sections.length > 0;
   // Список схем показуємо, коли шлях пройдено або користувач попросив усі схеми
   const canShowSchemes =
     Boolean(selectedModel) &&
     (showAllSchematics ||
-      (Boolean(selectedSection) && (!needsSubsystemStep || Boolean(selectedSubsystem))));
+      (sectionsReady &&
+        Boolean(selectedSection) &&
+        (!needsSubsystemStep || Boolean(selectedSubsystem))));
 
   // Категорії каталогу — джерело моделей і поколінь для фільтрів.
   // Нічого не підставляємо автоматично: спершу користувач має обрати своє авто,
@@ -980,6 +987,17 @@ export const SchemesCatalog: React.FC = () => {
         </div>
       )}
 
+      {/* Розділ уже є в URL, а дерево розділів ще вантажиться (reload) —
+          тримаємо спінер замість порожнечі, щоб не було стрибка верстки
+          і не блимав чужий блок «Вузли та схеми» (відео 12.10) */}
+      {selectedModel && !activeSearch && !showAllSchematics && selectedSection &&
+        !sectionsReady && sectionsLoading && (
+        <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
+          <div className="w-9 h-9 mx-auto mb-3 rounded-full border-4 border-gray-100 border-t-tesla-red animate-spin" />
+          <p className="text-gray-400 font-manrope text-sm">Завантаження розділів…</p>
+        </div>
+      )}
+
       {/* Список вузлів: показуємо лише коли обрано авто (або є пошук за номером) */}
       {(activeSearch || canShowSchemes) && (
       <div className="space-y-4">
@@ -988,9 +1006,11 @@ export const SchemesCatalog: React.FC = () => {
             {selectedModel && !activeSearch && BackButton}
             <Layers size={18} className="text-tesla-red" />
             Вузли та схеми
-            <span className="text-xs font-normal text-gray-400 font-manrope">
-              ({schematics.length})
-            </span>
+            {(!loading || schematics.length > 0) && (
+              <span className="text-xs font-normal text-gray-400 font-manrope">
+                ({schematics.length})
+              </span>
+            )}
           </h2>
         </div>
 
