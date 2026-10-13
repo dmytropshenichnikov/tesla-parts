@@ -209,10 +209,13 @@ def list_schematics(
             query = query.where(func.lower(Schematic.generation).like("%classic%"))
         else:
             query = query.where(func.lower(Schematic.generation).like(f"%{gen_clean}%"))
+    # Порівняння через TRIM з обох боків: у БД трапляються записи із зайвими
+    # пробілами (напр. subsystem '...ОХОЛОДЖЕННЯ ' у схеми 96), а сайт шле чисте
+    # значення зі списку каталогу — exact-match давав (0) «Схем не знайдено».
     if section:
-        query = query.where(Schematic.section == section)
+        query = query.where(func.trim(Schematic.section) == section.strip())
     if subsystem:
-        query = query.where(Schematic.subsystem == subsystem)
+        query = query.where(func.trim(Schematic.subsystem) == subsystem.strip())
     if q:
         query = query.where(_search_condition(q.strip()))
 
@@ -1128,12 +1131,14 @@ def get_schematic(schematic_id: int, session: Session = Depends(get_session)):
 
 @router.post("", response_model=SchematicRead, dependencies=[Depends(get_current_admin)])
 def create_schematic(payload: SchematicCreate, session: Session = Depends(get_session)):
+    # TRIM на записі: зайвий пробіл у section/subsystem ламає точний фільтр
+    # списку схем на сайті (схема є в адмінці, а сайт дає «Схем не знайдено»).
     schematic = Schematic(
-        title=payload.title,
-        model=payload.model,
-        generation=payload.generation,
-        section=payload.section,
-        subsystem=payload.subsystem,
+        title=payload.title.strip(),
+        model=payload.model.strip(),
+        generation=(payload.generation or '').strip(),
+        section=(payload.section or '').strip(),
+        subsystem=(payload.subsystem or '').strip(),
         image_url=payload.image_url,
         sort_order=payload.sort_order
     )
@@ -1165,15 +1170,15 @@ def update_schematic(schematic_id: int, payload: SchematicUpdate, session: Sessi
         raise HTTPException(status_code=404, detail="Схему не знайдено")
     
     if payload.title is not None:
-        schematic.title = payload.title
+        schematic.title = payload.title.strip()
     if payload.model is not None:
-        schematic.model = payload.model
+        schematic.model = payload.model.strip()
     if payload.generation is not None:
-        schematic.generation = payload.generation
+        schematic.generation = (payload.generation or '').strip()
     if payload.section is not None:
-        schematic.section = payload.section
+        schematic.section = (payload.section or '').strip()
     if payload.subsystem is not None:
-        schematic.subsystem = payload.subsystem
+        schematic.subsystem = (payload.subsystem or '').strip()
     if payload.image_url is not None:
         schematic.image_url = payload.image_url
     if payload.sort_order is not None:
