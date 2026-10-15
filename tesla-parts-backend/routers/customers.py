@@ -17,7 +17,9 @@ from schemas import (
     OrderRead
 )
 from services.crypto import encrypt_value, decrypt_value, get_email_hash
-from services.email import send_verification_email, send_reset_password_email
+from services.email import send_verification_email, send_reset_password_email,
+    send_welcome_email, notify_admin_new_client as notify_admin_email
+from services.telegram import notify_admin_new_client as notify_admin_tg
 from auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from dependencies import get_current_customer, get_current_admin
 import hashlib
@@ -26,7 +28,7 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 
 @router.get("/", dependencies=[Depends(get_current_admin)])
 async def get_all_customers(session: Session = Depends(get_session)):
-    customers = session.exec(select(Customer)).all()
+    customers = session.exec(select(Customer).order_by(Customer.id.desc())).all()
     result = []
     for c in customers:
         result.append({
@@ -37,6 +39,7 @@ async def get_all_customers(session: Session = Depends(get_session)):
             "phone": decrypt_value(c.encrypted_phone) if c.encrypted_phone else None,
             "discount_type": c.discount_type,
             "discount_value": c.discount_value,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
         })
     return result
 
@@ -58,8 +61,17 @@ async def register_customer(request: CustomerRegisterRequest, session: Session =
     )
     session.add(new_customer)
     session.commit()
-    
+
     send_verification_email(request.email, verification_token)
+
+    try:
+        notify_admin_tg(request.email)
+    except Exception as e:
+        print("admin tg notify failed: %s" % e)
+    try:
+        notify_admin_email(request.email)
+    except Exception as e:
+        print("admin email notify failed: %s" % e)
     
     return {"message": "Verification email sent", "token": verification_token} # Returning token for testing purposes
 
@@ -79,8 +91,24 @@ async def verify_customer(request: CustomerVerifyRequest, session: Session = Dep
     customer.hashed_password = get_password_hash(request.password)
     customer.verification_token = None
     customer.token_expires_at = None
+    if not customer.discount_type and not customer.discount_value:
+        customer.discount_type = "percent"
+        customer.discount_value = 3
     session.add(customer)
     session.commit()
+    try:
+        c_email = decrypt_value(customer.encrypted_email) if customer.encrypted_email else None
+    except Exception:
+        c_email = None
+    try:
+        c_name = decrypt_value(customer.encrypted_first_name) if customer.encrypted_first_name else None
+    except Exception:
+        c_name = None
+    if c_email:
+        try:
+            send_welcome_email(c_email, c_name)
+        except Exception as e:
+            print("welcome email failed: %s" % e)
     return {"message": "Account verified successfully"}
 
 @router.post("/login")

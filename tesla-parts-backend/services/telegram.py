@@ -8,6 +8,38 @@ def _get_setting_value(session: Session, key: str) -> str | None:
     setting = session.get(Settings, key)
     return setting.value if setting else None
 
+def send_plain_message(text: str) -> bool:
+    """Надіслати довільний текст у чат власника. True якщо відправлено."""
+    try:
+        with Session(engine) as session:
+            bot_token = _get_setting_value(session, "telegram_bot_token")
+            chat_id = _get_setting_value(session, "telegram_chat_id")
+        if not bot_token or not chat_id or "YOUR_" in bot_token:
+            print("Telegram credentials not set, skipping message")
+            return False
+        url = "https://api.telegram.org/bot%s/sendMessage" % bot_token
+        requests.post(
+            url,
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=15,
+        )
+        return True
+    except Exception as e:
+        print("Failed to send telegram message: %s" % e)
+        return False
+
+
+def notify_admin_new_client(client_email: str) -> None:
+    """Сповіщення власнику в Telegram про нового зареєстрованого клієнта."""
+    try:
+        send_plain_message(
+            "<b>Новий клієнт зареєструвався</b>
+%s" % client_email
+        )
+    except Exception as e:
+        print("admin tg notify failed: %s" % e)
+
+
 def send_telegram_notification(order: Order):
     with Session(engine) as session:
         bot_token = _get_setting_value(session, "telegram_bot_token")

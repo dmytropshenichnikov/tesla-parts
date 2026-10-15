@@ -137,6 +137,72 @@ def send_reset_password_email(to_email: str, token: str):
         print(f"Link: {reset_link}")
         print(f"-------------------------------")
 
+def _get_admin_email():
+    # Головна пошта адміна з CRM (налаштування admin_email), запасний
+    # варіант — публічний contact_email.
+    for key in ("admin_email", "contact_email"):
+        try:
+            with Session(engine) as session:
+                setting = session.exec(select(Settings).where(Settings.key == key)).first()
+                if setting and setting.value and setting.value.strip():
+                    return setting.value.strip()
+        except Exception as e:
+            print("Failed to fetch admin email: %s" % e)
+    return None
+
+
+def send_welcome_email(to_email, first_name=None):
+    """Лист-привітання новому клієнту: дякуємо за реєстрацію, даруємо 3%,
+    даємо посилання на сайт. Викликається після verify."""
+    name = (first_name or "").strip()
+    hello = (" " + name) if name else ""
+    site = FRONTEND_URL.split(",")[0].strip()
+    subject = "Вітаємо в Tesla Parts Center — ваша знижка 3%"
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print("--- EMAIL DISPATCH FALLBACK ---")
+        print("To: %s" % to_email)
+        print("Subject: %s" % subject)
+        print("Site: %s" % site)
+        print("-------------------------------")
+        return
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = get_from_header()
+    msg["To"] = to_email
+    html = (
+        "<html><body style=\"font-family: Arial, sans-serif;\">"
+        + get_email_header()
+        + "<h2>Дякуємо за реєстрацію%s!</h2>" % hello
+        + "<p>Вам автоматично нараховано знижку <b>3%</b> на всі запчастини.</p>"
+        + "<p>Обирайте деталі для вашого Tesla:</p>"
+        + '<a href="%s" style=\"display:inline-block;padding:12px 24px;background-color:#E31937;color:#ffffff;text-decoration:none;border-radius:5px;\">Перейти на сайт</a>' % site
+        + get_email_footer()
+        + "</body></html>"
+    )
+    msg.attach(MIMEText(html, "html"))
+    try:
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        server.quit()
+    except Exception as e:
+        print("Failed to send welcome email to %s: %s" % (to_email, e))
+
+
+def notify_admin_new_client(client_email):
+    """Сповіщення власнику про нового зареєстрованого клієнта."""
+    admin_email = _get_admin_email()
+    if not admin_email:
+        print("No admin contact_email, skipping new-client email notify")
+        return
+    send_custom_email(
+        admin_email,
+        "Новий клієнт зареєструвався",
+        "На сайті зареєструвався новий клієнт: <b>%s</b>" % client_email,
+    )
+
+
 def send_custom_email(to_email: str, subject: str, body: str):
     if not SMTP_EMAIL or not SMTP_PASSWORD:
         print(f"--- EMAIL DISPATCH FALLBACK ---")
@@ -151,11 +217,14 @@ def send_custom_email(to_email: str, subject: str, body: str):
     msg["From"] = get_from_header()
     msg["To"] = to_email
     
+    # Текст з адмінки йде голим (з textarea): переноси рядків стають <br>,
+    # інакше лист злипається в один абзац. HTML-теги з тулбару працюють як є.
+    html_body = body.replace("\n", "<br>")
     full_body = f"""
     <html>
       <body style="font-family: Arial, sans-serif;">
         {get_email_header()}
-        {body}
+        {html_body}
         {get_email_footer()}
       </body>
     </html>

@@ -14,6 +14,7 @@ export const SettingsPage: React.FC = () => {
   const [chatId, setChatId] = useState('');
   const [savingTelegramSettings, setSavingTelegramSettings] = useState(false);
   const [contactEmail, setContactEmail] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [footerDescription, setFooterDescription] = useState('');
   const [footerText, setFooterText] = useState('');
@@ -57,14 +58,16 @@ export const SettingsPage: React.FC = () => {
         return '';
       }
     };
-    const [emailValue, phoneValue, footerDescValue, footerTextValue] =
+    const [emailValue, adminValue, phoneValue, footerDescValue, footerTextValue] =
       await Promise.all([
         fetchValue('contact_email'),
+        fetchValue('admin_email'),
         fetchValue('contact_phone'),
         fetchValue('footer_description'),
         fetchValue('footer_text'),
       ]);
     setContactEmail(emailValue);
+    setAdminEmail(adminValue);
     setContactPhone(phoneValue);
     setFooterDescription(footerDescValue);
     setFooterText(footerTextValue);
@@ -119,6 +122,7 @@ export const SettingsPage: React.FC = () => {
     try {
       await Promise.all([
         ApiService.updateSetting('contact_email', contactEmail),
+        ApiService.updateSetting('admin_email', adminEmail),
         ApiService.updateSetting('contact_phone', contactPhone),
         ApiService.updateSetting('footer_description', footerDescription),
         ApiService.updateSetting('footer_text', footerText),
@@ -265,6 +269,22 @@ export const SettingsPage: React.FC = () => {
                 placeholder="+38 (099) 123-45-67"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Головна пошта адміна
+            </label>
+            <input
+              type="email"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="admin@teslaparts.ua"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Сюди приходять сповіщення про нових зареєстрованих клієнтів.
+            </p>
           </div>
 
           <div>

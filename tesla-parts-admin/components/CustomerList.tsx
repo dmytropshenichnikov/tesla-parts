@@ -18,7 +18,8 @@ export const CustomerList: React.FC = () => {
   const fetchCustomers = async () => {
     try {
       const data = await ApiService.getCustomers();
-      setCustomers(data);
+      const sorted = [...data].sort((a: any, b: any) => (b.id || 0) - (a.id || 0));
+      setCustomers(sorted);
     } catch (e) {
       console.error(e);
     } finally {
@@ -59,6 +60,7 @@ export const CustomerList: React.FC = () => {
               <th className="px-6 py-4">Email</th>
               <th className="px-6 py-4">Ім'я / Прізвище</th>
               <th className="px-6 py-4">Телефон</th>
+              <th className="px-6 py-4">Зареєстрований</th>
               <th className="px-6 py-4">Знижка</th>
               <th className="px-6 py-4 text-right">Дії</th>
             </tr>
@@ -75,6 +77,15 @@ export const CustomerList: React.FC = () => {
                   {c.first_name} {c.last_name}
                 </td>
                 <td className="px-6 py-4">{c.phone}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {c.created_at ? new Date(c.created_at).toLocaleDateString('uk-UA') : '—'}
+                  {c.created_at &&
+                    Date.now() - new Date(c.created_at).getTime() < 7 * 24 * 3600 * 1000 && (
+                      <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold">
+                        НОВИЙ
+                      </span>
+                    )}
+                </td>
                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   {editingId === c.id ? (
                     <div className="flex gap-2">

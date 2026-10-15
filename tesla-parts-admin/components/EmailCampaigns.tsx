@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ApiService } from '../services/api';
-import { Mail, Plus, Trash2, Send, X, Users, Search, AlertCircle, Pencil } from 'lucide-react';
+import { Mail, Plus, Trash2, Send, X, Users, Search, AlertCircle, Pencil, Bold, Italic, Underline, Link2, Eye } from 'lucide-react';
 
 export const EmailCampaigns: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'lists' | 'direct'>('lists');
@@ -22,6 +22,77 @@ export const EmailCampaigns: React.FC = () => {
   const [activeListId, setActiveListId] = useState<number | null>(null);
   const [campaignSubject, setCampaignSubject] = useState('');
   const [campaignBody, setCampaignBody] = useState('');
+
+  // Міні-редактор листа: кнопки обгортають виділення HTML-тегами
+  // (лист відправляється як HTML, переноси рядків стають <br> на бекенді).
+  const bodyRefs = React.useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const wrapSel = (
+    key: string,
+    value: string,
+    setValue: (v: string) => void,
+    before: string,
+    after: string,
+    placeholder = 'текст'
+  ) => {
+    const ta = bodyRefs.current[key];
+    if (!ta) {
+      setValue(value + before + placeholder + after);
+      return;
+    }
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const sel = value.slice(start, end) || placeholder;
+    setValue(value.slice(0, start) + before + sel + after + value.slice(end));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + before.length + sel.length + after.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+  const insertLink = (key: string, value: string, setValue: (v: string) => void) => {
+    const url = window.prompt('URL посилання (https://…)');
+    if (!url) return;
+    wrapSel(key, value, setValue, '<a href="' + url + '">', '</a>', 'посилання');
+  };
+  const MailToolbar: React.FC<{
+    areaKey: string;
+    value: string;
+    setValue: (v: string) => void;
+  }> = ({ areaKey, value, setValue }) => {
+    const btn =
+      'p-1.5 rounded-md border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-300 transition cursor-pointer';
+    return (
+      <div className="flex items-center gap-1 mb-1.5">
+        <button type="button" title="Жирний" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<b>', '</b>')}>
+          <Bold className="w-4 h-4" />
+        </button>
+        <button type="button" title="Курсив" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<i>', '</i>')}>
+          <Italic className="w-4 h-4" />
+        </button>
+        <button type="button" title="Підкреслений" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<u>', '</u>')}>
+          <Underline className="w-4 h-4" />
+        </button>
+        <button type="button" title="Посилання" className={btn} onClick={() => insertLink(areaKey, value, setValue)}>
+          <Link2 className="w-4 h-4" />
+        </button>
+        <span className="ml-1 text-[11px] text-gray-400 inline-flex items-center gap-1">
+          <Eye className="w-3.5 h-3.5" /> виділіть текст і натисніть кнопку
+        </span>
+      </div>
+    );
+  };
+  const MailPreview: React.FC<{ body: string }> = ({ body }) => {
+    if (!body.trim()) return null;
+    return (
+      <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="text-[11px] font-semibold text-gray-400 uppercase mb-1">Як побачить клієнт</div>
+        <div
+          className="text-sm text-gray-800 font-manrope"
+          dangerouslySetInnerHTML={{ __html: body.replace(/\n/g, '<br>') }}
+        />
+      </div>
+    );
+  };
 
   // Direct Mail State
   const [directSubject, setDirectSubject] = useState('');
@@ -299,13 +370,16 @@ export const EmailCampaigns: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Тіло листа (підтримується HTML)</label>
+                <MailToolbar areaKey="direct" value={directBody} setValue={setDirectBody} />
                 <textarea
+                  ref={el => { bodyRefs.current['direct'] = el; }}
                   value={directBody}
                   onChange={e => setDirectBody(e.target.value)}
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Текст листа..."
                 />
+                <MailPreview body={directBody} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Додаткові email-адреси (через кому або з нового рядка)</label>
@@ -474,13 +548,16 @@ export const EmailCampaigns: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Тіло листа (підтримується HTML)</label>
+                <MailToolbar areaKey="campaign" value={campaignBody} setValue={setCampaignBody} />
                 <textarea
+                  ref={el => { bodyRefs.current['campaign'] = el; }}
                   value={campaignBody}
                   onChange={e => setCampaignBody(e.target.value)}
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
                   placeholder="Текст листа..."
                 />
+                <MailPreview body={campaignBody} />
               </div>
             </div>
 
