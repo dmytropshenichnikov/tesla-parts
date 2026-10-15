@@ -69,7 +69,7 @@ def send_verification_email(to_email: str, token: str):
     <html>
       <body style="font-family: Arial, sans-serif;">
         {get_email_header()}
-        <h2>Вітаємо в Tesla Parts Shop!</h2>
+        <h2>Вітаємо в Tesla Parts Center!</h2>
         <p>Будь ласка, натисніть кнопку нижче, щоб підтвердити свою електронну пошту та встановити пароль:</p>
         <a href="{verification_link}" style="display:inline-block;padding:10px 20px;background-color:#E31937;color:#ffffff;text-decoration:none;border-radius:5px;">Підтвердити пошту</a>
         {get_email_footer()}
