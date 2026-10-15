@@ -438,6 +438,13 @@ def get_schematic_sections(
     # Раніше картинка шукалась по всьому каталогу за назвою, тому чужа категорія
     # «віддавала» своє фото (Highland показував кузов від Model 3 тощо).
     images_by_name: dict = {}
+    # Рівнева відповідність картинок (баг 15.10: батько 56 і дитина 163
+    # називаються ОДНАКОВО «ВНУТРІШНЄ ОЗДОБЛЕННЯ», а картинки різні: у батька —
+    # рендер кузова, у дитини — креслення стійок. setdefault за самою назвою
+    # брав першу-ліпшу, і картка РОЗДІЛУ показувала креслення дитини).
+    # Тому розділ бере фото лише з верхнього рівня, підсистема — лише з дітей.
+    section_images: dict = {}
+    subsystem_images: dict = {}
     catalog_order: dict = {}
     if model and model != "all" and model != "Всі моделі":
         clean = model.strip()
@@ -446,9 +453,15 @@ def get_schematic_sections(
             category_subs = session.exec(
                 select(Subcategory).where(Subcategory.category_id == category.id)
             ).all()
-            for sub in category_subs:
-                if sub.image:
-                    images_by_name.setdefault(sub.name.strip().lower(), sub.image)
+            for sub in sorted(category_subs, key=lambda r: r.id):
+                if not sub.image:
+                    continue
+                key = sub.name.strip().lower()
+                images_by_name.setdefault(key, sub.image)
+                if sub.parent_id is None:
+                    section_images.setdefault(key, sub.image)
+                else:
+                    subsystem_images.setdefault(key, sub.image)
             rows = session.exec(
                 select(Subcategory)
                 .where(Subcategory.category_id == category.id)
@@ -468,13 +481,15 @@ def get_schematic_sections(
             "section": bucket["section"],
             # Спочатку фото підкатегорії каталогу, інакше — фото схеми
             # (див. fallback вище): картка не лишається порожньою.
-            "image": images_by_name.get(bucket["section"].strip().lower()) or bucket.get("image"),
+            # Розділ — фото верхнього рівня; якщо його нема — будь-яке фото
+            # каталогу з такою назвою; в останню чергу — фото схеми.
+            "image": section_images.get(bucket["section"].strip().lower()) or images_by_name.get(bucket["section"].strip().lower()) or bucket.get("image"),
             "count": bucket["count"],
             "subsystems": [
                 {
                     "subsystem": name,
                     "count": info["count"],
-                    "image": images_by_name.get(name.strip().lower()) or info.get("image"),
+                    "image": subsystem_images.get(name.strip().lower()) or images_by_name.get(name.strip().lower()) or info.get("image"),
                 }
                 for name, info in sorted(bucket["subsystems"].items())
             ],

@@ -268,6 +268,17 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
   // Collapsed / Expanded state for variants (map of hotspot.id -> boolean)
   const [expandedVariants, setExpandedVariants] = useState<Record<number, boolean>>({});
+  // Групи, в яких є хоча б одна розкрита точка: вони лишаються обраними
+  // (червоне обведення) разом, а не по одній.
+  const selectedGroupKeys = useMemo(() => {
+    const set = new Set<string>();
+    hotspotGroups.forEach((group) => {
+      if (group.hotspots.some((h) => expandedVariants[h.id])) set.add(group.key);
+    });
+    return set;
+  }, [hotspotGroups, expandedVariants]);
+  const isGroupSelected = (groupKey: string) =>
+    selectedGroupKeys.has(groupKey) || activeGroupKey === groupKey;
 
   // Added to cart feedback message
   const [addedToast, setAddedToast] = useState<string | null>(null);
@@ -358,11 +369,13 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
     const willExpand = !expandedVariants[hotspot.id];
     setExpandedVariants(prev => ({ ...prev, [hotspot.id]: !prev[hotspot.id] }));
     // Розкриваємо — позначаємо деталь; згортаємо — позначку знімаємо
-    setActiveHotspotId(willExpand ? hotspot.id : null);
+    setActiveHotspotId((prev) => (willExpand ? hotspot.id : prev === hotspot.id ? null : prev));
 
     // Прокручуємо до картки лише коли розкриваємо
-    if (willExpand) {
-      const cardEl = partRefs.current[hotspot.id];
+    if (willExpand && !expanded) {
+      const gk = groupKeyByHotspotId[hotspot.id];
+      const lead = hotspotGroups.find((g) => g.key === gk)?.lead;
+      const cardEl = partRefs.current[(lead ?? hotspot).id];
       if (cardEl) {
         cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -811,7 +824,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             {/* Red Hotspot Pins */}
             {schematic.hotspots.map((h) => {
               const groupKey = groupKeyByHotspotId[h.id];
-              const isActive = activeGroupKey === groupKey;
+              const isActive = isGroupSelected(groupKey);
               const isHovered = hoveredGroupKey === groupKey;
               return (
                 <button
@@ -890,7 +903,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           <div className="space-y-3">
             {hotspotGroups.map((group) => {
               const h = group.lead;
-              const isActive = activeGroupKey === group.key;
+              const isActive = isGroupSelected(group.key);
               const isHovered = hoveredGroupKey === group.key;
               const isExpanded = expandedVariants[h.id] ?? false;
               const variants = group.variants;
