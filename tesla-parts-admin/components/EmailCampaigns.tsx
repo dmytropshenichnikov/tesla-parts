@@ -61,22 +61,23 @@ export const EmailCampaigns: React.FC = () => {
   }> = ({ areaKey, value, setValue }) => {
     const btn =
       'p-1.5 rounded-md border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-300 transition cursor-pointer';
+    const keepSel = (e: React.MouseEvent) => e.preventDefault();
     return (
       <div className="flex items-center gap-1 mb-1.5">
-        <button type="button" title="Жирний" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<b>', '</b>')}>
+        <button type="button" title="Жирний" className={btn} onMouseDown={keepSel} onClick={() => wrapSel(areaKey, value, setValue, '<b>', '</b>')}>
           <Bold className="w-4 h-4" />
         </button>
-        <button type="button" title="Курсив" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<i>', '</i>')}>
+        <button type="button" title="Курсив" className={btn} onMouseDown={keepSel} onClick={() => wrapSel(areaKey, value, setValue, '<i>', '</i>')}>
           <Italic className="w-4 h-4" />
         </button>
-        <button type="button" title="Підкреслений" className={btn} onClick={() => wrapSel(areaKey, value, setValue, '<u>', '</u>')}>
+        <button type="button" title="Підкреслений" className={btn} onMouseDown={keepSel} onClick={() => wrapSel(areaKey, value, setValue, '<u>', '</u>')}>
           <Underline className="w-4 h-4" />
         </button>
-        <button type="button" title="Посилання" className={btn} onClick={() => insertLink(areaKey, value, setValue)}>
+        <button type="button" title="Посилання" className={btn} onMouseDown={keepSel} onClick={() => insertLink(areaKey, value, setValue)}>
           <Link2 className="w-4 h-4" />
         </button>
         <span className="ml-1 text-[11px] text-gray-400 inline-flex items-center gap-1">
-          <Eye className="w-3.5 h-3.5" /> виділіть текст і натисніть кнопку
+          <Eye className="w-3.5 h-3.5" /> виділіть слово, тисніть B / I / U, для посилання введіть адресу
         </span>
       </div>
     );
