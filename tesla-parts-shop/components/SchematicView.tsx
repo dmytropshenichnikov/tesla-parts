@@ -83,6 +83,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const frameRef = useRef<HTMLDivElement | null>(null);
+  const [toolbarHidden, setToolbarHidden] = useState(false);
 
   /**
    * Полноекранний режим схеми з РЕАЛІЗАЦІЄЮ через CSS (fixed-оверлей), а не через
@@ -730,6 +731,17 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             {/* Тулбар масштабу — як в оригінальному каталозі Tesla.
                 stopPropagation важливий: інакше два швидкі кліки по «+» летять
                 у полотно як dblclick і скидають масштаб на 100 %. */}
+            {toolbarHidden ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setToolbarHidden(false); }}
+                title="Показати панель масштабу"
+                onDoubleClick={(e) => e.stopPropagation()}
+                className="absolute left-2 top-2 z-30 w-8 h-8 flex items-center justify-center rounded-xl bg-white/95 backdrop-blur border border-gray-200 shadow-md text-gray-500 hover:text-tesla-red transition-colors cursor-pointer"
+              >
+                <ZoomIn size={15} />
+              </button>
+            ) : (
             <div
               className="absolute left-2 top-2 z-30 flex flex-col items-center gap-0.5 rounded-2xl bg-white/95 backdrop-blur border border-gray-200 shadow-md p-1"
               onDoubleClick={(e) => e.stopPropagation()}
@@ -776,7 +788,16 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
               >
                 {Math.round(zoom * 100)}%
               </span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setToolbarHidden(true); }}
+                title="Сховати панель масштабу"
+                className="w-8 h-6 flex items-center justify-center rounded-xl text-gray-400 hover:bg-red-50 hover:text-tesla-red transition-colors cursor-pointer"
+              >
+                <ChevronUp size={14} />
+              </button>
             </div>
+            )}
 
             {/* На весь екран. Раніше тут був Fullscreen API, який на мобільних
                 Safari/iOS не підтримується — кнопка мовчки не працювала. Тепер це
