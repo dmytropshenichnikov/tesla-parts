@@ -929,3 +929,5 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
   ліпити HTML-теги вручну. Прохання: bold/italic форматування прямо в полі
   (міні-WYSIWYG).
 
+
+- Лист верифікації: Вітаємо в Tesla Parts Center (було Shop, залишок Максима). Коміт b099c94.
