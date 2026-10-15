@@ -17,8 +17,8 @@ from schemas import (
     OrderRead
 )
 from services.crypto import encrypt_value, decrypt_value, get_email_hash
-from services.email import send_verification_email, send_reset_password_email,
-    send_welcome_email, notify_admin_new_client as notify_admin_email
+from services.email import (send_verification_email, send_reset_password_email,
+    send_welcome_email, notify_admin_new_client as notify_admin_email)
 from services.telegram import notify_admin_new_client as notify_admin_tg
 from auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from dependencies import get_current_customer, get_current_admin

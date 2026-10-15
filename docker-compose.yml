@@ -37,6 +37,7 @@ services:
     volumes:
       - ./tesla-parts-backend/static/images:/app/static/images:z
     environment:
+      - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://tesla:teslapass@db:5432/tesladb
       - FRONTEND_URL=https://teslapartscenter.com.ua,https://admin.teslapartscenter.com.ua # Краще змінити на https
       - WEBSITE_URL=https://teslapartscenter.com.ua

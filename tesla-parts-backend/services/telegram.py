@@ -33,8 +33,7 @@ def notify_admin_new_client(client_email: str) -> None:
     """Сповіщення власнику в Telegram про нового зареєстрованого клієнта."""
     try:
         send_plain_message(
-            "<b>Новий клієнт зареєструвався</b>
-%s" % client_email
+            "<b>Новий клієнт зареєструвався</b> | %s" % client_email
         )
     except Exception as e:
         print("admin tg notify failed: %s" % e)
