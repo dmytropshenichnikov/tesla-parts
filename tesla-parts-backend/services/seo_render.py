@@ -154,6 +154,10 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         + _links((f"/category/{slug}/sub/{c.id}", c.name) for c in children)
         + _links((f"/product/{p.id}", p.name) for p in products)
     )
+    if sub_id is None and category.seo_text:
+        # як у магазині: абзаци через порожній рядок
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", category.seo_text) if p.strip()]
+        body += "".join(f"<p>{_e(p)}</p>" for p in paragraphs)
     return PageSeo(
         title=_first(category.meta_title, f"{heading} | {SITE_NAME}"),
         description=_first(category.meta_description, description),

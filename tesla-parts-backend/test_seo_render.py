@@ -306,3 +306,13 @@ def test_sitemap_has_schemes_and_shop_slugs(session, client, monkeypatch):
     assert "<loc>https://teslapartscenter.com.ua/category/model-y-juniper</loc>" in xml
     assert "/category/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8</loc>" in xml
     assert "<loc>https://teslapartscenter.com.ua/category/model-3/sub/371</loc>" in xml
+
+
+def test_category_seo_text_paragraphs_only_on_category(session):
+    category = session.get(Category, 2)
+    category.seo_text = "Перший абзац.\n\nДругий <абзац>."
+    session.add(category)
+    session.commit()
+    body = _root(session, "/category/model-3")
+    assert "<p>Перший абзац.</p><p>Другий &lt;абзац&gt;.</p>" in body
+    assert "Перший абзац" not in _root(session, "/category/model-3/sub/371")
