@@ -1,3 +1,6 @@
+import json
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -141,3 +144,34 @@ def test_prerender_falls_back_when_shop_unavailable(client, monkeypatch):
 
     monkeypatch.setattr(seo_render, "load_index_html", broken)
     assert client.get("/prerender/").status_code == 502
+
+
+def _json_ld(page):
+    blocks = re.findall(r'<script data-rh="true" type="application/ld\+json">(.*?)</script>', page, re.S)
+    return [json.loads(b) for b in blocks]
+
+
+def test_product_json_ld(session):
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
+    [data] = _json_ld(page)
+    assert data["@type"] == "Product"
+    assert data["name"] == 'Важіль "передній" лівий'
+    assert data["offers"]["price"] == 1250.0
+    assert data["offers"]["priceCurrency"] == "UAH"
+    assert data["offers"]["availability"] == "https://schema.org/InStock"
+    assert data["offers"]["url"] == "https://teslapartscenter.com.ua/product/prod-1"
+
+
+def test_json_ld_cannot_close_script_tag(session):
+    product = session.get(Product, "prod-1")
+    product.description = "</script><script>alert(1)</script>"
+    session.add(product)
+    session.commit()
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
+    assert "</script><script>alert(1)" not in page
+    assert _json_ld(page)[0]["description"] == "</script><script>alert(1)</script>"
+
+
+def test_json_ld_only_on_products(session):
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/category/model-3"))
+    assert _json_ld(page) == []

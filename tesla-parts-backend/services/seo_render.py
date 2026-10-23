@@ -4,10 +4,12 @@
 те саме, що React потім ставить у браузері.
 """
 import html
+import json
 import os
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Optional
 
 import requests
@@ -19,6 +21,9 @@ SITE_URL = "https://teslapartscenter.com.ua"
 SITE_NAME = "Tesla Parts Center"
 DEFAULT_TITLE = SITE_NAME
 DEFAULT_DESCRIPTION = "Tesla Parts Center пропонує запчастини та аксесуари для вашого електромобіля."
+
+# як у SeoHead магазину
+ITEM_CONDITION = "https://schema.org/UsedCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 60
@@ -39,6 +44,7 @@ class PageSeo:
     canonical: str = SITE_URL + "/"
     image: Optional[str] = None
     og_type: str = "website"
+    json_ld: list = field(default_factory=list)
 
 
 def slugify(value: str) -> str:
@@ -116,7 +122,30 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
         canonical=f"{SITE_URL}/product/{product.id}",
         image=product.image,
         og_type="product",
+        json_ld=[_product_json_ld(product)],
     )
+
+
+def _product_json_ld(product: Product) -> dict:
+    url = f"{SITE_URL}/product/{product.id}"
+    return {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": _first(product.meta_title, product.name),
+        "image": [product.image] if product.image else [],
+        "description": _first(product.meta_description, product.description, product.name),
+        "sku": product.detail_number or product.id,
+        "brand": {"@type": "Brand", "name": "Tesla"},
+        "offers": {
+            "@type": "Offer",
+            "url": url,
+            "priceCurrency": "UAH",
+            "price": round(product.priceUAH, 2),
+            "priceValidUntil": (date.today() + timedelta(days=365)).isoformat(),
+            "availability": "https://schema.org/InStock" if product.inStock else "https://schema.org/OutOfStock",
+            "itemCondition": ITEM_CONDITION,
+        },
+    }
 
 
 def _info(session: Session, slug: str) -> Optional[PageSeo]:
@@ -210,6 +239,9 @@ def _head_tags(seo: PageSeo) -> str:
     ]
     if seo.image:
         tags.append(f'<meta data-rh="true" property="og:image" content="{esc(seo.image)}" />')
+    for data in seo.json_ld:
+        payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+        tags.append(f'<script data-rh="true" type="application/ld+json">{payload}</script>')
     return "\n    ".join(tags)
 
 
