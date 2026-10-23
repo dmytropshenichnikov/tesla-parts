@@ -1,5 +1,7 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import Session
 
 from database import get_session
@@ -15,5 +17,14 @@ def prerender_page(path: str, session: Session = Depends(get_session)):
     except Exception:
         # 502 -> шлюз віддасть звичайний index.html магазину
         raise HTTPException(status_code=502, detail="shop index unavailable")
-    seo = seo_render.resolve(session, path) or seo_render.PageSeo()
-    return HTMLResponse(seo_render.render(index_html, seo))
+
+    seo = seo_render.resolve(session, path)
+    if seo:
+        return HTMLResponse(seo_render.render(index_html, seo))
+
+    target = seo_render.legacy_redirect(session, path)
+    if target:
+        return RedirectResponse(quote(target), status_code=301)
+
+    # сторінки немає: React покаже свій екран, Google отримає 404
+    return HTMLResponse(seo_render.render(index_html, seo_render.PageSeo(canonical="")), status_code=404)

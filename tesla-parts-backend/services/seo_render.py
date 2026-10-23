@@ -297,6 +297,37 @@ def _schematic_body(session: Session, schematic: Schematic) -> str:
     return heading + (f"<ul>{''.join(items)}</ul>" if items else "")
 
 
+# маршрути магазину без власних SEO-даних — віддаємо як є, з кодом 200
+SPA_ROUTES = {
+    "/search",
+    "/garage",
+    "/checkout",
+    "/success",
+    "/login",
+    "/register",
+    "/verify",
+    "/profile",
+    "/forgot-password",
+    "/reset-password",
+}
+
+
+def _schemes_catalog() -> PageSeo:
+    return PageSeo(
+        title=f"Схеми запчастин Tesla | {SITE_NAME}",
+        description="Каталог схем запчастин Tesla Model 3, Model Y, Model S і Model X з номерами деталей.",
+        canonical=f"{SITE_URL}/schemes",
+    )
+
+
+def legacy_redirect(session: Session, path: str) -> Optional[str]:
+    """Старі адреси /model-3, /аксесуари тощо -> /category/<slug>."""
+    match = re.fullmatch(r"/([^/]+)", "/" + path.strip("/"))
+    if match and _category_by_slug(session, match.group(1)):
+        return f"/category/{match.group(1)}"
+    return None
+
+
 def resolve(session: Session, path: str) -> Optional[PageSeo]:
     """SEO сторінки за шляхом без query; None — якщо сторінки не існує."""
     path = "/" + path.strip("/")
@@ -304,6 +335,10 @@ def resolve(session: Session, path: str) -> Optional[PageSeo]:
         return _home(session)
     if path == "/reviews":
         return _reviews()
+    if path == "/schemes":
+        return _schemes_catalog()
+    if path in SPA_ROUTES:
+        return PageSeo(canonical=SITE_URL + path)
     match = re.fullmatch(r"/category/([^/]+)(?:/sub/(\d+))?", path)
     if match:
         return _category(session, match.group(1), int(match.group(2)) if match.group(2) else None)
@@ -336,17 +371,17 @@ _OG_TAG = re.compile(r'\s*<meta\s+property="og:(title|description|image|type|url
 
 def _head_tags(seo: PageSeo) -> str:
     # data-rh: react-helmet-async замінить ці теги своїми, без дублів
-    esc = lambda value: html.escape(value, quote=True)  # noqa: E731
     tags = [
-        f'<meta data-rh="true" name="description" content="{esc(seo.description)}" />',
-        f'<link data-rh="true" rel="canonical" href="{esc(seo.canonical)}" />',
-        f'<meta data-rh="true" property="og:title" content="{esc(seo.title)}" />',
-        f'<meta data-rh="true" property="og:description" content="{esc(seo.description)}" />',
+        f'<meta data-rh="true" name="description" content="{_e(seo.description)}" />',
+        f'<meta data-rh="true" property="og:title" content="{_e(seo.title)}" />',
+        f'<meta data-rh="true" property="og:description" content="{_e(seo.description)}" />',
         f'<meta data-rh="true" property="og:type" content="{seo.og_type}" />',
-        f'<meta data-rh="true" property="og:url" content="{esc(seo.canonical)}" />',
     ]
+    if seo.canonical:
+        tags.append(f'<link data-rh="true" rel="canonical" href="{_e(seo.canonical)}" />')
+        tags.append(f'<meta data-rh="true" property="og:url" content="{_e(seo.canonical)}" />')
     if seo.image:
-        tags.append(f'<meta data-rh="true" property="og:image" content="{esc(seo.image)}" />')
+        tags.append(f'<meta data-rh="true" property="og:image" content="{_e(seo.image)}" />')
     for data in seo.json_ld:
         payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
         tags.append(f'<script data-rh="true" type="application/ld+json">{payload}</script>')

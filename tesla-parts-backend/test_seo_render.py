@@ -247,3 +247,42 @@ def test_schematic_and_home_body(session):
 
 def test_body_is_escaped(session):
     assert "<h1>Важіль &quot;передній&quot; лівий</h1>" in _root(session, "/product/prod-1")
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/prerender/product/deleted", "/prerender/category/model-3/sub/999", "/prerender/schemes/1", "/prerender/no-such-page/x"],
+)
+def test_missing_pages_return_404_without_canonical(client, path):
+    response = client.get(path)
+    assert response.status_code == 404
+    assert 'rel="canonical"' not in response.text
+    assert '<div id="root">' in response.text
+
+
+def test_legacy_category_urls_redirect(client):
+    response = client.get("/prerender/model-3", follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "/category/model-3"
+
+    response = client.get("/prerender/model-y-juniper", follow_redirects=False)
+    assert response.headers["location"] == "/category/model-y-juniper"
+
+
+def test_legacy_redirect_encodes_cyrillic(session, client):
+    session.add(Category(id=11, name="Аксесуари"))
+    session.commit()
+    response = client.get("/prerender/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8", follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "/category/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8"
+
+
+@pytest.mark.parametrize("path", ["/prerender/search?q=bolt", "/prerender/checkout", "/prerender/profile"])
+def test_spa_routes_stay_200(client, path):
+    assert client.get(path).status_code == 200
+
+
+def test_schemes_catalog_canonical_drops_filters(client):
+    response = client.get("/prerender/schemes?model=Model%20Y&generation=x")
+    assert response.status_code == 200
+    assert 'rel="canonical" href="https://teslapartscenter.com.ua/schemes"' in response.text
