@@ -1263,6 +1263,14 @@ const CategoryView: React.FC<CategoryViewProps> = ({
             В цій категорії поки немає товарів чи підкатегорій.
           </p>
         )}
+
+      {!loading && !selectedSubcategory && category.seo_text && (
+        <section className="mt-12 max-w-3xl space-y-3 text-gray-600 leading-relaxed">
+          {category.seo_text.split(/\n\s*\n/).map((paragraph, i) => (
+            <p key={i}>{paragraph.trim()}</p>
+          ))}
+        </section>
+      )}
     </div>
   );
 };

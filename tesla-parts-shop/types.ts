@@ -21,6 +21,7 @@ export interface Category {
   sort_order?: number;
   meta_title?: string | null;
   meta_description?: string | null;
+  seo_text?: string | null;
   subcategories?: Subcategory[];
 }
 
