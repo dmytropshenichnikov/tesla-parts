@@ -13,9 +13,18 @@ from datetime import date, timedelta
 from typing import Optional
 
 import requests
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
-from models import Category, Page, Product, Schematic, StaticPageSEO, Subcategory
+from models import (
+    Category,
+    Page,
+    Product,
+    ProductSubcategoryLink,
+    Schematic,
+    SchematicHotspot,
+    StaticPageSEO,
+    Subcategory,
+)
 
 SITE_URL = "https://teslapartscenter.com.ua"
 SITE_NAME = "Tesla Parts Center"
@@ -27,6 +36,7 @@ ITEM_CONDITION = "https://schema.org/UsedCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 60
+MAX_LINKS = 300
 
 STATIC_TITLES = {
     "about": "Про нас",
@@ -45,6 +55,7 @@ class PageSeo:
     image: Optional[str] = None
     og_type: str = "website"
     json_ld: list = field(default_factory=list)
+    body: str = ""
 
 
 def slugify(value: str) -> str:
@@ -57,6 +68,15 @@ def _first(*values: Optional[str]) -> Optional[str]:
         if value and value.strip():
             return value.strip()
     return None
+
+
+def _e(value) -> str:
+    return html.escape(str(value or ""), quote=True)
+
+
+def _links(items) -> str:
+    rows = [f'<li><a href="{_e(href)}">{_e(text)}</a></li>' for href, text in list(items)[:MAX_LINKS]]
+    return f"<ul>{''.join(rows)}</ul>" if rows else ""
 
 
 def _static_seo(session: Session, slug: str) -> Optional[StaticPageSEO]:
@@ -79,6 +99,10 @@ def _home(session: Session) -> PageSeo:
             "Популярні запчастини Tesla з гарантією якості та швидкою доставкою по Україні.",
         ),
         canonical=SITE_URL + "/",
+        body=_links(
+            (f"/category/{slugify(c.name)}", c.name)
+            for c in session.exec(select(Category).order_by(Category.sort_order.desc())).all()
+        ),
     )
 
 
@@ -87,9 +111,22 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
     if not category:
         return None
     canonical = f"{SITE_URL}/category/{slug}"
+    breadcrumb = ""
     if sub_id is None:
         heading = category.name
         description = f"Категорія {category.name}: підберіть запчастини для вашої Tesla."
+        children = session.exec(
+            select(Subcategory)
+            .where(Subcategory.category_id == category.id, Subcategory.parent_id == None)  # noqa: E711
+            .order_by(Subcategory.sort_order)
+        ).all()
+        # як у products.read_products: у самій категорії — лише товари без підкатегорії
+        products = session.exec(
+            select(Product)
+            .where(Product.category.contains(category.name), Product.subcategory_id == None)  # noqa: E711
+            .where(~Product.linked_subcategories.any())
+            .order_by(Product.sort_order)
+        ).all()
     else:
         sub = session.get(Subcategory, sub_id)
         if not sub or sub.category_id != category.id:
@@ -97,11 +134,32 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         heading = sub.name
         description = f"Запчастини підкатегорії {sub.name} в категорії {category.name}."
         canonical += f"/sub/{sub_id}"
+        children = session.exec(
+            select(Subcategory).where(Subcategory.parent_id == sub.id).order_by(Subcategory.sort_order)
+        ).all()
+        products = session.exec(
+            select(Product)
+            .where(
+                or_(
+                    Product.subcategory_id == sub.id,
+                    Product.linked_subcategories.any(ProductSubcategoryLink.subcategory_id == sub.id),
+                )
+            )
+            .order_by(Product.sort_order)
+        ).all()
+        breadcrumb = f'<p><a href="/category/{_e(slug)}">{_e(category.name)}</a></p>'
+    body = (
+        breadcrumb
+        + f"<h1>{_e(heading)}</h1>"
+        + _links((f"/category/{slug}/sub/{c.id}", c.name) for c in children)
+        + _links((f"/product/{p.id}", p.name) for p in products)
+    )
     return PageSeo(
         title=_first(category.meta_title, f"{heading} | {SITE_NAME}"),
         description=_first(category.meta_description, description),
         canonical=canonical,
         image=category.image,
+        body=body,
     )
 
 
@@ -123,7 +181,36 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
         image=product.image,
         og_type="product",
         json_ld=[_product_json_ld(product)],
+        body=_product_body(product),
     )
+
+
+def _clean_title(product: Product) -> str:
+    # як cleanTitle у ProductPage.tsx: без артикула на початку назви
+    name = product.name or ""
+    number = product.detail_number or ""
+    if number and name.lower().startswith(number.lower()):
+        name = re.sub(r"^[\s\-–—:]+", "", name[len(number):])
+    return name.strip() or product.name
+
+
+def _product_body(product: Product) -> str:
+    parts = []
+    sub = product.subcategory
+    if sub and sub.category:
+        cat_slug = slugify(sub.category.name)
+        parts.append(
+            f'<p><a href="/category/{_e(cat_slug)}">{_e(sub.category.name)}</a> / '
+            f'<a href="/category/{_e(cat_slug)}/sub/{sub.id}">{_e(sub.name)}</a></p>'
+        )
+    parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
+    stock = "В наявності" if product.inStock else "Під замовлення"
+    parts.append(f"<p>{_price(product.priceUAH)} грн · {stock}</p>")
+    if product.detail_number:
+        parts.append(f"<p>Артикул: {_e(product.detail_number)}</p>")
+    if product.description:
+        parts.append("<p>" + _e(product.description).replace("\n", "<br>") + "</p>")
+    return "".join(parts)
 
 
 def _product_json_ld(product: Product) -> dict:
@@ -165,6 +252,8 @@ def _info(session: Session, slug: str) -> Optional[PageSeo]:
         title=_first(seo and seo.meta_title, f"{title} | {SITE_NAME}"),
         description=_first(seo and seo.meta_description, fallback_description),
         canonical=f"{SITE_URL}/info/{slug}",
+        # контент сторінок з адмінки — так само, як його виводить StaticPage
+        body=f"<h1>{_e(title)}</h1>" + (page.content.replace("\n", "<br>") if page else ""),
     )
 
 
@@ -173,6 +262,7 @@ def _reviews() -> PageSeo:
         title="Відгуки клієнтів | Tesla Parts Center",
         description="Що про нас кажуть клієнти. Переглядайте скріншоти відгуків про запчастини Tesla від нашого магазину.",
         canonical=f"{SITE_URL}/reviews",
+        body="<h1>Відгуки клієнтів</h1>",
     )
 
 
@@ -186,7 +276,25 @@ def _schematic(session: Session, schematic_id: int) -> Optional[PageSeo]:
         description=f"Схема «{schematic.title}» для {car}: номери деталей і запчастини з цієї схеми.",
         canonical=f"{SITE_URL}/schemes/{schematic.id}",
         image=schematic.image_url,
+        body=_schematic_body(session, schematic),
     )
+
+
+def _schematic_body(session: Session, schematic: Schematic) -> str:
+    hotspots = session.exec(
+        select(SchematicHotspot)
+        .where(SchematicHotspot.schematic_id == schematic.id)
+        .order_by(SchematicHotspot.number)
+    ).all()
+    items = []
+    for spot in hotspots[:MAX_LINKS]:
+        label = f"{spot.number}. {spot.name}" + (f" ({spot.part_number})" if spot.part_number else "")
+        if spot.product_id:
+            items.append(f'<li><a href="/product/{_e(spot.product_id)}">{_e(label)}</a></li>')
+        else:
+            items.append(f"<li>{_e(label)}</li>")
+    heading = f"<h1>{_e(schematic.title)} • {_e(schematic.model)} {_e(schematic.generation)}</h1>"
+    return heading + (f"<ul>{''.join(items)}</ul>" if items else "")
 
 
 def resolve(session: Session, path: str) -> Optional[PageSeo]:
@@ -254,4 +362,6 @@ def render(index_html: str, seo: PageSeo) -> str:
         count=1,
         flags=re.S,
     )
-    return page.replace("</head>", f"    {_head_tags(seo)}\n  </head>", 1)
+    page = page.replace("</head>", f"    {_head_tags(seo)}\n  </head>", 1)
+    # createRoot у index.tsx замінює вміст #root своєю розміткою
+    return page.replace('<div id="root"></div>', f'<div id="root">{seo.body}</div>', 1)

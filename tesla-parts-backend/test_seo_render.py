@@ -8,7 +8,16 @@ from sqlmodel.pool import StaticPool
 
 from database import get_session
 from main import app
-from models import Category, Page, Product, Schematic, StaticPageSEO, Subcategory
+from models import (
+    Category,
+    Page,
+    Product,
+    ProductSubcategoryLink,
+    Schematic,
+    SchematicHotspot,
+    StaticPageSEO,
+    Subcategory,
+)
 from services import seo_render
 
 INDEX_HTML = """<!doctype html>
@@ -51,6 +60,25 @@ def session_fixture():
                 inStock=True,
             )
         )
+        session.add(
+            Product(
+                id="prod-2",
+                name="1044331-00-C - Піввісь задня",
+                category="Model 3",
+                subcategory_id=371,
+                detail_number="1044331-00-C",
+                priceUAH=4800.0,
+                image="https://img/p2.jpg",
+                description="Б/в\nоригінал",
+                inStock=False,
+            )
+        )
+        session.add(
+            Product(id="prod-3", name="Болт", category="Model 3", priceUAH=50.0, image="", description="", inStock=True)
+        )
+        session.add(ProductSubcategoryLink(product_id="prod-3", subcategory_id=371))
+        session.add(SchematicHotspot(schematic_id=77, number=2, x=0, y=0, name="Тяга", part_number="1188", product_id="prod-2"))
+        session.add(SchematicHotspot(schematic_id=77, number=1, x=0, y=0, name="Втулка"))
         session.add(Page(slug="delivery", title="Доставка та оплата", content="<p>Нова пошта по всій Україні</p>"))
         session.add(StaticPageSEO(slug="home", meta_title="Головна з адмінки"))
         session.add(
@@ -175,3 +203,47 @@ def test_json_ld_cannot_close_script_tag(session):
 def test_json_ld_only_on_products(session):
     page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/category/model-3"))
     assert _json_ld(page) == []
+
+
+def _root(session, path):
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, path))
+    return re.search(r'<div id="root">(.*)</div>\s*</body>', page, re.S).group(1)
+
+
+def test_product_body(session):
+    body = _root(session, "/product/prod-2")
+    assert '<a href="/category/model-3">Model 3</a> / <a href="/category/model-3/sub/371">ЗАДНІЙ ПРИВІД</a>' in body
+    assert "<h1>Піввісь задня</h1>" in body
+    assert "<p>4800 грн · Під замовлення</p>" in body
+    assert "<p>Артикул: 1044331-00-C</p>" in body
+    assert "<p>Б/в<br>оригінал</p>" in body
+
+
+def test_category_body_lists_subcategories_and_own_products(session):
+    body = _root(session, "/category/model-3")
+    assert "<h1>Model 3</h1>" in body
+    assert '<a href="/category/model-3/sub/371">ЗАДНІЙ ПРИВІД</a>' in body
+    assert 'href="/product/prod-1"' in body
+    assert 'href="/product/prod-2"' not in body
+
+
+def test_subcategory_body_lists_direct_and_linked_products(session):
+    body = _root(session, "/category/model-3/sub/371")
+    assert '<p><a href="/category/model-3">Model 3</a></p><h1>ЗАДНІЙ ПРИВІД</h1>' in body
+    assert 'href="/product/prod-2"' in body
+    assert 'href="/product/prod-3"' in body
+    assert 'href="/product/prod-1"' not in body
+
+
+def test_schematic_and_home_body(session):
+    body = _root(session, "/schemes/77")
+    assert "<h1>Передній стабілізатор • Model Y Стандартна</h1>" in body
+    assert body.index("1. Втулка") < body.index("2. Тяга (1188)")
+    assert '<a href="/product/prod-2">2. Тяга (1188)</a>' in body
+
+    home = _root(session, "/")
+    assert '<a href="/category/model-3">Model 3</a>' in home
+
+
+def test_body_is_escaped(session):
+    assert "<h1>Важіль &quot;передній&quot; лівий</h1>" in _root(session, "/product/prod-1")
