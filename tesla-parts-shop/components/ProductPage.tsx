@@ -70,7 +70,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
   );
   const [selectedImage, setSelectedImage] = useState(allImages[0]);
   const [added, setAdded] = useState(false);
-  const [deliveryInfo, setDeliveryInfo] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
@@ -175,20 +174,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
       .map((c) => c.trim())
       .filter(Boolean);
   }, [product.cross_number]);
-
-  useEffect(() => {
-    const fetchDeliveryInfo = async () => {
-      try {
-        const page = await api.getPage('delivery');
-        if (page && page.content) {
-          setDeliveryInfo(page.content);
-        }
-      } catch (e) {
-        console.error('Failed to load delivery info', e);
-      }
-    };
-    fetchDeliveryInfo();
-  }, []);
 
   // GA4 view_item for Google Ads dynamic remarketing.
   // Depends on product.id only: effectiveRate changes once when the exchange
@@ -326,7 +311,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
         price={product.priceUAH}
         currency="UAH"
         availability={product.inStock}
-        deliveryInfo={deliveryInfo}
       />
 
       {/* Top Navigation & Breadcrumb */}
