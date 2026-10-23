@@ -649,7 +649,8 @@ export const ApiService = {
     file?: File,
     sort_order?: number,
     meta_title?: string,
-    meta_description?: string
+    meta_description?: string,
+    seo_text?: string
   ): Promise<Category> => {
     const formData = new FormData();
     formData.append('name', name);
@@ -664,6 +665,8 @@ export const ApiService = {
     }
     formData.append('meta_title', meta_title ?? '');
     formData.append('meta_description', meta_description ?? '');
+    // без поля бекенд лишає текст як є (напр. при зміні сортування)
+    if (seo_text !== undefined) formData.append('seo_text', seo_text);
 
     const res = await _authenticatedFetch(`${API_URL}/categories/${id}`, {
       method: 'PUT',
