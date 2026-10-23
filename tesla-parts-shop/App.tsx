@@ -45,6 +45,7 @@ import ViberIcon from './components/ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
 import SeoHead from './components/SeoHead';
 import { slugify } from './utils/slugify';
+import { categoryMeta, subcategoryMeta } from './utils/seoTemplates';
 import { trackAddToCart } from './utils/analytics';
 import FloatingContactButton from './components/FloatingContactButton';
 
@@ -1178,10 +1179,9 @@ const CategoryView: React.FC<CategoryViewProps> = ({
   ]);
 
   const pageHeading = getSelectedSubcategoryName();
-  const fallbackTitle = `${pageHeading} | Tesla Parts Center`;
-  const fallbackDescription = selectedSubcategory
-    ? `Запчастини підкатегорії ${pageHeading} в категорії ${category.name}.`
-    : `Категорія ${category.name}: підберіть запчастини для вашої Tesla.`;
+  const fallbackMeta = selectedSubcategory
+    ? subcategoryMeta(pageHeading, category.name)
+    : categoryMeta(category.name);
 
   const backLink = getBackLink();
 
@@ -1190,10 +1190,11 @@ const CategoryView: React.FC<CategoryViewProps> = ({
   return (
     <div className="mt-8">
       <SeoHead
-        title={category.meta_title}
-        description={category.meta_description}
-        fallbackTitle={fallbackTitle}
-        fallbackDescription={fallbackDescription}
+        // мета категорії — лише для неї самої, підкатегорії мають власний шаблон
+        title={selectedSubcategory ? undefined : category.meta_title}
+        description={selectedSubcategory ? undefined : category.meta_description}
+        fallbackTitle={fallbackMeta.title}
+        fallbackDescription={fallbackMeta.description}
       />
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <Link
