@@ -1266,7 +1266,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
         )}
 
       {!loading && !selectedSubcategory && category.seo_text && (
-        <section className="mt-12 max-w-3xl space-y-3 text-gray-600 leading-relaxed">
+        <section className="mt-12 bg-white rounded-xl shadow-xs border border-gray-100 p-4 sm:p-6 space-y-3 text-gray-600 leading-relaxed sm:text-justify hyphens-auto">
           {category.seo_text.split(/\n\s*\n/).map((paragraph, i) => (
             <p key={i}>{paragraph.trim()}</p>
           ))}
