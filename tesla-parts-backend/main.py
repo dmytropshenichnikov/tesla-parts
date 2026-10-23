@@ -19,10 +19,12 @@ for _ext, _type in (
 from sqlmodel import Session, select
 from typing import List
 from database import create_db_and_tables, engine, get_session
-from routers import products, orders, categories, settings, pages, auth, feeds, reviews, customers, promocodes, email_campaigns, analytics, schematics, vin, garage
+from routers import products, orders, categories, settings, pages, auth, feeds, reviews, customers, promocodes, email_campaigns, analytics, schematics, vin, garage, prerender
 from contextlib import asynccontextmanager
 import os
-from models import Product, Category, Subcategory, Page, StaticPageSEO
+from models import Product, Category, Subcategory, Page, StaticPageSEO, Schematic
+from services.seo_render import slugify
+from urllib.parse import quote
 from schemas import StaticPageSEORead, StaticPageSEOUpdate
 from dependencies import get_current_admin
 
@@ -131,18 +133,15 @@ app.include_router(analytics.router)
 app.include_router(schematics.router)
 app.include_router(vin.router)
 app.include_router(garage.router)
+app.include_router(prerender.router)
 
 @app.get("/")
 def read_root():
     return {"message": "Tesla Parts API is running"}
 
 def _slugify(value: str) -> str:
-    return (
-        value.lower()
-        .strip()
-        .replace(" ", "-")
-        .replace("/", "-")
-    )
+    # той самий slug, що в магазині (utils/slugify.ts), у URL-кодуванні
+    return quote(slugify(value))
 
 @app.get("/sitemap.xml", response_class=Response)
 @app.head("/sitemap.xml", response_class=Response)
@@ -153,6 +152,7 @@ def get_sitemap():
         categories = session.exec(select(Category)).all()
         subcategories = session.exec(select(Subcategory)).all()
         pages = session.exec(select(Page).where(Page.is_published == True)).all()
+        schematics = session.exec(select(Schematic)).all()
 
     category_map = {c.id: _slugify(c.name) for c in categories if c.id and c.name}
 
@@ -184,6 +184,11 @@ def get_sitemap():
     for product in products:
         if product.id:
             xml_parts.append(f'<url><loc>{base_url}/product/{product.id}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
+
+    # 6. Schemes
+    xml_parts.append(f'<url><loc>{base_url}/schemes</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>')
+    for schematic in schematics:
+        xml_parts.append(f'<url><loc>{base_url}/schemes/{schematic.id}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>')
 
     xml_parts.append("</urlset>")
 

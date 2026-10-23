@@ -90,7 +90,7 @@ const SeoHead: React.FC<SeoHeadProps> = ({
         availability: availability
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
-        itemCondition: 'https://schema.org/UsedCondition', // Можна змінювати на NewCondition
+        itemCondition: 'https://schema.org/NewCondition', // у магазині лише нові товари
       },
     };
   }
