@@ -27,4 +27,5 @@ def prerender_page(path: str, session: Session = Depends(get_session)):
         return RedirectResponse(quote(target), status_code=301)
 
     # сторінки немає: React покаже свій екран, Google отримає 404
-    return HTMLResponse(seo_render.render(index_html, seo_render.PageSeo(canonical="")), status_code=404)
+    page = seo_render.render(index_html, seo_render.PageSeo(canonical=""))
+    return HTMLResponse(page, status_code=404)

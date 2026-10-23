@@ -35,7 +35,7 @@ DEFAULT_DESCRIPTION = "Tesla Parts Center пропонує запчастини 
 ITEM_CONDITION = "https://schema.org/UsedCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
-INDEX_TTL_SECONDS = 60
+INDEX_TTL_SECONDS = 5
 MAX_LINKS = 300
 
 STATIC_TITLES = {

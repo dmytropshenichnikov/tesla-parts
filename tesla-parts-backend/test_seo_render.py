@@ -286,3 +286,9 @@ def test_schemes_catalog_canonical_drops_filters(client):
     response = client.get("/prerender/schemes?model=Model%20Y&generation=x")
     assert response.status_code == 200
     assert 'rel="canonical" href="https://teslapartscenter.com.ua/schemes"' in response.text
+
+
+def test_html_is_not_cached(client):
+    # глобальний middleware main.py: no-store для всього, крім /static
+    for path in ("/prerender/product/prod-1", "/prerender/product/deleted"):
+        assert "no-store" in client.get(path).headers["cache-control"]
