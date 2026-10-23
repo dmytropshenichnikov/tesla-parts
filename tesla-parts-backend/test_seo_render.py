@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
+import main
 from database import get_session
 from main import app
 from models import (
@@ -293,3 +294,15 @@ def test_html_is_not_cached(client):
     # глобальний middleware main.py: no-store для всього, крім /static
     for path in ("/prerender/product/prod-1", "/prerender/product/deleted"):
         assert "no-store" in client.get(path).headers["cache-control"]
+
+
+def test_sitemap_has_schemes_and_shop_slugs(session, client, monkeypatch):
+    session.add(Category(id=11, name="Аксесуари"))
+    session.commit()
+    monkeypatch.setattr(main, "engine", engine)
+    xml = client.get("/sitemap.xml").text
+    assert "<loc>https://teslapartscenter.com.ua/schemes</loc>" in xml
+    assert "<loc>https://teslapartscenter.com.ua/schemes/77</loc>" in xml
+    assert "<loc>https://teslapartscenter.com.ua/category/model-y-juniper</loc>" in xml
+    assert "/category/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8</loc>" in xml
+    assert "<loc>https://teslapartscenter.com.ua/category/model-3/sub/371</loc>" in xml
