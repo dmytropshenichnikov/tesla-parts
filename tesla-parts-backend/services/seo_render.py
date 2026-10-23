@@ -222,7 +222,9 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
         title=_first(product.meta_title, product.name),
         description=_first(
             product.meta_description,
-            f"Купити {product.name} за ціною {_price(product.priceUAH)} грн",
+            # як fallbackDescription у ProductPage.tsx
+            f"{product.name}. Ціна {_price(product.priceUAH)} грн, "
+            f"{'в наявності' if product.inStock else 'під замовлення'}. Доставка по Україні.",
         ),
         canonical=f"{SITE_URL}/product/{product.id}",
         image=product.image,

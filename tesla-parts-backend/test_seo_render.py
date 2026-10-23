@@ -127,7 +127,7 @@ def test_category_meta_from_admin_wins(session):
 def test_product(session):
     seo = seo_render.resolve(session, "/product/prod-1")
     assert seo.title == 'Важіль "передній" лівий'
-    assert seo.description == 'Купити Важіль "передній" лівий за ціною 1250 грн'
+    assert seo.description == 'Важіль "передній" лівий. Ціна 1250 грн, в наявності. Доставка по Україні.'
     assert seo.canonical == "https://teslapartscenter.com.ua/product/prod-1"
     assert seo.og_type == "product"
 
@@ -157,7 +157,7 @@ def test_render_replaces_head_without_duplicates(session):
     assert page.count("og:url") == 1
     assert 'property="og:site_name"' in page
     assert '<link data-rh="true" rel="canonical" href="https://teslapartscenter.com.ua/product/prod-1" />' in page
-    assert 'content="Купити Важіль &quot;передній&quot; лівий за ціною 1250 грн"' in page
+    assert 'content="Важіль &quot;передній&quot; лівий. Ціна 1250 грн, в наявності. Доставка по Україні."' in page
 
 
 def test_prerender_endpoint(client):
