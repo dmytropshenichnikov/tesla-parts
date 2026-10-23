@@ -19,6 +19,7 @@ export interface Category {
   show_in_schematics?: boolean;
   meta_title?: string | null;
   meta_description?: string | null;
+  seo_text?: string | null;
   subcategories: Subcategory[];
   products?: Product[];
 }

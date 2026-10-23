@@ -110,12 +110,12 @@ def test_home_uses_admin_meta(session):
 
 def test_category_and_subcategory_fallbacks(session):
     category = seo_render.resolve(session, "/category/model-3")
-    assert category.title == "Model 3 | Tesla Parts Center"
+    assert category.title == "Запчастини Tesla Model 3 — купити з доставкою по Україні | Tesla Parts Center"
     assert category.canonical == "https://teslapartscenter.com.ua/category/model-3"
 
     sub = seo_render.resolve(session, "/category/model-3/sub/371")
-    assert sub.title == "ЗАДНІЙ ПРИВІД | Tesla Parts Center"
-    assert sub.description == "Запчастини підкатегорії ЗАДНІЙ ПРИВІД в категорії Model 3."
+    assert sub.title == "Задній привід Tesla Model 3 — запчастини | Tesla Parts Center"
+    assert sub.description.startswith("Задній привід для Tesla Model 3: нові запчастини")
     assert sub.canonical.endswith("/category/model-3/sub/371")
 
 
@@ -127,7 +127,7 @@ def test_category_meta_from_admin_wins(session):
 def test_product(session):
     seo = seo_render.resolve(session, "/product/prod-1")
     assert seo.title == 'Важіль "передній" лівий'
-    assert seo.description == 'Купити Важіль "передній" лівий за ціною 1250 грн'
+    assert seo.description == 'Важіль "передній" лівий. Ціна 1250 грн, в наявності. Доставка по Україні.'
     assert seo.canonical == "https://teslapartscenter.com.ua/product/prod-1"
     assert seo.og_type == "product"
 
@@ -157,7 +157,7 @@ def test_render_replaces_head_without_duplicates(session):
     assert page.count("og:url") == 1
     assert 'property="og:site_name"' in page
     assert '<link data-rh="true" rel="canonical" href="https://teslapartscenter.com.ua/product/prod-1" />' in page
-    assert 'content="Купити Важіль &quot;передній&quot; лівий за ціною 1250 грн"' in page
+    assert 'content="Важіль &quot;передній&quot; лівий. Ціна 1250 грн, в наявності. Доставка по Україні."' in page
 
 
 def test_prerender_endpoint(client):
@@ -306,3 +306,29 @@ def test_sitemap_has_schemes_and_shop_slugs(session, client, monkeypatch):
     assert "<loc>https://teslapartscenter.com.ua/category/model-y-juniper</loc>" in xml
     assert "/category/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8</loc>" in xml
     assert "<loc>https://teslapartscenter.com.ua/category/model-3/sub/371</loc>" in xml
+
+
+def test_category_seo_text_paragraphs_only_on_category(session):
+    category = session.get(Category, 2)
+    category.seo_text = "Перший абзац.\n\nДругий <абзац>."
+    session.add(category)
+    session.commit()
+    body = _root(session, "/category/model-3")
+    assert "<p>Перший абзац.</p><p>Другий &lt;абзац&gt;.</p>" in body
+    assert "Перший абзац" not in _root(session, "/category/model-3/sub/371")
+
+
+def test_subcategory_ignores_category_meta(session):
+    session.add(Subcategory(id=500, name="ФАРИ", category_id=9))
+    session.commit()
+    seo = seo_render.resolve(session, "/category/model-y-juniper/sub/500")
+    assert seo.title == "Фари Tesla Model Y Juniper — запчастини | Tesla Parts Center"
+
+
+def test_sentence_case_and_accessories_templates():
+    assert seo_render.sentence_case("ВНУТРІШНЄ ОЗДОБЛЕННЯ СТІЙОК АВС") == "Внутрішнє оздоблення стійок АВС"
+    assert seo_render.sentence_case("Вже нормальна назва") == "Вже нормальна назва"
+    title, _ = seo_render.category_meta("Аксесуари")
+    assert title == "Аксесуари для Tesla — купити з доставкою по Україні | Tesla Parts Center"
+    title, _ = seo_render.subcategory_meta("КИЛИМКИ", "Аксесуари")
+    assert title == "Килимки для Tesla | Tesla Parts Center"

@@ -61,6 +61,7 @@ class CategoryRead(BaseModel):
     sort_order: int
     meta_title: str | None = None
     meta_description: str | None = None
+    seo_text: str | None = None
     subcategories: List[SubcategoryRead] = []
 
 class CategoryCreate(BaseModel):
@@ -69,6 +70,7 @@ class CategoryCreate(BaseModel):
     sort_order: int | None = None
     meta_title: str | None = None
     meta_description: str | None = None
+    seo_text: str | None = None
 
 class SubcategoryCreate(BaseModel):
     name: str
@@ -161,6 +163,7 @@ class CategoryListSchema(BaseModel):
     sort_order: int
     meta_title: str | None = None
     meta_description: str | None = None
+    seo_text: str | None = None
     # Показувати модель у «Схемах запчастин (EPC)». Без цього поля адмінка
     # завжди показувала «увімкнено», хоч би що було в базі.
     show_in_schematics: bool = True

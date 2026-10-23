@@ -32,6 +32,8 @@ class Category(SQLModel, table=True):
     show_in_schematics: bool = Field(default=True, index=True)
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
+    # текст під товарами на сторінці категорії (для пошуку)
+    seo_text: Optional[str] = None
     
     subcategories: List["Subcategory"] = Relationship(back_populates="category")
 

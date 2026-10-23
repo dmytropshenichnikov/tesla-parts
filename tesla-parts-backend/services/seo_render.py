@@ -70,6 +70,47 @@ def _first(*values: Optional[str]) -> Optional[str]:
     return None
 
 
+KEEP_UPPER = {"АВС"}
+
+
+def sentence_case(value: str) -> str:
+    # як sentenceCase у utils/seoTemplates.ts: «ЗАДНІЙ ПРИВІД» -> «Задній привід»
+    if value != value.upper():
+        return value
+    words = [w.upper() if w.upper() in KEEP_UPPER else w for w in value.lower().split(" ")]
+    text = " ".join(words)
+    return text[:1].upper() + text[1:]
+
+
+def _is_model(name: str) -> bool:
+    return re.match(r"model\s", name.strip(), re.I) is not None
+
+
+def category_meta(name: str) -> tuple:
+    if _is_model(name):
+        return (
+            f"Запчастини Tesla {name} — купити з доставкою по Україні | {SITE_NAME}",
+            f"Запчастини для Tesla {name}: нові деталі з номерами, ціни й наявність, підбір за схемами. Доставка по Україні.",
+        )
+    return (
+        f"{name} для Tesla — купити з доставкою по Україні | {SITE_NAME}",
+        f"{name} для Tesla: нові товари, ціни й наявність. Доставка по Україні.",
+    )
+
+
+def subcategory_meta(name: str, category_name: str) -> tuple:
+    sub = sentence_case(name)
+    if not _is_model(category_name):
+        return (
+            f"{sub} для Tesla | {SITE_NAME}",
+            f"{sub} для Tesla: нові товари, ціни й наявність. Доставка по Україні.",
+        )
+    return (
+        f"{sub} Tesla {category_name} — запчастини | {SITE_NAME}",
+        f"{sub} для Tesla {category_name}: нові запчастини з номерами деталей, ціни й наявність. Доставка по Україні.",
+    )
+
+
 def _e(value) -> str:
     return html.escape(str(value or ""), quote=True)
 
@@ -114,7 +155,9 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
     breadcrumb = ""
     if sub_id is None:
         heading = category.name
-        description = f"Категорія {category.name}: підберіть запчастини для вашої Tesla."
+        title, description = category_meta(category.name)
+        title = _first(category.meta_title, title)
+        description = _first(category.meta_description, description)
         children = session.exec(
             select(Subcategory)
             .where(Subcategory.category_id == category.id, Subcategory.parent_id == None)  # noqa: E711
@@ -132,7 +175,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         if not sub or sub.category_id != category.id:
             return None
         heading = sub.name
-        description = f"Запчастини підкатегорії {sub.name} в категорії {category.name}."
+        title, description = subcategory_meta(sub.name, category.name)
         canonical += f"/sub/{sub_id}"
         children = session.exec(
             select(Subcategory).where(Subcategory.parent_id == sub.id).order_by(Subcategory.sort_order)
@@ -154,9 +197,13 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         + _links((f"/category/{slug}/sub/{c.id}", c.name) for c in children)
         + _links((f"/product/{p.id}", p.name) for p in products)
     )
+    if sub_id is None and category.seo_text:
+        # як у магазині: абзаци через порожній рядок
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", category.seo_text) if p.strip()]
+        body += "".join(f"<p>{_e(p)}</p>" for p in paragraphs)
     return PageSeo(
-        title=_first(category.meta_title, f"{heading} | {SITE_NAME}"),
-        description=_first(category.meta_description, description),
+        title=title,
+        description=description,
         canonical=canonical,
         image=category.image,
         body=body,
@@ -175,7 +222,9 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
         title=_first(product.meta_title, product.name),
         description=_first(
             product.meta_description,
-            f"Купити {product.name} за ціною {_price(product.priceUAH)} грн",
+            # як fallbackDescription у ProductPage.tsx
+            f"{product.name}. Ціна {_price(product.priceUAH)} грн, "
+            f"{'в наявності' if product.inStock else 'під замовлення'}. Доставка по Україні.",
         ),
         canonical=f"{SITE_URL}/product/{product.id}",
         image=product.image,

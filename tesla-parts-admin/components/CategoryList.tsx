@@ -886,6 +886,7 @@ const CategoryList: React.FC = () => {
   const [editCategoryMetaTitle, setEditCategoryMetaTitle] = useState('');
   const [editCategoryMetaDescription, setEditCategoryMetaDescription] =
     useState('');
+  const [editCategorySeoText, setEditCategorySeoText] = useState('');
 
   // New Subcategory State (Top Level)
   const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
@@ -979,6 +980,7 @@ const CategoryList: React.FC = () => {
     setEditCategoryFile(null);
     setEditCategoryMetaTitle(category.meta_title || '');
     setEditCategoryMetaDescription(category.meta_description || '');
+    setEditCategorySeoText(category.seo_text || '');
   };
 
   const handleUpdateCategory = async () => {
@@ -993,7 +995,8 @@ const CategoryList: React.FC = () => {
         editCategoryFile || undefined,
         undefined, // Preserve sort order
         editCategoryMetaTitle,
-        editCategoryMetaDescription
+        editCategoryMetaDescription,
+        editCategorySeoText
       );
       if (wasVisible !== editShowInSchematics) {
         await ApiService.setCategorySchematicsVisibility(editingCategory, editShowInSchematics);
@@ -1456,6 +1459,18 @@ const CategoryList: React.FC = () => {
                         placeholder="Короткий опис для пошукових систем"
                       />
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      SEO-текст категорії
+                    </label>
+                    <textarea
+                      value={editCategorySeoText}
+                      onChange={(e) => setEditCategorySeoText(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-tesla-red outline-none"
+                      rows={6}
+                      placeholder="Текст під товарами на сторінці категорії. Порожній рядок — новий абзац."
+                    />
                   </div>
 
                   {/* Показувати модель у «Схемах запчастин» — тут, у редакторі.

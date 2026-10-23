@@ -74,6 +74,8 @@ def _ensure_category_seo_columns():
             conn.execute(text("ALTER TABLE category ADD COLUMN meta_title VARCHAR"))
         if "meta_description" not in columns:
             conn.execute(text("ALTER TABLE category ADD COLUMN meta_description VARCHAR"))
+        if "seo_text" not in columns:
+            conn.execute(text("ALTER TABLE category ADD COLUMN seo_text TEXT"))
         conn.commit()
 
 def _ensure_subcategory_sort_order_column():

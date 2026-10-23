@@ -488,6 +488,7 @@ async def create_category(
     sort_order: Optional[int] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
+    seo_text: Optional[str] = Form(None),
     session: Session = Depends(get_session)
 ):
     # Handle file upload
@@ -505,6 +506,7 @@ async def create_category(
         sort_order=sort_order,
         meta_title=meta_title or None,
         meta_description=meta_description or None,
+        seo_text=seo_text or None,
     )
     session.add(db_category)
     session.commit()
@@ -561,6 +563,7 @@ async def update_category(
     sort_order: Optional[int] = Form(None),
     meta_title: Optional[str] = Form(None),
     meta_description: Optional[str] = Form(None),
+    seo_text: Optional[str] = Form(None),
     show_in_schematics: Optional[bool] = Form(None),
     session: Session = Depends(get_session)
 ):
@@ -582,6 +585,8 @@ async def update_category(
         category.meta_title = meta_title or None
     if meta_description is not None:
         category.meta_description = meta_description or None
+    if seo_text is not None:
+        category.seo_text = seo_text or None
     if show_in_schematics is not None:
         category.show_in_schematics = show_in_schematics
 
