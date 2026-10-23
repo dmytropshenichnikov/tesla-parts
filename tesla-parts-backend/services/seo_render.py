@@ -31,8 +31,8 @@ SITE_NAME = "Tesla Parts Center"
 DEFAULT_TITLE = SITE_NAME
 DEFAULT_DESCRIPTION = "Tesla Parts Center пропонує запчастини та аксесуари для вашого електромобіля."
 
-# як у SeoHead магазину
-ITEM_CONDITION = "https://schema.org/UsedCondition"
+# у магазині лише нові товари (як у SeoHead)
+ITEM_CONDITION = "https://schema.org/NewCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 5

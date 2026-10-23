@@ -188,6 +188,7 @@ def test_product_json_ld(session):
     assert data["offers"]["priceCurrency"] == "UAH"
     assert data["offers"]["availability"] == "https://schema.org/InStock"
     assert data["offers"]["url"] == "https://teslapartscenter.com.ua/product/prod-1"
+    assert data["offers"]["itemCondition"] == "https://schema.org/NewCondition"
 
 
 def test_json_ld_cannot_close_script_tag(session):
