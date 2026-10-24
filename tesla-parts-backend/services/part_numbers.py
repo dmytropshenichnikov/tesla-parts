@@ -62,9 +62,11 @@ def feed_title(name: str, detail_number: Optional[str], limit: int = 150) -> str
     alts = alternates(detail_number)
     if not alts:
         return name[:limit]
-    first = split_numbers(detail_number)[0] if split_numbers(detail_number) else ""
-    if first and name.lower().startswith(first.lower()):
-        title = f"{name[:len(first)]} {' '.join(alts)}{name[len(first):]}"
+    # вставляємо після артикула на початку назви: усього поля або першого номера
+    prefixes = [detail_number.strip(), split_numbers(detail_number)[0]]
+    prefix = next((p for p in prefixes if name.lower().startswith(p.lower())), "")
+    if prefix:
+        title = f"{name[:len(prefix)]} {' '.join(alts)}{name[len(prefix):]}"
     else:
         title = f"{name} {' '.join(alts)}"
     return title[:limit].rstrip()
