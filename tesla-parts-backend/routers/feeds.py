@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from database import get_session
 from models import Product, Category, Subcategory
 from services.pricing import get_exchange_rate, compute_price_fields
+from services import part_numbers
 from datetime import datetime
 
 # Configure logging
@@ -54,7 +55,7 @@ async def get_google_merchant_feed(session: Session = Depends(get_session)):
             
             # Google required fields mapping
             p_id = saxutils.escape(str(product.id))
-            p_title = saxutils.escape(product.name)
+            p_title = saxutils.escape(part_numbers.feed_title(product.name, product.detail_number))
             p_description = saxutils.escape(product.description or product.name)
             p_link = f"{SHOP_BASE_URL}/product/{product.id}"
             p_image_link = saxutils.escape(product.image) if product.image else ""
