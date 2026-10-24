@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
 import { trackViewItem } from '../utils/analytics';
 import { getProductPartType } from '../utils/partType';
+import { displayPartNumbers, withAlternate } from '../utils/partNumbers';
 import { PartTypeBadge } from './PartTypeBadge';
 
 interface ProductPageProps {
@@ -469,7 +470,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     <span className="text-gray-500 font-sans font-normal text-[11px]">
                       Артикул OEM:
                     </span>
-                    <span className="font-bold">{product.detail_number}</span>
+                    <span className="font-bold">{displayPartNumbers(product.detail_number)}</span>
                     {copiedField === 'part' ? (
                       <Check size={13} className="text-emerald-600" />
                     ) : (
@@ -490,8 +491,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     <span className="text-gray-500 font-sans font-normal text-[11px]">
                       Крос:
                     </span>
-                    <span className="font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                      {crossNumbers.join(', ')}
+                    <span className="font-medium truncate max-w-[180px] sm:max-w-[320px]">
+                      {crossNumbers.map(withAlternate).join(', ')}
                     </span>
                     {copiedField === 'cross' ? (
                       <Check size={13} className="text-emerald-600" />
@@ -690,7 +691,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                 <span className="text-gray-500 font-medium">Оригінальний номер (OEM):</span>
                 <span className="font-mono font-bold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-md inline-block self-start sm:self-auto">
-                  {product.detail_number}
+                  {displayPartNumbers(product.detail_number)}
                 </span>
               </div>
             )}
@@ -699,7 +700,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                 <span className="text-gray-500 font-medium">Крос-номери / Аналоги:</span>
                 <span className="font-mono text-gray-800 text-xs sm:text-sm">
-                  {crossNumbers.join(', ')}
+                  {crossNumbers.map(withAlternate).join(', ')}
                 </span>
               </div>
             )}
