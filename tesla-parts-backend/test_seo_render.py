@@ -68,6 +68,7 @@ def session_fixture():
                 category="Model 3",
                 subcategory_id=371,
                 detail_number="1044331-00-C",
+                cross_number="104433200C, 5163001",
                 priceUAH=4800.0,
                 image="https://img/p2.jpg",
                 description="Б/в\nоригінал",
@@ -180,6 +181,20 @@ def _json_ld(page):
     return [json.loads(b) for b in blocks]
 
 
+def test_product_description_gets_alternate_numbers(session):
+    seo = seo_render.resolve(session, "/product/prod-2")
+    assert seo.description == "1044331-00-C - Піввісь задня. Ціна 4800 грн, під замовлення. Доставка по Україні. 104433100C, 1044332-00-C"
+    assert seo_render.resolve(session, "/product/prod-1").description.endswith("Доставка по Україні.")
+
+
+def test_product_json_ld_mpn(session):
+    [data] = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-2")))
+    assert data["sku"] == "1044331-00-C"
+    assert data["mpn"] == "1044331-00-C"
+    [data] = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1")))
+    assert "mpn" not in data
+
+
 def test_product_json_ld(session):
     page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
     [data] = _json_ld(page)
@@ -217,7 +232,8 @@ def test_product_body(session):
     assert '<a href="/category/model-3">Model 3</a> / <a href="/category/model-3/sub/371">ЗАДНІЙ ПРИВІД</a>' in body
     assert "<h1>Піввісь задня</h1>" in body
     assert "<p>4800 грн · Під замовлення</p>" in body
-    assert "<p>Артикул: 1044331-00-C</p>" in body
+    assert "<p>Артикул: 1044331-00-C / 104433100C</p>" in body
+    assert "<p>Крос-номери: 104433200C / 1044332-00-C, 5163001</p>" in body
     assert "<p>Б/в<br>оригінал</p>" in body
 
 

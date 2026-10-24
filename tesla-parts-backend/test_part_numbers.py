@@ -21,6 +21,13 @@ def test_display_keeps_original_first():
     assert pn.display("null") == ""
 
 
+def test_hyphenated():
+    assert pn.hyphenated("161086600A") == "1610866-00-A"
+    assert pn.hyphenated("1044331-00-C") == "1044331-00-C"
+    assert pn.hyphenated("AA01500001, 109503800A") == "1095038-00-A"
+    assert pn.hyphenated("5163001") is None
+
+
 def test_with_alternates_appends_once():
     text = pn.with_alternates("Панель передня", "161086600A", "108350100B, 161086600A")
     assert text == "Панель передня 1610866-00-A, 1083501-00-B"

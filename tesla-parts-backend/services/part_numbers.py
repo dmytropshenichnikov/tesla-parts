@@ -45,6 +45,14 @@ def alternates(*values: Optional[str]) -> List[str]:
     return out
 
 
+def hyphenated(value: Optional[str]) -> Optional[str]:
+    # перший номер Tesla з поля у форматі з дефісами — для mpn у розмітці
+    for n, alt in pairs(value):
+        if alt:
+            return alt if "-" in alt else n
+    return None
+
+
 def with_alternates(text: str, detail_number: Optional[str], cross_number: Optional[str]) -> str:
     alts = alternates(detail_number, cross_number)
     return f"{text} {', '.join(alts)}" if alts else text
