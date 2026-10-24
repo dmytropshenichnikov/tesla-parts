@@ -36,6 +36,7 @@ import {
   appendAlternates,
   displayPartNumbers,
   hyphenatedPartNumber,
+  insertAlternates,
   withAlternate,
 } from '../utils/partNumbers';
 import { PartTypeBadge } from './PartTypeBadge';
@@ -308,7 +309,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
   return (
     <div className="max-w-6xl mx-auto pb-12">
       <SeoHead
-        title={product.meta_title || product.name}
+        title={insertAlternates(product.meta_title?.trim() || product.name, product.detail_number)}
         description={appendAlternates(
           product.meta_description?.trim() ||
             `${product.name}. Ціна ${product.priceUAH} грн, ${product.inStock ? 'в наявності' : 'під замовлення'}. Доставка по Україні.`,

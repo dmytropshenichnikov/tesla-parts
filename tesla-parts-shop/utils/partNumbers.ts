@@ -48,6 +48,16 @@ export const appendAlternates = (
   return alts.length ? `${text} ${alts.join(', ')}` : text;
 };
 
+// вставляємо після артикула на початку назви: усього поля або першого номера
+export const insertAlternates = (title: string, detailNumber?: string | null): string => {
+  const alts = alternatePartNumbers(detailNumber);
+  if (!alts.length || !detailNumber) return title;
+  const prefixes = [detailNumber.trim(), splitPartNumbers(detailNumber)[0]];
+  const prefix = prefixes.find((p) => title.toLowerCase().startsWith(p.toLowerCase())) || '';
+  if (prefix) return `${title.slice(0, prefix.length)} ${alts.join(' ')}${title.slice(prefix.length)}`;
+  return `${title} ${alts.join(' ')}`;
+};
+
 // перший номер Tesla з поля у форматі з дефісами — для mpn у розмітці
 export const hyphenatedPartNumber = (value?: string | null): string | null => {
   for (const n of splitPartNumbers(value)) {
