@@ -181,6 +181,11 @@ def _json_ld(page):
     return [json.loads(b) for b in blocks]
 
 
+def test_product_title_gets_alternate_number(session):
+    assert seo_render.resolve(session, "/product/prod-2").title == "1044331-00-C 104433100C - Піввісь задня"
+    assert seo_render.resolve(session, "/product/prod-1").title == 'Важіль "передній" лівий'
+
+
 def test_product_description_gets_alternate_numbers(session):
     seo = seo_render.resolve(session, "/product/prod-2")
     assert seo.description == "1044331-00-C - Піввісь задня. Ціна 4800 грн, під замовлення. Доставка по Україні. 104433100C, 1044332-00-C"

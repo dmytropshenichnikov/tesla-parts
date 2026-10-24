@@ -58,15 +58,17 @@ def with_alternates(text: str, detail_number: Optional[str], cross_number: Optio
     return f"{text} {', '.join(alts)}" if alts else text
 
 
-def feed_title(name: str, detail_number: Optional[str], limit: int = 150) -> str:
+def insert_alternates(title: str, detail_number: Optional[str]) -> str:
     alts = alternates(detail_number)
     if not alts:
-        return name[:limit]
+        return title
     # вставляємо після артикула на початку назви: усього поля або першого номера
     prefixes = [detail_number.strip(), split_numbers(detail_number)[0]]
-    prefix = next((p for p in prefixes if name.lower().startswith(p.lower())), "")
+    prefix = next((p for p in prefixes if title.lower().startswith(p.lower())), "")
     if prefix:
-        title = f"{name[:len(prefix)]} {' '.join(alts)}{name[len(prefix):]}"
-    else:
-        title = f"{name} {' '.join(alts)}"
-    return title[:limit].rstrip()
+        return f"{title[:len(prefix)]} {' '.join(alts)}{title[len(prefix):]}"
+    return f"{title} {' '.join(alts)}"
+
+
+def feed_title(name: str, detail_number: Optional[str], limit: int = 150) -> str:
+    return insert_alternates(name, detail_number)[:limit].rstrip()

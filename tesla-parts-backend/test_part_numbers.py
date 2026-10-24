@@ -34,6 +34,12 @@ def test_with_alternates_appends_once():
     assert pn.with_alternates("Масло ZF", "AA01500001", None) == "Масло ZF"
 
 
+def test_insert_alternates():
+    assert pn.insert_alternates("161086600A - Панель", "161086600A") == "161086600A 1610866-00-A - Панель"
+    assert pn.insert_alternates("Панель передня", "161086600A") == "Панель передня 1610866-00-A"
+    assert pn.insert_alternates("Масло ZF", "AA01500001") == "Масло ZF"
+
+
 def test_feed_title():
     name = "161086600A - Панель передня (телевізор) рестайлінг Tesla Model 3. Оригінал"
     assert pn.feed_title(name, "161086600A") == (

@@ -220,7 +220,7 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
     if not product:
         return None
     return PageSeo(
-        title=_first(product.meta_title, product.name),
+        title=part_numbers.insert_alternates(_first(product.meta_title, product.name), product.detail_number),
         description=part_numbers.with_alternates(
             _first(
                 product.meta_description,
@@ -274,7 +274,7 @@ def _product_json_ld(product: Product) -> dict:
     data = {
         "@context": "https://schema.org/",
         "@type": "Product",
-        "name": _first(product.meta_title, product.name),
+        "name": part_numbers.insert_alternates(_first(product.meta_title, product.name), product.detail_number),
         "image": [product.image] if product.image else [],
         "description": _first(product.meta_description, product.description, product.name),
         "sku": product.detail_number or product.id,
