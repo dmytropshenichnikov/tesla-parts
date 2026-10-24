@@ -14,6 +14,8 @@ interface SeoHeadProps {
   currency?: string; // Валюта (за замовчуванням UAH)
   availability?: boolean; // Чи є в наявності
   canonicalUrl?: string; // Канонічний URL сторінки
+  sku?: string;
+  mpn?: string | null;
 }
 
 const DEFAULT_TITLE = 'Tesla Parts Center';
@@ -32,6 +34,8 @@ const SeoHead: React.FC<SeoHeadProps> = ({
   currency = 'UAH',
   availability = true,
   canonicalUrl,
+  sku,
+  mpn,
 }) => {
   const safeTitle = title?.trim() || fallbackTitle?.trim() || DEFAULT_TITLE;
   const safeDescription =
@@ -57,6 +61,8 @@ const SeoHead: React.FC<SeoHeadProps> = ({
       name: safeTitle,
       image: image ? [image] : [],
       description: safeDescription,
+      ...(sku ? { sku } : {}),
+      ...(mpn ? { mpn } : {}),
       brand: {
         '@type': 'Brand',
         name: 'Tesla', // Можна змінити на динамічний бренд, якщо є різні

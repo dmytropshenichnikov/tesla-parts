@@ -32,7 +32,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
 import { trackViewItem } from '../utils/analytics';
 import { getProductPartType } from '../utils/partType';
-import { displayPartNumbers, withAlternate } from '../utils/partNumbers';
+import {
+  appendAlternates,
+  displayPartNumbers,
+  hyphenatedPartNumber,
+  withAlternate,
+} from '../utils/partNumbers';
 import { PartTypeBadge } from './PartTypeBadge';
 
 interface ProductPageProps {
@@ -304,11 +309,17 @@ const ProductPage: React.FC<ProductPageProps> = ({
     <div className="max-w-6xl mx-auto pb-12">
       <SeoHead
         title={product.meta_title || product.name}
-        description={product.meta_description}
+        description={appendAlternates(
+          product.meta_description?.trim() ||
+            `${product.name}. Ціна ${product.priceUAH} грн, ${product.inStock ? 'в наявності' : 'під замовлення'}. Доставка по Україні.`,
+          product.detail_number,
+          product.cross_number
+        )}
         fallbackTitle={product.name}
-        fallbackDescription={`${product.name}. Ціна ${product.priceUAH} грн, ${product.inStock ? 'в наявності' : 'під замовлення'}. Доставка по Україні.`}
         image={product.image}
         type="product"
+        sku={product.detail_number || product.id}
+        mpn={hyphenatedPartNumber(product.detail_number)}
         price={product.priceUAH}
         currency="UAH"
         availability={product.inStock}
