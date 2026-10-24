@@ -15,6 +15,7 @@ from typing import Optional
 import requests
 from sqlmodel import Session, or_, select
 
+from services import part_numbers
 from models import (
     Category,
     Page,
@@ -219,12 +220,16 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
     if not product:
         return None
     return PageSeo(
-        title=_first(product.meta_title, product.name),
-        description=_first(
-            product.meta_description,
-            # як fallbackDescription у ProductPage.tsx
-            f"{product.name}. Ціна {_price(product.priceUAH)} грн, "
-            f"{'в наявності' if product.inStock else 'під замовлення'}. Доставка по Україні.",
+        title=part_numbers.insert_alternates(_first(product.meta_title, product.name), product.detail_number),
+        description=part_numbers.with_alternates(
+            _first(
+                product.meta_description,
+                # як fallbackDescription у ProductPage.tsx
+                f"{product.name}. Ціна {_price(product.priceUAH)} грн, "
+                f"{'в наявності' if product.inStock else 'під замовлення'}. Доставка по Україні.",
+            ),
+            product.detail_number,
+            product.cross_number,
         ),
         canonical=f"{SITE_URL}/product/{product.id}",
         image=product.image,
@@ -255,8 +260,10 @@ def _product_body(product: Product) -> str:
     parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
     stock = "В наявності" if product.inStock else "Під замовлення"
     parts.append(f"<p>{_price(product.priceUAH)} грн · {stock}</p>")
-    if product.detail_number:
-        parts.append(f"<p>Артикул: {_e(product.detail_number)}</p>")
+    if part_numbers.split_numbers(product.detail_number):
+        parts.append(f"<p>Артикул: {_e(part_numbers.display(product.detail_number))}</p>")
+    if part_numbers.split_numbers(product.cross_number):
+        parts.append(f"<p>Крос-номери: {_e(part_numbers.display(product.cross_number))}</p>")
     if product.description:
         parts.append("<p>" + _e(product.description).replace("\n", "<br>") + "</p>")
     return "".join(parts)
@@ -264,10 +271,10 @@ def _product_body(product: Product) -> str:
 
 def _product_json_ld(product: Product) -> dict:
     url = f"{SITE_URL}/product/{product.id}"
-    return {
+    data = {
         "@context": "https://schema.org/",
         "@type": "Product",
-        "name": _first(product.meta_title, product.name),
+        "name": part_numbers.insert_alternates(_first(product.meta_title, product.name), product.detail_number),
         "image": [product.image] if product.image else [],
         "description": _first(product.meta_description, product.description, product.name),
         "sku": product.detail_number or product.id,
@@ -282,6 +289,10 @@ def _product_json_ld(product: Product) -> dict:
             "itemCondition": ITEM_CONDITION,
         },
     }
+    mpn = part_numbers.hyphenated(product.detail_number)
+    if mpn:
+        data["mpn"] = mpn
+    return data
 
 
 def _info(session: Session, slug: str) -> Optional[PageSeo]:
