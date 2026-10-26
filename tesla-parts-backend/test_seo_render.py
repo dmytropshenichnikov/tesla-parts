@@ -283,9 +283,29 @@ def test_schematic_and_home_body(session):
     assert '<a href="/product/pivvis-zadnia-1044331-00-c">2. Тяга (1188)</a>' in body
 
     home = _root(session, "/")
-    assert '<a href="/category/model-3">Model 3</a>' in home
-    assert home.startswith("<h1>Запчастини для Tesla</h1>")
+    assert 'href="/category/model-3"' in home
+    assert home.startswith(
+        '<div class="mb-12"><h1 class="text-3xl md:text-4xl font-bold text-center mb-2 '
+        'text-tesla-dark">Запчастини для Tesla</h1>'
+    )
     assert home.count("<h1") == 1
+    # плитки моделей: сервер віддає їх одразу, у тому ж порядку, що й GET /categories/
+    assert home.count("<h2") == 2
+    assert home.index('href="/category/model-3"') < home.index('href="/category/model-y-juniper"')
+
+
+def test_home_preloads_lcp_image_and_seeds_react(session):
+    """Головна: LCP-картинка прелоудиться з HTML, а React стартує з тих самих даних."""
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/"))
+    assert '<link rel="preload" as="image" href="https://img/cat.jpg" fetchpriority="high">' in page
+    assert "window.__HOME_CATEGORIES__=" in page
+    payload = re.search(r"window\.__HOME_CATEGORIES__=(\[.*?\]);</script>", page, re.S).group(1)
+    assert json.loads(payload) == [
+        {"id": 2, "name": "Model 3", "image": "https://img/cat.jpg"},
+        {"id": 9, "name": "Model Y Juniper", "image": ""},
+    ]
+    # inline-дані не можуть закрити <script>
+    assert "</script>" not in payload
 
 
 def test_body_is_escaped(session):

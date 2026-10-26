@@ -59,6 +59,9 @@ class PageSeo:
     og_type: str = "website"
     json_ld: list = field(default_factory=list)
     body: str = ""
+    # Додаткові теги в <head>: <link rel=preload> для LCP-картинки, інлайн-JS
+    # з даними, які React має мати вже при першому рендері (щоб не було CLS).
+    head_extra: list = field(default_factory=list)
 
 
 def slugify(value: str) -> str:
@@ -134,8 +137,76 @@ def _category_by_slug(session: Session, slug: str) -> Optional[Category]:
     return None
 
 
+def _home_hero_card(category: Category, position: int) -> str:
+    """Плитка моделі — рівно та сама розмітка, що й у Hero.tsx (компонент магазину).
+
+    Однакова геометрія = React після старту перемальовує ті самі блоки,
+    тому контент не «стрибає» (CLS), а Google/LCP бачить картинки одразу в HTML.
+    """
+    href = f"/category/{slugify(category.name)}"
+    image = category.image or ""
+    priority = ' fetchpriority="high"' if position < 2 else ""
+    card = (
+        f'<a href="{_e(href)}" class="group relative h-64 md:h-96 rounded-2xl overflow-hidden '
+        'cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-300 ease-out '
+        'active:scale-[0.98]" style="WebkitTapHighlightColor:transparent">'
+        '<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 '
+        'group-hover:via-black/25 transition-all duration-300 z-10"></div>'
+    )
+    if image:
+        card += (
+            f'<img src="{_e(image)}" alt="{_e(category.name)}" width="800" height="500"{priority} '
+            'class="absolute inset-0 w-full h-full object-cover transform transition-transform '
+            'duration-500 ease-out">'
+        )
+    else:
+        card += '<div class="absolute inset-0 bg-white"></div>'
+    card += (
+        '<div class="absolute bottom-0 left-0 p-6 z-20 text-white w-full">'
+        f'<h2 class="text-xl md:text-2xl font-bold mb-1">{_e(category.name)}</h2>'
+        '<div class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider '
+        'text-gray-200 group-hover:text-white transition-colors">'
+        '<span>Переглянути каталог</span>'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" '
+        'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path>'
+        '<path d="m12 5 7 7-7 7"></path></svg>'
+        "</div></div></a>"
+    )
+    return card
+
+
 def _home(session: Session) -> PageSeo:
     seo = _static_seo(session, "home")
+    # Порядок і склад — як у GET /categories/ (sort_order desc, id), щоб дані,
+    # які підвантажить React, збіглися з тим, що вже намальовано сервером.
+    categories = session.exec(
+        select(Category).order_by(Category.sort_order.desc(), Category.id)
+    ).all()
+    cards = "".join(_home_hero_card(c, i) for i, c in enumerate(categories))
+    hero = (
+        '<div class="mb-12">'
+        f'<h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-tesla-dark">{HOME_H1}</h1>'
+        '<p class="text-center text-lg text-gray-500 mb-8 font-manrope">Оберіть модель вашого Tesla</p>'
+        f'<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">{cards}</div>'
+        "</div>"
+    )
+
+    head_extra = []
+    # Прелоуд перших плиток: LCP-картинки стартують разом із HTML, а не після JS.
+    for c in categories[:2]:
+        if c.image:
+            head_extra.append(
+                f'<link rel="preload" as="image" href="{_e(c.image)}" fetchpriority="high">'
+            )
+    # React має ті самі категорії при ПЕРШОМУ рендері (useState(() => window.__...)),
+    # інакше плитки зникнуть біжучим запитом і сторінка знову стрибне.
+    payload = json.dumps(
+        [{"id": c.id, "name": c.name, "image": c.image or ""} for c in categories],
+        ensure_ascii=False,
+    ).replace("<", "\\u003c")
+    head_extra.append(f"<script>window.__HOME_CATEGORIES__={payload};</script>")
+
     return PageSeo(
         title=_first(seo and seo.meta_title, "Tesla Parts Center | Магазин запчастин для Tesla"),
         description=_first(
@@ -143,11 +214,8 @@ def _home(session: Session) -> PageSeo:
             "Популярні запчастини Tesla з гарантією якості та швидкою доставкою по Україні.",
         ),
         canonical=SITE_URL + "/",
-        body=f"<h1>{HOME_H1}</h1>"
-        + _links(
-            (f"/category/{slugify(c.name)}", c.name)
-            for c in session.exec(select(Category).order_by(Category.sort_order.desc())).all()
-        ),
+        body=hero,
+        head_extra=head_extra,
     )
 
 
@@ -500,7 +568,8 @@ _OG_TAG = re.compile(r'\s*<meta\s+property="og:(title|description|image|type|url
 
 def _head_tags(seo: PageSeo) -> str:
     # data-rh: react-helmet-async замінить ці теги своїми, без дублів
-    tags = [
+    # head_extra першим: прелоуд LCP-картинки має стартувати до CSS/JS.
+    tags = list(seo.head_extra) + [
         f'<meta data-rh="true" name="description" content="{_e(seo.description)}" />',
         f'<meta data-rh="true" property="og:title" content="{_e(seo.title)}" />',
         f'<meta data-rh="true" property="og:description" content="{_e(seo.description)}" />',

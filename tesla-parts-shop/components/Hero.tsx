@@ -9,8 +9,19 @@ import { HOME_H1 } from '../utils/seoTemplates';
 
 interface HeroProps {}
 
+/**
+ * Категорії, які вже вбудував сервер у prerender-HTML (`window.__HOME_CATEGORIES__`).
+ * Перший рендер React має збігатися з серверною розміткою плиток — інакше плитки
+ * зникнуть біжучим запитом і сторінка дасть layout shift (CLS).
+ */
+const readServerCategories = (): Category[] => {
+  if (typeof window === 'undefined') return [];
+  const raw = (window as unknown as { __HOME_CATEGORIES__?: unknown }).__HOME_CATEGORIES__;
+  return Array.isArray(raw) ? (raw as Category[]) : [];
+};
+
 const Hero: React.FC<HeroProps> = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(readServerCategories);
   const activeCar = useActiveCar();
   const myModel = catalogModelForCar(activeCar);
 
@@ -50,7 +61,7 @@ const Hero: React.FC<HeroProps> = () => {
         </p>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {orderedCategories.map((category) => {
+        {orderedCategories.map((category, index) => {
           const isMine = Boolean(myModel) && category.name.trim().toLowerCase() === myModel.toLowerCase();
           return (
             <Link
@@ -69,6 +80,7 @@ const Hero: React.FC<HeroProps> = () => {
                 alt={category.name}
                 width={800}
                 height={500}
+                fetchPriority={index < 2 ? 'high' : undefined}
                 className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
               />
               {isMine && (

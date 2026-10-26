@@ -278,3 +278,12 @@ export interface PlateLookupResult {
   tesla_specs?: VinDecodeResult | null;
   message?: string | null;
 }
+
+/** Дані головної, які вбудовує сервер у prerender-HTML (див. Hero.tsx). */
+declare global {
+  interface Window {
+    __HOME_CATEGORIES__?: unknown;
+  }
+}
+
+export {};
