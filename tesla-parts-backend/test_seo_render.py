@@ -284,6 +284,8 @@ def test_schematic_and_home_body(session):
 
     home = _root(session, "/")
     assert '<a href="/category/model-3">Model 3</a>' in home
+    assert home.startswith("<h1>Запчастини для Tesla</h1>")
+    assert home.count("<h1") == 1
 
 
 def test_body_is_escaped(session):

@@ -38,6 +38,8 @@ ITEM_CONDITION = "https://schema.org/NewCondition"
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 5
 MAX_LINKS = 300
+# H1 головної — той самий у shop utils/seoTemplates.ts (HOME_H1)
+HOME_H1 = "Запчастини для Tesla"
 
 STATIC_TITLES = {
     "about": "Про нас",
@@ -141,7 +143,8 @@ def _home(session: Session) -> PageSeo:
             "Популярні запчастини Tesla з гарантією якості та швидкою доставкою по Україні.",
         ),
         canonical=SITE_URL + "/",
-        body=_links(
+        body=f"<h1>{HOME_H1}</h1>"
+        + _links(
             (f"/category/{slugify(c.name)}", c.name)
             for c in session.exec(select(Category).order_by(Category.sort_order.desc())).all()
         ),
