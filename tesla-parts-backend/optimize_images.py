@@ -224,9 +224,17 @@ def main():
 
     pairs = optimize(args)
     if args.update_db:
-        if not args.apply:
-            sys.exit("--update-db потребує --apply (спочатку генеруємо файли)")
-        print("\nОновлюємо посилання в БД...")
+        if not pairs:
+            # пара не з поточної прогону (наприклад, файли вже створені раніше) —
+            # відновлюємо з диску: кожен оригінал, поруч з яким лежить .webp
+            pairs = [
+                (f.name, f.with_suffix(".webp").name)
+                for f in BASE.rglob("*")
+                if f.is_file()
+                and f.suffix.lower() != ".webp"
+                and f.with_suffix(".webp").exists()
+            ]
+        print(f"\nОновлюємо посилання в БД ({len(pairs)} пар)...")
         update_db(engine, pairs)
         print("Перевірка...")
         update_db(engine, pairs, verify_only=True)
