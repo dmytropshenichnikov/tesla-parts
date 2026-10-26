@@ -57,7 +57,7 @@ async def get_google_merchant_feed(session: Session = Depends(get_session)):
             p_id = saxutils.escape(str(product.id))
             p_title = saxutils.escape(part_numbers.feed_title(product.name, product.detail_number))
             p_description = saxutils.escape(product.description or product.name)
-            p_link = f"{SHOP_BASE_URL}/product/{product.id}"
+            p_link = f"{SHOP_BASE_URL}/product/{product.slug or product.id}"
             p_image_link = saxutils.escape(product.image) if product.image else ""
             p_price = f"{price_uah:.2f} UAH"
             p_availability = "in_stock" if product.inStock else "out_of_stock"
@@ -157,7 +157,7 @@ async def get_prom_ua_feed(session: Session = Depends(get_session)):
             desc = desc.replace(']]>', ']]]]><![CDATA[>')
             p_description = f"<![CDATA[{desc}]]>"
             
-            p_link = f"{SHOP_BASE_URL}/product/{product.id}"
+            p_link = f"{SHOP_BASE_URL}/product/{product.slug or product.id}"
             p_image_link = saxutils.escape(product.image) if product.image else ""
             p_price = f"{price_uah:.2f}"
             available_str = "true" if product.inStock else "false"

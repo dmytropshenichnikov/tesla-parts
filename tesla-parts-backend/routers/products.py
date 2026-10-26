@@ -11,6 +11,7 @@ from models import Product, ProductImage, ProductSubcategoryLink, Category
 from schemas import ProductCreate, ProductRead, ProductBulkDeleteRequest, ProductReorderRequest
 from services.image_uploader import image_uploader
 from services.pricing import get_exchange_rate, compute_price_fields
+from services.product_slug import build_slug
 from dependencies import get_current_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -27,6 +28,22 @@ def _slugify(value: str) -> str:
         return ""
     value = value.lower().strip()
     return re.sub(r'\s+', '-', value)
+
+
+def _make_unique_slug(
+    session: Session,
+    name: str,
+    detail_number: Optional[str],
+    product_id: str,
+) -> str:
+    taken = {
+        slug
+        for slug in session.exec(
+            select(Product.slug).where(Product.slug.is_not(None))
+        ).all()
+        if slug
+    }
+    return build_slug(name, detail_number, product_id, taken)
 
 
 def _detect_model_in_query(search: str) -> Optional[str]:
@@ -269,9 +286,10 @@ def read_products(
 
 @router.get("/{product_id}", response_model=ProductRead)
 def read_product(product_id: str, session: Session = Depends(get_session)):
+    # product_id може бути як старим id (prod-xxxx), так і новим slug
     product = session.exec(
         select(Product)
-        .where(Product.id == product_id)
+        .where(or_(Product.id == product_id, Product.slug == product_id))
         .options(
             selectinload(Product.images),
             selectinload(Product.linked_subcategories),
@@ -357,6 +375,7 @@ async def create_product(
 
     product_data = Product(
         id=product_id,
+        slug=_make_unique_slug(session, name, detail_number, product_id),
         name=name,
         category=category,
         subcategory_id=primary_subcategory_id,
@@ -445,7 +464,12 @@ async def update_product(
     product.is_popular = is_popular
     if part_type is not None:
         product.part_type = part_type if part_type != "" else None
-    
+
+    # Slug не змінюємо при редагуванні назви — він має лишатися стабільним.
+    # Але якщо його чомусь немає (імпорт/стара БД), догенеровуємо.
+    if not product.slug:
+        product.slug = _make_unique_slug(session, name, detail_number, product_id)
+
     # Update main image if provided
     if image:
         product.image = image
@@ -536,9 +560,11 @@ def copy_product(
     new_id = f"prod-{os.urandom(4).hex()}"
     rate = get_exchange_rate(session)
     
+    copy_name = f"{product.name} (Копія)"
     new_product = Product(
         id=new_id,
-        name=f"{product.name} (Копія)",
+        slug=_make_unique_slug(session, copy_name, product.detail_number, new_id),
+        name=copy_name,
         category=product.category,
         subcategory_id=product.subcategory_id,
         priceUAH=product.priceUAH,

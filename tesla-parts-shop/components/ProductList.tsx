@@ -81,7 +81,7 @@ const ProductList: React.FC<ProductListProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedType, setCopiedType] = useState<'part' | null>(null);
 
-  const handleCardClick = (e: React.MouseEvent, productId: string) => {
+  const handleCardClick = (e: React.MouseEvent, product: Product) => {
     const target = e.target as HTMLElement;
     if (target.closest('button, a, input, select, textarea')) {
       return;
@@ -90,7 +90,9 @@ const ProductList: React.FC<ProductListProps> = ({
     if (selection && selection.toString().trim().length > 0) {
       return;
     }
-    navigate(`/product/${productId}`);
+    navigate(`/product/${product.slug || product.id}`, {
+      state: browseModel ? { browseModel } : undefined,
+    });
   };
 
   const handleCopyPartNumber = (
@@ -210,7 +212,7 @@ const ProductList: React.FC<ProductListProps> = ({
           return (
             <div
               key={product.id}
-              onClick={(e) => handleCardClick(e, product.id)}
+              onClick={(e) => handleCardClick(e, product)}
               className="bg-white rounded-2xl shadow-xs hover:shadow-md active:scale-[0.99] transition-shadow duration-200 ease-out border border-gray-100 flex flex-col cursor-pointer group overflow-hidden select-text"
               style={{
                 WebkitTapHighlightColor: 'transparent',
@@ -218,7 +220,8 @@ const ProductList: React.FC<ProductListProps> = ({
             >
               {/* Product Photo & Stock Badge */}
               <Link
-                to={`/product/${product.id}${browseModel ? `?model=${encodeURIComponent(browseModel)}` : ''}`}
+                to={`/product/${product.slug || product.id}`}
+                state={browseModel ? { browseModel } : undefined}
                 draggable={false}
                 onDragStart={(e) => e.preventDefault()}
                 className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50 cursor-pointer block"
@@ -280,7 +283,8 @@ const ProductList: React.FC<ProductListProps> = ({
                   {/* Full Product Title (Selectable & clickable) */}
                   <h3 className="font-medium text-xs sm:text-sm text-gray-900 leading-snug group-hover:text-tesla-red transition-colors mb-2 select-text">
                     <Link
-                      to={`/product/${product.id}${browseModel ? `?model=${encodeURIComponent(browseModel)}` : ''}`}
+                      to={`/product/${product.slug || product.id}`}
+                      state={browseModel ? { browseModel } : undefined}
                       draggable={false}
                       onDragStart={(e) => e.preventDefault()}
                       className="hover:text-tesla-red select-text"

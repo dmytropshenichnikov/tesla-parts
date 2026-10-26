@@ -53,6 +53,7 @@ def session_fixture():
         session.add(
             Product(
                 id="prod-1",
+                slug="vazhil-perednii-livyi",
                 name='Важіль "передній" лівий',
                 category="Model 3",
                 priceUAH=1250.0,
@@ -64,6 +65,7 @@ def session_fixture():
         session.add(
             Product(
                 id="prod-2",
+                slug="pivvis-zadnia-1044331-00-c",
                 name="1044331-00-C - Піввісь задня",
                 category="Model 3",
                 subcategory_id=371,
@@ -76,7 +78,7 @@ def session_fixture():
             )
         )
         session.add(
-            Product(id="prod-3", name="Болт", category="Model 3", priceUAH=50.0, image="", description="", inStock=True)
+            Product(id="prod-3", slug="bolt", name="Болт", category="Model 3", priceUAH=50.0, image="", description="", inStock=True)
         )
         session.add(ProductSubcategoryLink(product_id="prod-3", subcategory_id=371))
         session.add(SchematicHotspot(schematic_id=77, number=2, x=0, y=0, name="Тяга", part_number="1188", product_id="prod-2"))
@@ -126,10 +128,10 @@ def test_category_meta_from_admin_wins(session):
 
 
 def test_product(session):
-    seo = seo_render.resolve(session, "/product/prod-1")
+    seo = seo_render.resolve(session, "/product/vazhil-perednii-livyi")
     assert seo.title == 'Важіль "передній" лівий'
     assert seo.description == 'Важіль "передній" лівий. Ціна 1250 грн, в наявності. Доставка по Україні.'
-    assert seo.canonical == "https://teslapartscenter.com.ua/product/prod-1"
+    assert seo.canonical == "https://teslapartscenter.com.ua/product/vazhil-perednii-livyi"
     assert seo.og_type == "product"
 
 
@@ -151,21 +153,27 @@ def test_unknown_entities_resolve_to_none(session):
 
 
 def test_render_replaces_head_without_duplicates(session):
-    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/vazhil-perednii-livyi"))
     assert "<title>Важіль &quot;передній&quot; лівий</title>" in page
     assert page.count("og:title") == 1
     assert page.count("og:description") == 1
     assert page.count("og:url") == 1
     assert 'property="og:site_name"' in page
-    assert '<link data-rh="true" rel="canonical" href="https://teslapartscenter.com.ua/product/prod-1" />' in page
+    assert '<link data-rh="true" rel="canonical" href="https://teslapartscenter.com.ua/product/vazhil-perednii-livyi" />' in page
     assert 'content="Важіль &quot;передній&quot; лівий. Ціна 1250 грн, в наявності. Доставка по Україні."' in page
 
 
 def test_prerender_endpoint(client):
-    response = client.get("/prerender/product/prod-1?model=Model%203")
+    response = client.get("/prerender/product/vazhil-perednii-livyi?model=Model%203")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert 'rel="canonical" href="https://teslapartscenter.com.ua/product/prod-1"' in response.text
+    assert 'rel="canonical" href="https://teslapartscenter.com.ua/product/vazhil-perednii-livyi"' in response.text
+
+
+def test_old_product_id_redirects_to_slug(client):
+    response = client.get("/prerender/product/prod-1?model=Model%203", follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "/product/vazhil-perednii-livyi"
 
 
 def test_prerender_falls_back_when_shop_unavailable(client, monkeypatch):
@@ -182,34 +190,44 @@ def _json_ld(page):
 
 
 def test_product_title_gets_alternate_number(session):
-    assert seo_render.resolve(session, "/product/prod-2").title == "1044331-00-C 104433100C - Піввісь задня"
-    assert seo_render.resolve(session, "/product/prod-1").title == 'Важіль "передній" лівий'
+    assert seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c").title == "1044331-00-C 104433100C - Піввісь задня"
+    assert seo_render.resolve(session, "/product/vazhil-perednii-livyi").title == 'Важіль "передній" лівий'
 
 
 def test_product_description_gets_alternate_numbers(session):
-    seo = seo_render.resolve(session, "/product/prod-2")
+    seo = seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c")
     assert seo.description == "1044331-00-C - Піввісь задня. Ціна 4800 грн, під замовлення. Доставка по Україні. 104433100C, 1044332-00-C"
-    assert seo_render.resolve(session, "/product/prod-1").description.endswith("Доставка по Україні.")
+    assert seo_render.resolve(session, "/product/vazhil-perednii-livyi").description.endswith("Доставка по Україні.")
 
 
 def test_product_json_ld_mpn(session):
-    [data] = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-2")))
+    data = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c")))[0]
     assert data["sku"] == "1044331-00-C"
     assert data["mpn"] == "1044331-00-C"
-    [data] = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1")))
+    data = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/vazhil-perednii-livyi")))[0]
     assert "mpn" not in data
 
 
 def test_product_json_ld(session):
-    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
-    [data] = _json_ld(page)
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/vazhil-perednii-livyi"))
+    data = _json_ld(page)[0]
     assert data["@type"] == "Product"
     assert data["name"] == 'Важіль "передній" лівий'
     assert data["offers"]["price"] == 1250.0
     assert data["offers"]["priceCurrency"] == "UAH"
     assert data["offers"]["availability"] == "https://schema.org/InStock"
-    assert data["offers"]["url"] == "https://teslapartscenter.com.ua/product/prod-1"
+    assert data["offers"]["url"] == "https://teslapartscenter.com.ua/product/vazhil-perednii-livyi"
     assert data["offers"]["itemCondition"] == "https://schema.org/NewCondition"
+
+
+def test_product_json_ld_breadcrumbs(session):
+    blocks = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c")))
+    breadcrumbs = blocks[1]
+    assert breadcrumbs["@type"] == "BreadcrumbList"
+    names = [item["name"] for item in breadcrumbs["itemListElement"]]
+    assert names == ["Головна", "Model 3", "ЗАДНІЙ ПРИВІД", "Піввісь задня"]
+    urls = [item["item"] for item in breadcrumbs["itemListElement"]]
+    assert urls[-1] == "https://teslapartscenter.com.ua/product/pivvis-zadnia-1044331-00-c"
 
 
 def test_json_ld_cannot_close_script_tag(session):
@@ -217,7 +235,7 @@ def test_json_ld_cannot_close_script_tag(session):
     product.description = "</script><script>alert(1)</script>"
     session.add(product)
     session.commit()
-    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/prod-1"))
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/vazhil-perednii-livyi"))
     assert "</script><script>alert(1)" not in page
     assert _json_ld(page)[0]["description"] == "</script><script>alert(1)</script>"
 
@@ -233,43 +251,43 @@ def _root(session, path):
 
 
 def test_product_body(session):
-    body = _root(session, "/product/prod-2")
+    body = _root(session, "/product/pivvis-zadnia-1044331-00-c")
     assert '<a href="/category/model-3">Model 3</a> / <a href="/category/model-3/sub/371">ЗАДНІЙ ПРИВІД</a>' in body
     assert "<h1>Піввісь задня</h1>" in body
-    assert "<p>4800 грн · Під замовлення</p>" in body
+    assert "<p><strong>4800 грн</strong> · Під замовлення</p>" in body
     assert "<p>Артикул: 1044331-00-C / 104433100C</p>" in body
     assert "<p>Крос-номери: 104433200C / 1044332-00-C, 5163001</p>" in body
-    assert "<p>Б/в<br>оригінал</p>" in body
+    assert "<p>Б/в</p><p>оригінал</p>" in body
 
 
 def test_category_body_lists_subcategories_and_own_products(session):
     body = _root(session, "/category/model-3")
     assert "<h1>Model 3</h1>" in body
     assert '<a href="/category/model-3/sub/371">ЗАДНІЙ ПРИВІД</a>' in body
-    assert 'href="/product/prod-1"' in body
-    assert 'href="/product/prod-2"' not in body
+    assert 'href="/product/vazhil-perednii-livyi"' in body
+    assert 'href="/product/pivvis-zadnia-1044331-00-c"' not in body
 
 
 def test_subcategory_body_lists_direct_and_linked_products(session):
     body = _root(session, "/category/model-3/sub/371")
     assert '<p><a href="/category/model-3">Model 3</a></p><h1>ЗАДНІЙ ПРИВІД</h1>' in body
-    assert 'href="/product/prod-2"' in body
-    assert 'href="/product/prod-3"' in body
-    assert 'href="/product/prod-1"' not in body
+    assert 'href="/product/pivvis-zadnia-1044331-00-c"' in body
+    assert 'href="/product/bolt"' in body
+    assert 'href="/product/vazhil-perednii-livyi"' not in body
 
 
 def test_schematic_and_home_body(session):
     body = _root(session, "/schemes/77")
     assert "<h1>Передній стабілізатор • Model Y Стандартна</h1>" in body
     assert body.index("1. Втулка") < body.index("2. Тяга (1188)")
-    assert '<a href="/product/prod-2">2. Тяга (1188)</a>' in body
+    assert '<a href="/product/pivvis-zadnia-1044331-00-c">2. Тяга (1188)</a>' in body
 
     home = _root(session, "/")
     assert '<a href="/category/model-3">Model 3</a>' in home
 
 
 def test_body_is_escaped(session):
-    assert "<h1>Важіль &quot;передній&quot; лівий</h1>" in _root(session, "/product/prod-1")
+    assert "<h1>Важіль &quot;передній&quot; лівий</h1>" in _root(session, "/product/vazhil-perednii-livyi")
 
 
 @pytest.mark.parametrize(
@@ -313,7 +331,7 @@ def test_schemes_catalog_canonical_drops_filters(client):
 
 def test_html_is_not_cached(client):
     # глобальний middleware main.py: no-store для всього, крім /static
-    for path in ("/prerender/product/prod-1", "/prerender/product/deleted"):
+    for path in ("/prerender/product/vazhil-perednii-livyi", "/prerender/product/deleted"):
         assert "no-store" in client.get(path).headers["cache-control"]
 
 
@@ -327,6 +345,8 @@ def test_sitemap_has_schemes_and_shop_slugs(session, client, monkeypatch):
     assert "<loc>https://teslapartscenter.com.ua/category/model-y-juniper</loc>" in xml
     assert "/category/%D0%B0%D0%BA%D1%81%D0%B5%D1%81%D1%83%D0%B0%D1%80%D0%B8</loc>" in xml
     assert "<loc>https://teslapartscenter.com.ua/category/model-3/sub/371</loc>" in xml
+    assert "<loc>https://teslapartscenter.com.ua/product/vazhil-perednii-livyi</loc>" in xml
+    assert "<loc>https://teslapartscenter.com.ua/product/prod-1</loc>" not in xml
 
 
 def test_category_seo_text_paragraphs_only_on_category(session):

@@ -1326,12 +1326,26 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
   phoneNumber,
 }) => {
   const { productId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadedProduct = useRef<Product | null>(null);
+
+  useEffect(() => {
+    loadedProduct.current = product;
+  }, [product]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       if (!productId) return;
+      // Після 301/заміни старого id на slug не робимо повторний запит.
+      const current = loadedProduct.current;
+      if (current && (current.slug === productId || current.id === productId)) {
+        setProduct(current);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const data = await api.getProduct(productId);
@@ -1345,6 +1359,17 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
     };
     fetchProduct();
   }, [productId]);
+
+  // Старий /product/prod-xxxx у браузері (клієнтська навігація) -> slug.
+  // Серверні 301 обробляє backend prerender.
+  useEffect(() => {
+    if (!loading && product?.slug && productId !== product.slug) {
+      navigate(`/product/${product.slug}`, {
+        replace: true,
+        state: location.state,
+      });
+    }
+  }, [loading, product, productId, navigate, location.state]);
 
   useLayoutEffect(() => {
     if (!loading && product) {

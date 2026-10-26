@@ -1181,7 +1181,8 @@ export const SchemesCatalog: React.FC = () => {
             {subsystemParts.map((item) => (
               <Link
                 key={item.id}
-                to={`/product/${item.id}${selectedModel ? `?model=${encodeURIComponent(selectedModel)}` : ''}`}
+                to={`/product/${item.slug || item.id}`}
+                state={selectedModel ? { browseModel: selectedModel } : undefined}
                 className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-lg transition-shadow duration-300"
               >
                 <div className="h-28 bg-[#fbfbfb] p-3 flex items-center justify-center border-b border-gray-50">

@@ -148,6 +148,11 @@ def _home(session: Session) -> PageSeo:
     )
 
 
+def _product_path(product: Product) -> str:
+    """Людиночитаний шлях товару; fallback на старий id, якщо slug ще немає."""
+    return f"/product/{product.slug or product.id}"
+
+
 def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[PageSeo]:
     category = _category_by_slug(session, slug)
     if not category:
@@ -196,7 +201,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         breadcrumb
         + f"<h1>{_e(heading)}</h1>"
         + _links((f"/category/{slug}/sub/{c.id}", c.name) for c in children)
-        + _links((f"/product/{p.id}", p.name) for p in products)
+        + _links((_product_path(p), p.name) for p in products)
     )
     if sub_id is None and category.seo_text:
         # як у магазині: абзаци через порожній рядок
@@ -215,9 +220,16 @@ def _price(value: float) -> str:
     return f"{value:g}"
 
 
-def _product(session: Session, product_id: str) -> Optional[PageSeo]:
-    product = session.get(Product, product_id)
+def _product(session: Session, identifier: str) -> Optional[PageSeo]:
+    product = session.exec(
+        select(Product).where(
+            or_(Product.slug == identifier, Product.id == identifier)
+        )
+    ).first()
     if not product:
+        return None
+    # Старий id-URL не віддаємо як 200: legacy_redirect зробить 301 на slug.
+    if product.slug and identifier != product.slug:
         return None
     return PageSeo(
         title=part_numbers.insert_alternates(_first(product.meta_title, product.name), product.detail_number),
@@ -231,46 +243,59 @@ def _product(session: Session, product_id: str) -> Optional[PageSeo]:
             product.detail_number,
             product.cross_number,
         ),
-        canonical=f"{SITE_URL}/product/{product.id}",
+        canonical=f"{SITE_URL}{_product_path(product)}",
         image=product.image,
         og_type="product",
-        json_ld=[_product_json_ld(product)],
+        json_ld=[_product_json_ld(product)] + _product_breadcrumb_json_ld(product),
         body=_product_body(product),
     )
 
 
 def _clean_title(product: Product) -> str:
     # як cleanTitle у ProductPage.tsx: без артикула на початку назви
-    name = product.name or ""
-    number = product.detail_number or ""
-    if number and name.lower().startswith(number.lower()):
-        name = re.sub(r"^[\s\-–—:]+", "", name[len(number):])
-    return name.strip() or product.name
+    from services.product_slug import clean_title
+
+    return clean_title(product.name, product.detail_number) or (product.name or "")
 
 
-def _product_body(product: Product) -> str:
-    parts = []
+def _product_breadcrumbs(product: Product) -> list:
+    items = [("Головна", "/")]
     sub = product.subcategory
     if sub and sub.category:
         cat_slug = slugify(sub.category.name)
-        parts.append(
-            f'<p><a href="/category/{_e(cat_slug)}">{_e(sub.category.name)}</a> / '
-            f'<a href="/category/{_e(cat_slug)}/sub/{sub.id}">{_e(sub.name)}</a></p>'
-        )
+        items.append((sub.category.name, f"/category/{cat_slug}"))
+        items.append((sub.name, f"/category/{cat_slug}/sub/{sub.id}"))
+    items.append((_clean_title(product), _product_path(product)))
+    return items
+
+
+def _product_body(product: Product) -> str:
+    # Повноцінний серверний HTML товару: Google бачить його без виконання JS.
+    parts = ['<nav aria-label="breadcrumbs">']
+    crumbs = []
+    for text, href in _product_breadcrumbs(product):
+        crumbs.append(f'<a href="{_e(href)}">{_e(text)}</a>')
+    parts.append(" / ".join(crumbs) + "</nav>")
     parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
+    if product.image:
+        parts.append(
+            f'<p><img src="{_e(product.image)}" alt="{_e(_clean_title(product))}" '
+            f'width="480" height="480" loading="eager"></p>'
+        )
     stock = "В наявності" if product.inStock else "Під замовлення"
-    parts.append(f"<p>{_price(product.priceUAH)} грн · {stock}</p>")
+    parts.append(f"<p><strong>{_price(product.priceUAH)} грн</strong> · {stock}</p>")
     if part_numbers.split_numbers(product.detail_number):
         parts.append(f"<p>Артикул: {_e(part_numbers.display(product.detail_number))}</p>")
     if part_numbers.split_numbers(product.cross_number):
         parts.append(f"<p>Крос-номери: {_e(part_numbers.display(product.cross_number))}</p>")
     if product.description:
-        parts.append("<p>" + _e(product.description).replace("\n", "<br>") + "</p>")
+        paragraphs = [p.strip() for p in re.split(r"\n+", product.description) if p.strip()]
+        parts.extend(f"<p>{_e(p)}</p>" for p in paragraphs)
     return "".join(parts)
 
 
 def _product_json_ld(product: Product) -> dict:
-    url = f"{SITE_URL}/product/{product.id}"
+    url = f"{SITE_URL}{_product_path(product)}"
     data = {
         "@context": "https://schema.org/",
         "@type": "Product",
@@ -279,6 +304,7 @@ def _product_json_ld(product: Product) -> dict:
         "description": _first(product.meta_description, product.description, product.name),
         "sku": product.detail_number or product.id,
         "brand": {"@type": "Brand", "name": "Tesla"},
+        "url": url,
         "offers": {
             "@type": "Offer",
             "url": url,
@@ -293,6 +319,24 @@ def _product_json_ld(product: Product) -> dict:
     if mpn:
         data["mpn"] = mpn
     return data
+
+
+def _product_breadcrumb_json_ld(product: Product) -> list:
+    items = []
+    for position, (text, href) in enumerate(_product_breadcrumbs(product), start=1):
+        items.append({
+            "@type": "ListItem",
+            "position": position,
+            "name": text,
+            "item": f"{SITE_URL}{href}",
+        })
+    if not items:
+        return []
+    return [{
+        "@context": "https://schema.org/",
+        "@type": "BreadcrumbList",
+        "itemListElement": items,
+    }]
 
 
 def _info(session: Session, slug: str) -> Optional[PageSeo]:
@@ -346,11 +390,17 @@ def _schematic_body(session: Session, schematic: Schematic) -> str:
         .where(SchematicHotspot.schematic_id == schematic.id)
         .order_by(SchematicHotspot.number)
     ).all()
+    product_ids = [spot.product_id for spot in hotspots if spot.product_id]
+    products_by_id = {}
+    if product_ids:
+        for product in session.exec(select(Product).where(Product.id.in_(product_ids))).all():
+            products_by_id[product.id] = product
     items = []
     for spot in hotspots[:MAX_LINKS]:
         label = f"{spot.number}. {spot.name}" + (f" ({spot.part_number})" if spot.part_number else "")
-        if spot.product_id:
-            items.append(f'<li><a href="/product/{_e(spot.product_id)}">{_e(label)}</a></li>')
+        product = products_by_id.get(spot.product_id) if spot.product_id else None
+        if product:
+            items.append(f'<li><a href="{_e(_product_path(product))}">{_e(label)}</a></li>')
         else:
             items.append(f"<li>{_e(label)}</li>")
     heading = f"<h1>{_e(schematic.title)} • {_e(schematic.model)} {_e(schematic.generation)}</h1>"
@@ -381,7 +431,23 @@ def _schemes_catalog() -> PageSeo:
 
 
 def legacy_redirect(session: Session, path: str) -> Optional[str]:
-    """Старі адреси /model-3, /аксесуари тощо -> /category/<slug>."""
+    """Старі адреси -> нові.
+
+    - /product/prod-xxxx (старий id) -> /product/<slug> (301, щоб Google
+      переніс вагу на нову людиночитану адресу);
+    - /model-3, /аксесуари тощо -> /category/<slug>.
+    """
+    match = re.fullmatch(r"/product/([^/]+)", "/" + path.strip("/"))
+    if match:
+        product = session.exec(
+            select(Product).where(
+                or_(Product.slug == match.group(1), Product.id == match.group(1))
+            )
+        ).first()
+        if product and product.slug and product.slug != match.group(1):
+            return _product_path(product)
+        return None
+
     match = re.fullmatch(r"/([^/]+)", "/" + path.strip("/"))
     if match and _category_by_slug(session, match.group(1)):
         return f"/category/{match.group(1)}"
@@ -442,6 +508,12 @@ def _head_tags(seo: PageSeo) -> str:
         tags.append(f'<meta data-rh="true" property="og:url" content="{_e(seo.canonical)}" />')
     if seo.image:
         tags.append(f'<meta data-rh="true" property="og:image" content="{_e(seo.image)}" />')
+        tags.append(f'<meta data-rh="true" property="og:image:alt" content="{_e(seo.title)}" />')
+    tags.append(f'<meta data-rh="true" name="twitter:card" content="summary_large_image" />')
+    tags.append(f'<meta data-rh="true" name="twitter:title" content="{_e(seo.title)}" />')
+    tags.append(f'<meta data-rh="true" name="twitter:description" content="{_e(seo.description)}" />')
+    if seo.image:
+        tags.append(f'<meta data-rh="true" name="twitter:image" content="{_e(seo.image)}" />')
     for data in seo.json_ld:
         payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
         tags.append(f'<script data-rh="true" type="application/ld+json">{payload}</script>')

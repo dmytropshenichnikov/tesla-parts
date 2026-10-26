@@ -4,6 +4,7 @@ from datetime import datetime
 
 class ProductBase(BaseModel):
     id: str
+    slug: str | None = None
     name: str
     category: str
     priceUSD: float | None = None

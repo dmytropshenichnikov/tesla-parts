@@ -62,6 +62,12 @@ class Subcategory(SQLModel, table=True):
 
 class Product(SQLModel, table=True):
     id: str = Field(primary_key=True)
+    # Людиночитаний URL: /product/<slug>. Генерується один раз, не змінюється
+    # при редагуванні назви, щоб не ламати індексацію Google.
+    slug: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, unique=True, index=True, nullable=True),
+    )
     name: str
     category: str # Deprecated, keeping for backward compatibility
     subcategory_id: Optional[int] = Field(default=None, foreign_key="subcategory.id")

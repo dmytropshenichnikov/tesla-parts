@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, create_engine, Session, select
 from sqlalchemy import text, inspect
 import os
-from models import Settings, User, SearchQueryLog, Schematic, SchematicHotspot # Import models
+from models import Product, Settings, User, SearchQueryLog, Schematic, SchematicHotspot # Import models
 from auth import get_password_hash # Import password hashing utility
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -35,6 +35,7 @@ def create_db_and_tables():
     _ensure_product_part_type_column()
     _ensure_product_search_keywords_column()
     _ensure_product_meta_columns()
+    _ensure_product_slug_column()
     _ensure_order_note_column()
     
     with Session(engine) as session:
@@ -185,4 +186,49 @@ def _ensure_product_meta_columns():
             print("Adding 'meta_description' column to 'product' table...")
             conn.execute(text("ALTER TABLE product ADD COLUMN meta_description VARCHAR"))
         conn.commit()
+
+
+def _ensure_product_slug_column():
+    """Додає product.slug, заповнює його для наявних товарів і ставить unique-індекс.
+
+    Ідемпотентно: на кожному старті перевіряє колонку/індекс і догенеровує slug
+    лише для товарів, де він порожній (наприклад, після імпорту).
+    """
+    from services.product_slug import build_slug
+
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("product")]
+    if "slug" not in columns:
+        print("Adding 'slug' column to 'product' table...")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE product ADD COLUMN slug VARCHAR"))
+            conn.commit()
+
+    with Session(engine) as session:
+        products = session.exec(select(Product).order_by(Product.id)).all()
+        taken = {p.slug for p in products if p.slug}
+        changed = 0
+        for product in products:
+            if product.slug:
+                continue
+            product.slug = build_slug(
+                product.name,
+                product.detail_number,
+                product.id,
+                taken,
+            )
+            taken.add(product.slug)
+            session.add(product)
+            changed += 1
+        if changed:
+            session.commit()
+            print(f"Backfilled slug for {changed} products")
+
+    index_names = {idx["name"] for idx in inspect(engine).get_indexes("product")}
+    if "ix_product_slug" not in index_names:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_product_slug ON product (slug)"
+            ))
+            conn.commit()
 

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import ViberIcon from './ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import SeoHead from './SeoHead';
 import { formatCurrency } from '../utils/currency';
 import { api } from '../services/api';
@@ -81,9 +81,13 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
-  // Модель, з якої прийшли в каталог (?model=Model Y) — щоб показати саме її схему
+  // Модель, з якої прийшли в каталог. Раніше передавали ?model=... у URL —
+  // це псувало SEO-адресу. Тепер модель летить у react-router state, а query
+  // лишаємо лише як fallback для старих зовнішніх посилань.
   const [searchParams] = useSearchParams();
-  const browseModel = (searchParams.get('model') || '').trim();
+  const location = useLocation();
+  const stateModel = (location.state as { browseModel?: string } | null)?.browseModel;
+  const browseModel = (searchParams.get('model') || stateModel || '').trim();
 
   useEffect(() => {
     let cancelled = false;
@@ -269,10 +273,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const partType = useMemo(() => getProductPartType(product), [product]);
 
   // Prefilled message for messenger consultation
+  const productPath = `/product/${product.slug || product.id}`;
   const productUrl =
     typeof window !== 'undefined' && window.location?.origin
-      ? `${window.location.origin}/product/${product.id}`
-      : `https://teslapartscenter.com.ua/product/${product.id}`;
+      ? `${window.location.origin}${productPath}`
+      : `https://teslapartscenter.com.ua${productPath}`;
 
   const messageLines = [
     `Доброго дня! Мене цікавить запчастина:`,
@@ -318,6 +323,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
         )}
         fallbackTitle={product.name}
         image={product.image}
+        canonicalUrl={`https://teslapartscenter.com.ua${productPath}`}
         type="product"
         sku={product.detail_number || product.id}
         mpn={hyphenatedPartNumber(product.detail_number)}

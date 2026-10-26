@@ -27,6 +27,8 @@ export interface Category {
 
 export interface Product {
   id: string;
+  /** Людиночитаний URL-сегмент: /product/<slug> */
+  slug?: string | null;
   name: string;
   category: string; // Comma-separated list of categories (e.g., "Model 3, Model Y")
   subcategory_id?: number;

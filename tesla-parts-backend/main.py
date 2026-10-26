@@ -180,10 +180,11 @@ def get_sitemap():
         if cat_slug and sub.id:
             xml_parts.append(f'<url><loc>{base_url}/category/{cat_slug}/sub/{sub.id}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
 
-    # 5. Products
+    # 5. Products (людиночитані slug-URL)
     for product in products:
         if product.id:
-            xml_parts.append(f'<url><loc>{base_url}/product/{product.id}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
+            product_path = product.slug or product.id
+            xml_parts.append(f'<url><loc>{base_url}/product/{product_path}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
 
     # 6. Schemes
     xml_parts.append(f'<url><loc>{base_url}/schemes</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>')
