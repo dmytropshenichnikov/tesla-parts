@@ -74,10 +74,12 @@ def optimize(args):
             too_big = orig_bytes > args.min_bytes
             too_wide = max(im.size) > max_side
             if suffix == ".webp":
-                # вже WebP: якщо завеликий — перепаковуємо на місці (БД не чіпаємо)
-                if not (too_big or too_wide):
+                # вже WebP: перепаковуємо на місці ЛИШЕ якщо завеликий по стороні,
+                # інакше подвійне стиснення з'їсть якість без виграшу (БД не чіпаємо)
+                if not too_wide:
                     skipped += 1
                     continue
+                too_big = True
                 target = path
             else:
                 if not (too_big or too_wide):
@@ -206,7 +208,21 @@ def main():
     parser.add_argument("--max-side", type=int, default=None, help="перевизначити макс. сторону")
     parser.add_argument("--quality", type=int, default=82)
     parser.add_argument("--min-bytes", type=int, default=150 * 1024, help="менші файли не чіпаємо")
+    parser.add_argument(
+        "--folders",
+        default="",
+        help="через кому: обробити лише ці папки (напр. categories) із --max-side",
+    )
     args = parser.parse_args()
+    if args.folders:
+        wanted = {f.strip() for f in args.folders.split(",") if f.strip()}
+        unknown = wanted - set(FOLDERS)
+        if unknown:
+            sys.exit(f"Невідомі папки: {', '.join(sorted(unknown))}")
+        FOLDERS.update({k: args.max_side for k in wanted if args.max_side})
+        for key in list(FOLDERS):
+            if key not in wanted:
+                del FOLDERS[key]
 
     if not BASE.is_dir():
         sys.exit(f"Не знайдено {BASE}")
