@@ -5,6 +5,7 @@ import { Category } from '../types';
 import { Link } from 'react-router-dom';
 import { slugify } from '../utils/slugify';
 import { catalogModelForCar, useActiveCar } from '../utils/garageMatch';
+import { HOME_H1 } from '../utils/seoTemplates';
 
 interface HeroProps {}
 
@@ -38,9 +39,10 @@ const Hero: React.FC<HeroProps> = () => {
 
   return (
     <div className="mb-12">
-      <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 text-tesla-dark">
-        Оберіть модель вашого Tesla
+      <h1 className="text-3xl md:text-4xl font-bold text-center mb-2 text-tesla-dark">
+        {HOME_H1}
       </h1>
+      <p className="text-center text-lg text-gray-500 mb-8 font-manrope">Оберіть модель вашого Tesla</p>
       {myModel && (
         <p className="text-center text-sm text-gray-500 -mt-4 mb-6 font-manrope">
           Ваше авто — <span className="font-semibold text-tesla-dark">{myModel}</span>. Воно вже перше в списку,
