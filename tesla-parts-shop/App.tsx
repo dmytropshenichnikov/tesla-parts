@@ -513,6 +513,8 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-tesla-dark bg-[#f8fafc]">
+      {/* main тримає щонайменше один екран: футер стартує НИЖЧЕ в'юпорта, тому
+          поки API віддає дані, він не «стрибає» в кадр (Lighthouse CLS). */}
       <ScrollToTop />
       <Header
         cartCount={cartCount}
@@ -533,7 +535,7 @@ const App: React.FC = () => {
         onCloseDrawer={() => setIsDrawerOpen(false)}
       />
 
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-grow min-h-[calc(100vh-1rem)] container mx-auto px-4 py-8">
         <Routes>
             <Route
               path="/"

@@ -10,7 +10,7 @@ const TeslaPartsCenterLogo = () => {
         alt="Tesla Logo"
         width={1600}
         height={1600}
-        className="h-7 sm:h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+        className="h-7 w-7 sm:h-8 sm:w-8 object-contain transition-transform duration-300 group-hover:scale-105"
       />
       <div className="flex flex-col select-none justify-center">
         <span className="font-montserrat font-black text-sm sm:text-base tracking-wider text-tesla-dark leading-none group-hover:text-tesla-red transition-colors">
