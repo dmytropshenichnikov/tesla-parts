@@ -2,6 +2,9 @@
 const SITE = 'Tesla Parts Center';
 const KEEP_UPPER = new Set(['АВС']);
 
+// H1 головної — той самий у backend services/seo_render.py (HOME_H1)
+export const HOME_H1 = 'Запчастини для Tesla';
+
 export const sentenceCase = (value: string) => {
   if (value !== value.toUpperCase()) return value;
   const text = value
