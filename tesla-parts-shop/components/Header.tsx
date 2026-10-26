@@ -349,6 +349,8 @@ const Header: React.FC<HeaderProps> = ({
                             <img
                               src={cat.image}
                               alt={cat.name}
+                              width={300}
+                              height={300}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             />
                           ) : (

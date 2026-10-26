@@ -676,6 +676,8 @@ export const SchemesCatalog: React.FC = () => {
                     <img
                       src={o.image}
                       alt={o.category}
+                      width={400}
+                      height={300}
                       loading="lazy"
                       className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
                     />
@@ -1092,6 +1094,8 @@ export const SchemesCatalog: React.FC = () => {
                     <img
                       src={getFullImageUrl(s.image_url)}
                       alt={s.title}
+                      width={400}
+                      height={400}
                       decoding="async"
                       className="max-h-full max-w-full object-contain"
                     />
@@ -1190,6 +1194,8 @@ export const SchemesCatalog: React.FC = () => {
                     <img
                       src={item.image}
                       alt={item.name}
+                      width={300}
+                      height={300}
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (

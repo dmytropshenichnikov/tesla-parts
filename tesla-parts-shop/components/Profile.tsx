@@ -335,6 +335,8 @@ export const Profile: React.FC = () => {
                         <img
                           src={item.product_image}
                           alt={item.product_name}
+                          width={80}
+                          height={80}
                           className="w-full h-full object-cover"
                         />
                       ) : (

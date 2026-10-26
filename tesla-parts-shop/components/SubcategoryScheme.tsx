@@ -89,6 +89,8 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
                   <img
                     src={imageUrl(scheme.image_url)}
                     alt={scheme.title}
+                    width={100}
+                    height={100}
                     className="max-h-full max-w-full object-contain transition-transform duration-300"
                   />
                 ) : (
@@ -126,6 +128,8 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
               <img
                 src={imageUrl(scheme.image_url)}
                 alt={scheme.title}
+                width={140}
+                height={140}
                 className="max-h-full max-w-full object-contain transition-transform duration-300"
               />
             ) : (

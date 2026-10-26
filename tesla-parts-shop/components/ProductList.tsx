@@ -229,6 +229,8 @@ const ProductList: React.FC<ProductListProps> = ({
                 <img
                   src={product.image}
                   alt={product.name}
+                  width={300}
+                  height={300}
                   loading="lazy"
                   draggable={false}
                   className="max-h-full max-w-full object-contain transition-transform duration-300 pointer-events-none"

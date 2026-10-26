@@ -67,6 +67,8 @@ const Hero: React.FC<HeroProps> = () => {
               <img
                 src={category.image || 'https://via.placeholder.com/800'}
                 alt={category.name}
+                width={800}
+                height={500}
                 className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
               />
               {isMine && (

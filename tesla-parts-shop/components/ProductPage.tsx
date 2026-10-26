@@ -381,6 +381,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 <img
                   src={selectedImage}
                   alt={product.name}
+                  width={480}
+                  height={480}
                   className="max-h-full max-w-full object-contain transition-transform duration-500"
                 />
 
@@ -444,6 +446,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       <img
                         src={img}
                         alt=""
+                        width={100}
+                        height={100}
                         className="w-full h-full object-contain"
                       />
                     </button>
@@ -882,6 +886,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
             <img
               src={selectedImage}
               alt={product.name}
+              width={1200}
+              height={1200}
               className="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             />

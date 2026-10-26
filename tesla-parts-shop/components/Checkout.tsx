@@ -472,6 +472,8 @@ const Checkout: React.FC<CheckoutProps> = ({
                   <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0">
                     <img
                       src={item.image}
+                      width={80}
+                      height={80}
                       className="w-full h-full object-cover rounded"
                       alt={item.name}
                     />

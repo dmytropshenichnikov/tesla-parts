@@ -8,6 +8,8 @@ const TeslaPartsCenterLogo = () => {
       <img
         src={teslaLogo}
         alt="Tesla Logo"
+        width={1600}
+        height={1600}
         className="h-7 sm:h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
       />
       <div className="flex flex-col select-none justify-center">
