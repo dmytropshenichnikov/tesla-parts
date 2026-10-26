@@ -4,6 +4,47 @@ from pathlib import Path
 from fastapi import UploadFile
 from typing import Optional
 
+# Максимальна сторона для прев'ю на сайті. ОРИГІНАЛ ЗАВЖДИ лишається на диску —
+# у WebP іде лише копія, на яку посилається БД (так і працює optimize_images.py
+# для наявних 900 МБ). Схеми/EPC беруть більший запас, бо їх збільшують.
+FOLDER_MAX_SIDE = {"schematics": 2400}
+
+
+def optimize_to_webp(file_path: Path, max_side: int = 1600, quality: int = 82) -> Optional[str]:
+    """Створює <name>.webp поруч з оригіналом і повертає його назву, якщо вигідно.
+
+    Навіщо: на завантаження потрапляли файли до 6.9 МБ / 4000×4000, які сайт
+    показує у картці 300–480 px. Вимикається з IMAGE_ORIGINALS_ONLY=1.
+    """
+    if os.getenv("IMAGE_ORIGINALS_ONLY") == "1":
+        return None
+    if file_path.suffix.lower() == ".webp":
+        return None
+    try:
+        from PIL import Image
+
+        Image.MAX_IMAGE_PIXELS = 200_000_000
+        with Image.open(file_path) as im:
+            im.load()
+            orig_bytes = file_path.stat().st_size
+            if orig_bytes <= 150 * 1024 and max(im.size) <= max_side:
+                return None
+            work = im.copy()
+            if max(work.size) > max_side:
+                work.thumbnail((max_side, max_side), Image.LANCZOS)
+            if work.mode not in ("RGB", "RGBA"):
+                work = work.convert("RGBA" if "A" in work.getbands() else "RGB")
+            target = file_path.with_suffix(".webp")
+            work.save(target, format="WEBP", quality=quality, method=4)
+        if target.stat().st_size >= orig_bytes * 0.95:
+            target.unlink(missing_ok=True)
+            return None
+        return target.name
+    except Exception as exc:  # noqa: BLE001 — оптимізація ніколи не має ламати завантаження
+        print(f"optimize_to_webp: {exc}")
+        return None
+
+
 class ImageUploader:
     def __init__(self):
         self.base_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -117,6 +158,13 @@ class ImageUploader:
         with open(file_path, "wb") as f:
             f.write(content)
 
+        optimized = optimize_to_webp(
+            file_path, max_side=FOLDER_MAX_SIDE.get(folder, 1600)
+        )
+        if optimized:
+            unique_filename = optimized
+            file_path = file_path.with_name(optimized)
+
         base_url = self.base_url.rstrip("/")
         return {
             "image_url": f"{base_url}/static/images/{folder}/{unique_filename}",
@@ -139,6 +187,14 @@ class ImageUploader:
         contents = await file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
+
+        # Поруч з оригіналом кладемо стиснений WebP і віддаємо в БД його:
+        # оригінал лишається (для друку/збільшення), а сайт не тягне 6 МБ.
+        optimized = optimize_to_webp(
+            file_path, max_side=FOLDER_MAX_SIDE.get(folder, 1600)
+        )
+        if optimized:
+            unique_filename = optimized
         
         # Картинку зберігаємо ЯК Є — без обрізання полів.
         # Автоматичне обрізання пробували: воно визначає межі малюнка по темних

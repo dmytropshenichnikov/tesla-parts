@@ -16,9 +16,11 @@ def client_fixture(monkeypatch):
     SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        session.add(Product(id="prod-1", name="161086600A - Панель передня", category="Model 3",
+        session.add(Product(id="prod-1", slug="panel-perednia-161086600a",
+                            name="161086600A - Панель передня", category="Model 3",
                             detail_number="161086600A", priceUAH=4554.0, image="", description="", inStock=True))
-        session.add(Product(id="prod-2", name="AA01500001 - Масло ZF", category="Model 3",
+        session.add(Product(id="prod-2", slug="maslo-zf-aa01500001",
+                            name="AA01500001 - Масло ZF", category="Model 3",
                             detail_number="AA01500001", priceUAH=900.0, image="", description="", inStock=True))
         session.commit()
 
@@ -36,3 +38,16 @@ def test_google_feed_title_gets_hyphen_variant(client):
     assert "<g:title>161086600A 1610866-00-A - Панель передня</g:title>" in xml
     assert "<g:title>AA01500001 - Масло ZF</g:title>" in xml
     assert "<g:id>prod-1</g:id>" in xml
+
+
+def test_google_feed_links_use_slug(client):
+    xml = client.get("/feed/google-merchant.xml").text
+    assert "<g:link>https://teslapartscenter.com.ua/product/panel-perednia-161086600a</g:link>" in xml
+    assert "https://teslapartscenter.com.ua/product/prod-1" not in xml
+
+
+def test_prom_feed_has_url_with_slug(client):
+    xml = client.get("/feed/prom-ua.xml").text
+    assert "<url>https://teslapartscenter.com.ua/product/panel-perednia-161086600a</url>" in xml
+    assert "<url>https://teslapartscenter.com.ua/product/maslo-zf-aa01500001</url>" in xml
+    assert "/product/prod-1" not in xml

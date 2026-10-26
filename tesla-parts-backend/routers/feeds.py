@@ -174,6 +174,8 @@ async def get_prom_ua_feed(session: Session = Depends(get_session)):
 
             item_xml = [
                 f'<offer id="{p_id}" available="{available_str}" in_stock="{in_stock_str}">',
+                # Людиночитаний адрес товару: Prom.ua індексує саме цю адресу
+                f'<url>{saxutils.escape(p_link)}</url>',
                 f'<name>{p_title}</name>',
                 f'<categoryId>{p_cat_id}</categoryId>',
                 f'<price>{p_price}</price>',
