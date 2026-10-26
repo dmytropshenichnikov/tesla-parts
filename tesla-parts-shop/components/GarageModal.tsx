@@ -13,7 +13,7 @@ import {
 import { api } from '../services/api';
 import { VinDecodeResult, SavedCar, PlateLookupResult } from '../types';
 import { Link } from 'react-router-dom';
-import { getCarTargetInfo } from './GaragePage';
+import { getCarTargetInfo } from '../utils/carTargets';
 import { TeslaCarIcon } from './TeslaCarIcon';
 
 interface GarageModalProps {

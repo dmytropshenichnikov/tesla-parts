@@ -78,9 +78,9 @@ const Hero: React.FC<HeroProps> = () => {
                 </span>
               )}
               <div className="absolute bottom-0 left-0 p-6 z-20 text-white w-full">
-                <h3 className="text-xl md:text-2xl font-bold mb-1 group-hover:translate-x-0.5 transition-transform duration-200">
+                <h2 className="text-xl md:text-2xl font-bold mb-1 group-hover:translate-x-0.5 transition-transform duration-200">
                   {category.name}
-                </h3>
+                </h2>
                 <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-200 group-hover:text-white transition-colors">
                   <span>Переглянути каталог</span>
                   <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1.5" />

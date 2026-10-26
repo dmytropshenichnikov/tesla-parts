@@ -2,7 +2,13 @@ import { Link } from 'react-router-dom';
 import teslaLogo from '../static/tesla-logo.png';
 // Assuming image_0.png is in the same directory
 
-const TeslaPartsCenterLogo = () => {
+interface TeslaPartsCenterLogoProps {
+  /** `light` — для темних фонів (футер): білий напис + контрастний підпис. */
+  variant?: 'default' | 'light';
+};
+
+const TeslaPartsCenterLogo = ({ variant = 'default' }: TeslaPartsCenterLogoProps) => {
+  const light = variant === 'light';
   return (
     <Link to="/" className="cursor-pointer flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group">
       <img
@@ -13,10 +19,18 @@ const TeslaPartsCenterLogo = () => {
         className="h-7 w-7 sm:h-8 sm:w-8 object-contain transition-transform duration-300 group-hover:scale-105"
       />
       <div className="flex flex-col select-none justify-center">
-        <span className="font-montserrat font-black text-sm sm:text-base tracking-wider text-tesla-dark leading-none group-hover:text-tesla-red transition-colors">
+        <span
+          className={`font-montserrat font-black text-sm sm:text-base tracking-wider leading-none group-hover:text-tesla-red transition-colors ${
+            light ? 'text-white' : 'text-tesla-dark'
+          }`}
+        >
           TESLA
         </span>
-        <span className="font-montserrat font-bold text-[9px] sm:text-[10px] tracking-[0.25em] text-gray-500 uppercase leading-none mt-0.5">
+        <span
+          className={`font-montserrat font-bold text-[9px] sm:text-[10px] tracking-[0.25em] uppercase leading-none mt-0.5 ${
+            light ? 'text-gray-400' : 'text-gray-500'
+          }`}
+        >
           PARTS CENTER
         </span>
       </div>

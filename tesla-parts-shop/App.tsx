@@ -15,20 +15,24 @@ import Hero from './components/Hero';
 import ProductList from './components/ProductList';
 import { SubcategoryScheme } from './components/SubcategoryScheme';
 import CartDrawer from './components/CartDrawer';
-import Checkout from './components/Checkout';
 import SubcategoryCard from './components/SubcategoryCard';
 import ProductPage from './components/ProductPage';
 import { ReviewsPage } from './components/ReviewsPage';
-import StaticPage from './components/StaticPage';
-import { SchemesCatalog } from './components/SchemesCatalog';
-import { SchematicView } from './components/SchematicView';
-import { GaragePage } from './components/GaragePage';
-import { Login } from './components/Login';
-import { Register } from './components/Register';
-import { Verify } from './components/Verify';
-import { Profile } from './components/Profile';
-import { ForgotPassword } from './components/ForgotPassword';
-import { ResetPassword } from './components/ResetPassword';
+const lazyNamed = (loader: () => Promise<Record<string, any>>, name: string) =>
+  React.lazy(() => loader().then((m: any) => ({ default: m[name] })));
+
+// Важкі сторінки — окремі чанки (код-сплітинг): Lighthouse «unused JavaScript».
+const Checkout = React.lazy(() => import('./components/Checkout'));
+const StaticPage = lazyNamed(() => import('./components/StaticPage'), 'default');
+const SchemesCatalog = lazyNamed(() => import('./components/SchemesCatalog'), 'SchemesCatalog');
+const SchematicView = lazyNamed(() => import('./components/SchematicView'), 'SchematicView');
+const GaragePage = lazyNamed(() => import('./components/GaragePage'), 'GaragePage');
+const Login = lazyNamed(() => import('./components/Login'), 'Login');
+const Register = lazyNamed(() => import('./components/Register'), 'Register');
+const Verify = lazyNamed(() => import('./components/Verify'), 'Verify');
+const Profile = lazyNamed(() => import('./components/Profile'), 'Profile');
+const ForgotPassword = lazyNamed(() => import('./components/ForgotPassword'), 'ForgotPassword');
+const ResetPassword = lazyNamed(() => import('./components/ResetPassword'), 'ResetPassword');
 import {
   Product,
   Currency,
@@ -536,6 +540,8 @@ const App: React.FC = () => {
       />
 
       <main className="flex-grow min-h-[calc(100vh-1rem)] container mx-auto px-4 py-8">
+        {/* Лениві сторінки вантажаються окремими чанками → Suspense-бфер */}
+        <React.Suspense fallback={<LoadingSpinner />}>
         <Routes>
             <Route
               path="/"
@@ -622,6 +628,7 @@ const App: React.FC = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+        </React.Suspense>
       </main>
 
       {/* ОНОВЛЕНИЙ ФУТЕР З ПОСИЛАННЯМИ (LINKS) ДЛЯ SEO */}
@@ -629,7 +636,7 @@ const App: React.FC = () => {
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="text-white text-xl font-bold mb-4 flex items-center gap-2">
-              <TeslaPartsCenterLogo />
+              <TeslaPartsCenterLogo variant="light" />
             </div>
             <p className="text-sm">
               {contactInfo.footerDescription ||
@@ -692,6 +699,8 @@ const App: React.FC = () => {
                   href={socialLinks.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  title="Instagram"
                   className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-tesla-red transition cursor-pointer"
                 >
                   <Instagram size={18} />
@@ -702,6 +711,8 @@ const App: React.FC = () => {
                   href={socialLinks.telegram}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Telegram"
+                  title="Telegram"
                   className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-tesla-red transition cursor-pointer"
                 >
                   <Send size={18} />
@@ -712,6 +723,8 @@ const App: React.FC = () => {
                   href={`viber://chat?number=${encodeURIComponent(socialLinks.viber)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Viber"
+                  title="Viber"
                   className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-tesla-red transition cursor-pointer"
                 >
                   <ViberIcon size={18} color="currentColor" />

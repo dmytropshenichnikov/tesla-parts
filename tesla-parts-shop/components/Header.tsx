@@ -17,13 +17,17 @@ import {
   Grid2x2,
 } from 'lucide-react';
 import { Category, Currency, Page, SavedCar } from '../types';
-import { GarageModal } from './GarageModal';
 import TeslaPartsCenterLogo from './ShopLogo';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrency } from '../utils/currency';
 import { api } from '../services/api';
 import { slugify } from '../utils/slugify';
-import { getCarTargetInfo } from './GaragePage';
+import { getCarTargetInfo } from '../utils/carTargets';
+
+// Важкий модальний діалог вантажиться окремим чанком лише коли потрібен.
+const GarageModal = React.lazy(() =>
+  import('./GarageModal').then((m) => ({ default: m.GarageModal }))
+);
 import ViberIcon from './ViberIcon';
 
 interface HeaderProps {
@@ -582,6 +586,11 @@ const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onCartClick}
+              aria-label={
+                cartCount > 0
+                  ? `Кошик: ${cartCount} товарів на ${formatPrice(displayCartTotal)}`
+                  : 'Кошик, порожній'
+              }
               className="flex items-center gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gray-950 hover:bg-black text-white active:scale-95 transition-all shadow-sm cursor-pointer group select-none flex-shrink-0"
             >
               <div className="relative flex items-center justify-center">
@@ -913,11 +922,13 @@ const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Garage Modal */}
-      <GarageModal
-        isOpen={isGarageOpen}
-        onClose={() => setIsGarageOpen(false)}
-        onCarSaved={(car) => setActiveCar(car)}
-      />
+      <React.Suspense fallback={null}>
+        <GarageModal
+          isOpen={isGarageOpen}
+          onClose={() => setIsGarageOpen(false)}
+          onCarSaved={(car) => setActiveCar(car)}
+        />
+      </React.Suspense>
     </header>
   );
 };

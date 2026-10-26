@@ -331,10 +331,15 @@ def test_schemes_catalog_canonical_drops_filters(client):
     assert 'rel="canonical" href="https://teslapartscenter.com.ua/schemes"' in response.text
 
 
-def test_html_is_not_cached(client):
-    # глобальний middleware main.py: no-store для всього, крім /static
+def test_html_always_revalidated_but_bfcache_compatible(client):
+    # middleware main.py: no-cache + must-revalidate — контент завжди свіжий,
+    # але без `no-store`, бо Chrome через нього вимикає back/forward cache
+    # (аудит Lighthouse bf-cache).
     for path in ("/prerender/product/vazhil-perednii-livyi", "/prerender/product/deleted"):
-        assert "no-store" in client.get(path).headers["cache-control"]
+        header = client.get(path).headers["cache-control"]
+        assert "no-cache" in header
+        assert "must-revalidate" in header
+        assert "no-store" not in header
 
 
 def test_sitemap_has_schemes_and_shop_slugs(session, client, monkeypatch):

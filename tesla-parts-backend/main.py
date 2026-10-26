@@ -105,7 +105,11 @@ async def always_fresh_api(request: Request, call_next):
     Статику (картинки) не чіпаємо — її кешувати корисно."""
     response = await call_next(request)
     if not request.url.path.startswith("/static"):
-        response.headers["Cache-Control"] = "no-store, max-age=0"
+        # Раніше було `no-store` — Chrome через це вимикав back/forward cache
+        # (аудит bf-cache: «Pages with cache-control:no-store cannot enter
+        # bfcache»). `no-cache, must-revalidate` зберігає гарантію свіжості
+        # (браузер зобов'язаний перепитувати в сервера), але дозволяє bfcache.
+        response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
         response.headers["Pragma"] = "no-cache"
     return response
 

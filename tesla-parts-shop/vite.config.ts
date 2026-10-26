@@ -10,6 +10,11 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
     },
     plugins: [react()],
+    build: {
+      // Lighthouse «Missing source maps for large first-party JavaScript».
+      // Карти завантажуються лише коли відкриті DevTools — на швидкість не впливає.
+      sourcemap: true,
+    },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
