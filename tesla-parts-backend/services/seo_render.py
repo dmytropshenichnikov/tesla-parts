@@ -37,6 +37,10 @@ ITEM_CONDITION = "https://schema.org/NewCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 5
+# Понад цю кількість товарів посів не вбудовуємо — HTML був би завеликим,
+# у такому разі фронт, як і раніше, завантажить дані сам.
+MAX_SEED_PRODUCTS = 300
+
 MAX_LINKS = 300
 # H1 головної — той самий у shop utils/seoTemplates.ts (HOME_H1)
 HOME_H1 = "Запчастини для Tesla"
@@ -290,6 +294,41 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         )
         if len(head_extra) >= 2:
             break
+
+    # Посів даних у HTML: React при ПЕРШОМУ рендері одразу має плитки підкатегорій
+    # і товари. Без нього після першого фарбування вміст з'являвся з фази
+    # завантаження (крутілка/скелет) і сторінка стрибала — Lighthouse CLS 0.45
+    # на сторінках підкатегорій. Якщо дані вже в HTML — фронт не робить повторних
+    # запитів, тож вміст більше ніколи не змінюється.
+    if len(products) <= MAX_SEED_PRODUCTS:
+        try:
+            from routers.categories import (  # noqa: WPS433 — ліниво, щоб не було циклу
+                _serialize_subcategory_tree_no_products,
+                _sort_subcategories,
+            )
+
+            all_subs = session.exec(
+                select(Subcategory)
+                .where(Subcategory.category_id == category.id)
+                .order_by(Subcategory.sort_order.desc(), Subcategory.id)
+            ).all()
+            roots = _sort_subcategories([x for x in all_subs if x.parent_id is None])
+            category_payload = category.model_dump()
+            category_payload.pop("seo_text", None)
+            category_payload["subcategories"] = [
+                _serialize_subcategory_tree_no_products(root, all_subs).model_dump()
+                for root in roots
+            ]
+            seed = {
+                # шлях без домену — саме так його порівнює фронт (location.pathname)
+                "path": canonical.removeprefix(SITE_URL),
+                "category": category_payload,
+                "products": [item.model_dump(exclude={"created_at"}) for item in products],
+            }
+            payload = json.dumps(seed, ensure_ascii=False, default=str).replace("<", "\\u003c")
+            head_extra.append(f"<script>window.__CATEGORY_PAGE__={payload};</script>")
+        except Exception as exc:  # noqa: BLE001 — поіт не має ламати рендеринг SEO
+            print(f"category seed skipped: {exc}")
 
     return PageSeo(
         title=title,

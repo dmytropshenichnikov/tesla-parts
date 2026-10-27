@@ -505,6 +505,8 @@ const App: React.FC = () => {
 
   const categoryRouteElement = currentCategory ? (
     <CategoryView
+      // перестворення на зміну шляху: поіт читається лише при монтуванні
+      key={location.pathname}
       category={currentCategory}
       currency={currency}
       uahPerUsd={uahPerUsd}
@@ -1031,6 +1033,28 @@ interface CategoryViewProps {
   addToCart: (product: Product) => void;
 }
 
+interface CategorySeed {
+  path: string;
+  category: Category;
+  products: Product[];
+}
+
+/**
+ * Дані категорії, вбудовані бекендом у prerender-HTML (`window.__CATEGORY_PAGE__`).
+ * Якщо вони відповідають поточному шляху — відображаємо їх одразу і НЕ робимо
+ * запитів: вміст не змінюється після першого фарбування, тому сторінка не
+ * стрибає (Lighthouse CLS на сторінках підкатегорій був 0.45).
+ */
+const readCategorySeed = (pathname: string): CategorySeed | null => {
+  try {
+    const raw = window.__CATEGORY_PAGE__ as CategorySeed | undefined;
+    if (!raw || raw.path !== pathname || !Array.isArray(raw.products)) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+};
+
 const CategoryView: React.FC<CategoryViewProps> = ({
   category,
   currency,
@@ -1039,18 +1063,23 @@ const CategoryView: React.FC<CategoryViewProps> = ({
 }) => {
   const { subId } = useParams<{ subId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const categorySlug = slugify(category.name);
   const selectedSubcategory = subId ? Number(subId) : null;
+  const seed = useMemo(() => readCategorySeed(location.pathname), [location.pathname]);
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [products, setProducts] = useState<Product[]>(seed?.products ?? []);
+  const [loadingProducts, setLoadingProducts] = useState(!seed);
 
   // State for the full category tree (with subcategories)
-  const [detailedCategory, setDetailedCategory] = useState<Category>(category);
+  const [detailedCategory, setDetailedCategory] = useState<Category>(
+    seed?.category ?? category
+  );
   const [loadingCategory, setLoadingCategory] = useState(false);
 
   // Fetch full category details (subcategories) on mount or change
   useEffect(() => {
+    if (seed) return; // поіт з HTML: дерево вже на місці
     const fetchDetails = async () => {
       setLoadingCategory(true);
       try {
@@ -1068,9 +1097,10 @@ const CategoryView: React.FC<CategoryViewProps> = ({
       }
     };
     fetchDetails();
-  }, [category.id]);
+  }, [category.id, seed]);
 
   useEffect(() => {
+    if (seed) return; // поіт з HTML: товари вже на місці
     const fetchProducts = async () => {
       setLoadingProducts(true);
       try {
@@ -1087,7 +1117,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
       }
     };
     fetchProducts();
-  }, [categorySlug, selectedSubcategory]);
+  }, [categorySlug, selectedSubcategory, seed]);
 
   const findSubcategory = (
     subs: Subcategory[],

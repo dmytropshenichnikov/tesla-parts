@@ -283,6 +283,8 @@ export interface PlateLookupResult {
 declare global {
   interface Window {
     __HOME_CATEGORIES__?: unknown;
+    /** Дані категорії/підкатегорії з prerender-HTML (див. App.tsx, readCategorySeed). */
+    __CATEGORY_PAGE__?: unknown;
   }
 }
 

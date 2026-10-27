@@ -233,6 +233,30 @@ def test_category_page_preloads_first_images(session):
     assert "https://img/p1.jpg" in preloads
 
 
+def test_category_page_seeds_data_for_react(session):
+    """Дані підкатегорії вбудовані в HTML: React малює одразу, без стрибків."""
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/category/model-3/sub/371"))
+    m = re.search(r"window\.__CATEGORY_PAGE__=(.*?);</script>", page, re.S)
+    assert m, "посів даних категорії відсутній"
+    seed = json.loads(m.group(1))
+    assert seed["path"] == "/category/model-3/sub/371"
+    assert seed["category"]["name"] == "Model 3"
+    assert len(seed["category"]["subcategories"]) == 1
+    assert seed["category"]["subcategories"][0]["name"] == "ЗАДНІЙ ПРИВІД"
+    # у підкатегорії прямий товар і товар через зв'язок
+    assert {p["id"] for p in seed["products"]} == {"prod-2", "prod-3"}
+    assert seed["products"][0]["slug"]  # slug теж має їхати у фронт
+    assert "</script>" not in json.dumps(seed)
+
+
+def test_category_page_without_products_has_no_seed_problem(session):
+    # поіт працює і для рівня категорії (там товари без підкатегорій)
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/category/model-3"))
+    seed = json.loads(re.search(r"window\.__CATEGORY_PAGE__=(.*?);</script>", page, re.S).group(1))
+    assert seed["path"] == "/category/model-3"
+    assert [p["id"] for p in seed["products"]] == ["prod-1"]
+
+
 def test_product_json_ld_breadcrumbs(session):
     blocks = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c")))
     breadcrumbs = blocks[1]
