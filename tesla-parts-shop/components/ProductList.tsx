@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { thumbUrl, onThumbError } from '../utils/imageUrl';
 import { Product, Currency } from '../types';
 import { ShoppingBag, AlertCircle, Copy, Check, Car, CheckCircle2 } from 'lucide-react';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
@@ -209,6 +210,10 @@ const ProductList: React.FC<ProductListProps> = ({
                 .filter(Boolean)
             : [];
 
+          // Мініатюра 480px для сітки: повний 1600px файл потрібен лише
+          // на сторінці товару і для зуму (srcset сам підбере потрібний).
+          const thumb = thumbUrl(product.image);
+
           return (
             <div
               key={product.id}
@@ -227,12 +232,17 @@ const ProductList: React.FC<ProductListProps> = ({
                 className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50 cursor-pointer block"
               >
                 <img
-                  src={product.image}
+                  src={thumb || product.image}
+                  srcSet={
+                    thumb ? `${thumb} 480w, ${product.image} 1600w` : undefined
+                  }
+                  sizes="(min-width: 1280px) 380px, (min-width: 768px) 32vw, 45vw"
                   alt={product.name}
                   width={300}
                   height={300}
                   loading="lazy"
                   draggable={false}
+                  onError={onThumbError(product.image)}
                   className="max-h-full max-w-full object-contain transition-transform duration-300 pointer-events-none"
                 />
                 

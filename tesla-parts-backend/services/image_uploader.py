@@ -45,6 +45,36 @@ def optimize_to_webp(file_path: Path, max_side: int = 1600, quality: int = 82) -
         return None
 
 
+# Сітки карток (товари/підкатегорії) показують 180-460 CSS px — повні файли
+# 1600px там зайві. Для цих папок поруч з оригіналом кладемо <назва>-sm.webp.
+THUMB_FOLDERS = {"tesla-parts/products", "tesla-parts/subcategories"}
+
+
+def make_thumbnail(source: Path, side: int = 480) -> Optional[str]:
+    """Створює <назва>-sm.webp поруч із файлом і повертає його назву."""
+    if source.suffix.lower() == ".webp" and source.name.endswith("-sm.webp"):
+        return None
+    target = source.with_name(source.stem + "-sm.webp")
+    if target.exists():
+        return None
+    try:
+        from PIL import Image
+
+        Image.MAX_IMAGE_PIXELS = 200_000_000
+        with Image.open(source) as im:
+            im.load()
+            work = im.copy()
+            work.thumbnail((side, side), Image.LANCZOS)
+            if work.mode not in ("RGB", "RGBA"):
+                work = work.convert("RGBA" if "A" in work.getbands() else "RGB")
+            work.save(target, format="WEBP", quality=82, method=4)
+        return target.name
+    except Exception as exc:  # noqa: BLE001 — мініатюра ніколи не має ламати завантаження
+        print(f"make_thumbnail: {exc}")
+        target.unlink(missing_ok=True)
+        return None
+
+
 class ImageUploader:
     def __init__(self):
         self.base_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -165,6 +195,9 @@ class ImageUploader:
             unique_filename = optimized
             file_path = file_path.with_name(optimized)
 
+        if folder in THUMB_FOLDERS and file_path.exists():
+            make_thumbnail(file_path)
+
         base_url = self.base_url.rstrip("/")
         return {
             "image_url": f"{base_url}/static/images/{folder}/{unique_filename}",
@@ -195,7 +228,12 @@ class ImageUploader:
         )
         if optimized:
             unique_filename = optimized
-        
+
+        if folder in THUMB_FOLDERS:
+            source = upload_dir / unique_filename
+            if source.exists():
+                make_thumbnail(source)
+
         # Картинку зберігаємо ЯК Є — без обрізання полів.
         # Автоматичне обрізання пробували: воно визначає межі малюнка по темних
         # пікселях, тому світло-сірі частини креслення (друга туманка, тонкі

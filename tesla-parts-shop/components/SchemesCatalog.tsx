@@ -84,6 +84,8 @@ const NodeImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
   <img
     src={src}
     alt={alt}
+    width={1414}
+    height={1000}
     loading="lazy"
     decoding="async"
     className="max-w-full max-h-full w-auto h-auto object-contain"

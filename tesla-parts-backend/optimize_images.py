@@ -139,6 +139,54 @@ def optimize(args):
     return pairs
 
 
+THUMB_FOLDERS = {"products", "subcategories"}
+
+
+def make_thumbs(args):
+    """Мініатюри для сіток карток: <назва>-sm.webp поруч з оригіналом.
+
+    Картка в сітці показує 180-460 CSS px, а ми віддавали 1600px/80 КБ —
+    на це йшло найбільше трафіку при гортанні каталогу. Тепер сітка тягне
+    480px (~10-15 КБ), повний файл лишається для картки товару і зуму.
+    Оригінали не чіпаються, рядки в БД не змінюються — фронт сам підставить
+    мініатюру через srcset.
+    """
+    from PIL import Image
+
+    Image.MAX_IMAGE_PIXELS = 200_000_000
+    made = skipped = failed = saved = 0
+    for folder in THUMB_FOLDERS:
+        root = BASE / folder
+        if not root.is_dir():
+            continue
+        for path in sorted(root.iterdir()):
+            if not path.is_file() or path.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp", ".avif"):
+                continue
+            if path.name.endswith("-sm.webp"):
+                continue
+            target = path.with_name(path.stem + "-sm.webp")
+            if target.exists() and not args.force:
+                skipped += 1
+                continue
+            try:
+                with Image.open(path) as im:
+                    im.load()
+                    work = im.copy()
+                    work.thumbnail((args.thumb_side, args.thumb_side), Image.LANCZOS)
+                    if work.mode not in ("RGB", "RGBA"):
+                        work = work.convert("RGBA" if "A" in work.getbands() else "RGB")
+                    work.save(target, format="WEBP", quality=args.quality, method=4)
+                made += 1
+                saved += path.stat().st_size - target.stat().st_size
+            except Exception as exc:  # noqa: BLE001
+                print(f"  ! мініатюра {path.name}: {exc}")
+                failed += 1
+                target.unlink(missing_ok=True)
+    print(f"Мініатюр створено: {made}, вже було: {skipped}, помилок: {failed}")
+    if made:
+        print(f"Сира різниця у байтах: {saved // (1024 * 1024)}МБ (мініатюра проти повного файла)")
+
+
 def _string_columns(engine):
     insp = inspect(engine)
     out = []
@@ -213,6 +261,18 @@ def main():
         default="",
         help="через кому: обробити лише ці папки (напр. categories) із --max-side",
     )
+    parser.add_argument(
+        "--thumbs",
+        action="store_true",
+        help="створити мініатюри <назва>-sm.webp для сіток товарів/підкатегорій",
+    )
+    parser.add_argument(
+        "--thumb-side",
+        type=int,
+        default=480,
+        help="макс. сторона мініатюри (типографіка сітки показує 180-460 CSS px)",
+    )
+    parser.add_argument("--force", action="store_true", help="перестворити наявні мініатюри")
     args = parser.parse_args()
     if args.folders:
         wanted = {f.strip() for f in args.folders.split(",") if f.strip()}
@@ -233,6 +293,10 @@ def main():
         pairs = [(p.name, p.with_suffix(".webp").name) for p in BASE.rglob("*") if p.is_file() and p.suffix.lower() != ".webp" and (p.with_suffix(".webp")).exists()]
         left = update_db(engine, pairs, verify_only=True)
         print(f"Залишилось старих посилань: {left}")
+        return
+
+    if args.thumbs:
+        make_thumbs(args)
         return
 
     if not args.apply:

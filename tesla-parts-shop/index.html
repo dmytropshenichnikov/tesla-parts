@@ -21,6 +21,11 @@
     </script>
     <!-- End Google Tag Manager -->
 
+    <!-- Фото товарів/категорій лежать на api.* — відкриваємо зʼєднання заздалегідь,
+         щоб перше фото не чекало на DNS+TCP+TLS (200-400 мс на мобільному).
+         Без crossorigin: <img> вантажить їх у no-cors режимі. -->
+    <link rel="preconnect" href="https://api.teslapartscenter.com.ua" />
+
     <title>Tesla Parts Center</title>
     <script type="application/ld+json">
       {

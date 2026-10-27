@@ -6,7 +6,7 @@ from sqlmodel.pool import StaticPool
 
 from database import get_session
 from main import app
-from models import Order, OrderItem, Product, PromoCode
+from models import Customer, Order, OrderItem, Product, PromoCode
 from services import part_numbers
 from services.telegram import build_order_message
 
@@ -136,20 +136,59 @@ def test_message_without_code_has_no_na(session):
 
 
 def test_message_shows_highlighted_discount_with_code(session):
+    session.add(PromoCode(code="SAVE10", discount_type="percent", discount_value=10,
+                          scope="everyone", is_active=True))
+    session.commit()
     order = _order(session, [{"product_name": "Товар", "quantity": 1, "price_at_purchase": 100.0}],
                    total=90.0, promocode="SAVE10", discount=10.0)
     message = build_order_message(order, RATE, session)
-    assert "<b><u>Знижка</u></b>: <b>-10.00 USD (-420.00 UAH)</b>, за кодом <code>SAVE10</code>" in message
+    assert (
+        "<b><u>Знижка</u></b>: <b>-10.00 USD (-420.00 UAH)</b>, "
+        "за кодом <code>SAVE10</code> — знижка 10%" in message
+    )
     # сума у повідомленні — вже зі знижкою
     assert "<b>Сума</b>: 90.00 USD (3780.00 UAH)" in message
 
 
-def test_message_shows_personal_discount_without_code(session):
+def test_message_shows_personal_discount_with_size(session):
+    customer = Customer(email_hash="hash1", encrypted_email="enc", discount_type="percent",
+                        discount_value=3.0)
+    session.add(customer)
+    session.commit()
+    session.refresh(customer)
+    order = _order(session, [{"product_name": "Товар", "quantity": 1, "price_at_purchase": 100.0}],
+                   total=97.0, discount=3.0)
+    order.customer_id = customer.id
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+    message = build_order_message(order, RATE, session)
+    # розмір персональної знижки має бути видно одразу: 3%, 5% тощо
+    assert "-3.00 USD (-126.00 UAH)</b>, персональна знижка клієнта 3%" in message
+    assert "SAVE" not in message
+
+
+def test_message_discount_size_falls_back_to_percent(session):
+    # джерело знижки невідоме (старий запис) — показуємо ефективний відсоток
     order = _order(session, [{"product_name": "Товар", "quantity": 1, "price_at_purchase": 100.0}],
                    total=85.0, discount=15.0)
     message = build_order_message(order, RATE, session)
-    assert "-15.00 USD (-630.00 UAH)</b>, персональна знижка клієнта" in message
-    assert "SAVE" not in message
+    assert "-15.00 USD (-630.00 UAH)</b>, знижка 15%" in message
+
+
+def test_message_prices_are_already_discounted(session):
+    """Кожна позиція — зі знижкою, стара ціна закреслена поруч (для чеків)."""
+    order = _order(session, [
+        {"product_name": "118841100F - Кулак поворотний", "product_detail_number": "118841100F",
+         "quantity": 1, "price_at_purchase": 163.0},
+        {"product_name": "Друга позиція", "quantity": 2, "price_at_purchase": 50.0},
+    ], total=186.30, discount=24.70)
+    message = build_order_message(order, RATE, session)
+    # частка знижки = 24.70 / 263.00 = 9.39%
+    assert "<b>147.69 USD (6202.98 UAH)</b>, <s>163.00 USD (6846.00 UAH)</s>" in message
+    assert "<b>90.61 USD (3805.62 UAH)</b>, <s>100.00 USD (4200.00 UAH)</s>" in message
+    # підсумок зі знижкою збігається із сумою позицій (округлення до центів)
+    assert "<b>Сума</b>: 186.30 USD" in message
 
 
 def test_message_has_no_discount_line_when_discount_missing(session):

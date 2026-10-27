@@ -2,6 +2,7 @@ import React from 'react';
 import { Subcategory } from '../types';
 import { ChevronRight, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { thumbUrl, onThumbError } from '../utils/imageUrl';
 
 interface SubcategoryCardProps {
   subcategory: Subcategory;
@@ -12,6 +13,8 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
   subcategory,
   to,
 }) => {
+  // Картка показує максимум 192×108 CSS px — мініатюри 480px цілком досить
+  const thumb = thumbUrl(subcategory.image);
   return (
     <Link
       to={to}
@@ -23,10 +26,15 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
           /* object-contain: картинки в каталозі вже обрізані по малюнку, тому
              «cover» дорізав би сам малюнок — показуємо повністю */
           <img
-            src={subcategory.image}
+            src={thumb || subcategory.image}
+            srcSet={
+              thumb ? `${thumb} 480w, ${subcategory.image} 1600w` : undefined
+            }
+            sizes="(min-width: 640px) 192px, 96px"
             alt={subcategory.name}
             width={300}
             height={300}
+            onError={onThumbError(subcategory.image)}
             className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 ease-out"
           />
         ) : (
