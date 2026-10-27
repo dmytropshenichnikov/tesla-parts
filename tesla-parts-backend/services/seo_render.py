@@ -278,12 +278,26 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         # як у магазині: абзаци через порожній рядок
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n", category.seo_text) if p.strip()]
         body += "".join(f"<p>{_e(p)}</p>" for p in paragraphs)
+
+    # Перші дві картинки (плитки підкатегорій або картки товарів) стартують
+    # разом із HTML — вони ж і є LCP на сторінці категорії.
+    head_extra = []
+    for item in list(children) + list(products):
+        if not item.image:
+            continue
+        head_extra.append(
+            f'<link rel="preload" as="image" href="{_e(item.image)}" fetchpriority="high">'
+        )
+        if len(head_extra) >= 2:
+            break
+
     return PageSeo(
         title=title,
         description=description,
         canonical=canonical,
         image=category.image,
         body=body,
+        head_extra=head_extra,
     )
 
 
@@ -319,6 +333,13 @@ def _product(session: Session, identifier: str) -> Optional[PageSeo]:
         og_type="product",
         json_ld=[_product_json_ld(product)] + _product_breadcrumb_json_ld(product),
         body=_product_body(product),
+        # Головне фото товару — LCP сторінки: завантажується одразу з HTML,
+        # не чекаючи бандл і відповіді API.
+        head_extra=(
+            [f'<link rel="preload" as="image" href="{_e(product.image)}" fetchpriority="high">']
+            if product.image
+            else []
+        ),
     )
 
 

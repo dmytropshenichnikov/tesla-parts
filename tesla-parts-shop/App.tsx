@@ -16,13 +16,13 @@ import ProductList from './components/ProductList';
 import { SubcategoryScheme } from './components/SubcategoryScheme';
 import CartDrawer from './components/CartDrawer';
 import SubcategoryCard from './components/SubcategoryCard';
-import ProductPage from './components/ProductPage';
 import { ReviewsPage } from './components/ReviewsPage';
 const lazyNamed = (loader: () => Promise<Record<string, any>>, name: string) =>
   React.lazy(() => loader().then((m: any) => ({ default: m[name] })));
 
 // Важкі сторінки — окремі чанки (код-сплітинг): Lighthouse «unused JavaScript».
 const Checkout = React.lazy(() => import('./components/Checkout'));
+const ProductPage = lazyNamed(() => import('./components/ProductPage'), 'default');
 const StaticPage = lazyNamed(() => import('./components/StaticPage'), 'default');
 const SchemesCatalog = lazyNamed(() => import('./components/SchemesCatalog'), 'SchemesCatalog');
 const SchematicView = lazyNamed(() => import('./components/SchematicView'), 'SchematicView');
@@ -52,6 +52,7 @@ import { slugify } from './utils/slugify';
 import { categoryMeta, subcategoryMeta } from './utils/seoTemplates';
 import { trackAddToCart } from './utils/analytics';
 import FloatingContactButton from './components/FloatingContactButton';
+import { PageSkeleton, GridSkeleton, ProductSkeleton } from './components/Skeletons';
 
 const CART_STORAGE_KEY = 'tesla-parts-cart';
 
@@ -510,7 +511,7 @@ const App: React.FC = () => {
       addToCart={addToCart}
     />
   ) : loading ? (
-    <LoadingSpinner />
+    <PageSkeleton />
   ) : (
     <Navigate to="/" replace />
   );
@@ -540,8 +541,8 @@ const App: React.FC = () => {
       />
 
       <main className="flex-grow min-h-[calc(100vh-1rem)] container mx-auto px-4 py-8">
-        {/* Лениві сторінки вантажаються окремими чанками → Suspense-бфер */}
-        <React.Suspense fallback={<LoadingSpinner />}>
+        {/* Лениві сторінки вантажаються окремими чанками → одразу каркас сторінки */}
+        <React.Suspense fallback={<PageSkeleton />}>
         <Routes>
             <Route
               path="/"
@@ -764,12 +765,6 @@ const App: React.FC = () => {
 
 // --- Sub-components ---
 
-const LoadingSpinner = () => (
-  <div className="flex justify-center py-20">
-    <div className="w-8 h-8 border-4 border-tesla-red border-t-transparent rounded-full animate-spin"></div>
-  </div>
-);
-
 interface SuccessViewProps {}
 
 const SuccessView: React.FC<SuccessViewProps> = () => {
@@ -836,11 +831,6 @@ const HomeView: React.FC<HomeViewProps> = ({
   const fallbackDescription =
     'Популярні запчастини Tesla з гарантією якості та швидкою доставкою по Україні.';
 
-  // FIX: Весь контент чекає на завантаження, щоб уникнути миготіння
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
   return (
     <>
       <SeoHead
@@ -849,12 +839,18 @@ const HomeView: React.FC<HomeViewProps> = ({
         fallbackTitle={fallbackTitle}
         fallbackDescription={fallbackDescription}
       />
+      {/* Герой з'являється одразу (категорії вже є з серверного HTML) —
+          не чекаємо завантаження популярних товарів, бо тоді плитки стрибають */}
       {showHero && (
         <div className="w-full min-h-[280px] md:min-h-[400px] lg:min-h-[500px]">
           <Hero />
         </div>
       )}
-      {products.length > 0 && (
+      {loading ? (
+        <div className="mt-8">
+          <GridSkeleton count={8} />
+        </div>
+      ) : products.length > 0 ? (
         <div className="mt-8">
           <ProductList
             title="Популярні товари"
@@ -864,7 +860,7 @@ const HomeView: React.FC<HomeViewProps> = ({
             onAddToCart={addToCart}
           />
         </div>
-      )}
+      ) : null}
     </>
   );
 };
@@ -998,7 +994,7 @@ const SearchView: React.FC<SearchViewProps> = ({
       </div>
 
       {loading ? (
-        <LoadingSpinner />
+        <GridSkeleton count={6} title={false} />
       ) : products.length > 0 ? (
         <ProductList
           products={products}
@@ -1258,7 +1254,7 @@ const CategoryView: React.FC<CategoryViewProps> = ({
       )}
 
       {loading ? (
-        <LoadingSpinner />
+        <GridSkeleton count={8} title={false} />
       ) : (
         products.length > 0 && (
           <ProductList
@@ -1393,7 +1389,7 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
   }, [loading, product]);
 
   if (loading) {
-    return <LoadingSpinner />;
+    return <ProductSkeleton />;
   }
 
   if (!product) {

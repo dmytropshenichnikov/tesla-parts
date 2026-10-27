@@ -220,6 +220,19 @@ def test_product_json_ld(session):
     assert data["offers"]["itemCondition"] == "https://schema.org/NewCondition"
 
 
+def test_product_page_preloads_main_image(session):
+    """Фото товару (LCP) має стартувати разом із HTML, а не після бандла."""
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c"))
+    assert '<link rel="preload" as="image" href="https://img/p2.jpg" fetchpriority="high">' in page
+
+
+def test_category_page_preloads_first_images(session):
+    page = seo_render.render(INDEX_HTML, seo_render.resolve(session, "/category/model-3"))
+    preloads = re.findall(r'<link rel="preload" as="image" href="([^"]+)"', page)
+    assert preloads and len(preloads) <= 2
+    assert "https://img/p1.jpg" in preloads
+
+
 def test_product_json_ld_breadcrumbs(session):
     blocks = _json_ld(seo_render.render(INDEX_HTML, seo_render.resolve(session, "/product/pivvis-zadnia-1044331-00-c")))
     breadcrumbs = blocks[1]
