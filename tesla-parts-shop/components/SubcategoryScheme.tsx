@@ -138,7 +138,9 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
           </div>
 
           <div className="min-w-0 flex-1 text-center sm:text-left">
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-montserrat font-bold text-tesla-red uppercase tracking-wider mb-1">
+            {/* red-700 замість tesla-red: чистий #e82127 на білому дає 4.49:1
+                і не проходить WCAG AA для дрібного тексту (Lighthouse color-contrast) */}
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-montserrat font-bold text-red-700 uppercase tracking-wider mb-1">
               <Layers size={12} />
               Схема цього вузла
             </div>
@@ -152,11 +154,12 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-tesla-red bg-red-50 border border-red-100 px-2.5 py-1 rounded-full font-montserrat">
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 bg-red-50 border border-red-100 px-2.5 py-1 rounded-full font-montserrat">
               <MapPin size={11} />
               {pluralPoints(scheme.hotspots_count)}
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-tesla-red group-hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-colors whitespace-nowrap">
+            {/* red-600 (#dc2626): білий текст на #e82127 — 4.49:1, теж не проходить AA */}
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-600 group-hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-colors whitespace-nowrap">
               Переглянути на схемі
               <ArrowRight size={13} />
             </span>

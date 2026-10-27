@@ -118,9 +118,9 @@ const ProductList: React.FC<ProductListProps> = ({
         <div className="text-gray-400 mb-4 flex justify-center">
           <AlertCircle size={48} />
         </div>
-        <h3 className="text-xl font-medium text-gray-900">
+        <h2 className="text-xl font-medium text-gray-900">
           Товарів не знайдено
-        </h3>
+        </h2>
         <p className="text-gray-500 mt-2">
           Спробуйте змінити параметри пошуку або обрати іншу категорію.
         </p>
@@ -130,10 +130,15 @@ const ProductList: React.FC<ProductListProps> = ({
 
   return (
     <div className="py-8">
-      {title && (
+      {title ? (
         <h2 className="text-2xl font-bold mb-6 text-tesla-dark border-l-4 border-tesla-red pl-4">
           {title}
         </h2>
+      ) : (
+        // без видимого заголовка: прихований h2 лишає правильний порядок
+        // рівнів (h1 -> h2 -> h3 у картках) — інакше Lighthouse фіксує
+        // «Heading elements are not in a sequentially-descending order»
+        <h2 className="sr-only">Товари</h2>
       )}
 
       {/* Каталог підлаштовується під гараж: показуємо, скільки позицій підходить

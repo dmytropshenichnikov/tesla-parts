@@ -45,9 +45,9 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
       </div>
 
       <div className="flex-grow min-w-0">
-        <h3 className="font-bold text-sm sm:text-lg text-gray-900 group-hover:text-tesla-red transition-colors pr-2 leading-tight">
+        <h2 className="font-bold text-sm sm:text-lg text-gray-900 group-hover:text-tesla-red transition-colors pr-2 leading-tight">
           {subcategory.name}
-        </h3>
+        </h2>
         {subcategory.code && (
           <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded inline-block mt-1 sm:mt-2">
             {subcategory.code}
