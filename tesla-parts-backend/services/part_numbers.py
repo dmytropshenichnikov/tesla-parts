@@ -72,3 +72,32 @@ def insert_alternates(title: str, detail_number: Optional[str]) -> str:
 
 def feed_title(name: str, detail_number: Optional[str], limit: int = 150) -> str:
     return insert_alternates(name, detail_number)[:limit].rstrip()
+
+
+# «118841100F - Кулак поворотний…», «1044331-00-C - Піввісь…», «AA01500001 - Масло…»
+_LEADING_CODE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9\-_/]{3,19})(?:\s*[-\u2013\u2014:.]\s*|\s+)(\S.*)$", re.S)
+_YEAR_RANGE = re.compile(r"^\d{4}(?:-\d{4})?$")
+
+
+def extract_from_name(name: Optional[str]) -> Optional[str]:
+    """Дістає артикул із початку назви, якщо адмін залишив поле порожнім.
+
+    «118841100F - Кулак поворотний задній лівий» -> «118841100F».
+    Потрібно для Telegram-сповіщення (щоб не було «N/A»), для JSON-LD (sku/mpn)
+    і для slug. Відмовляється від «Model 3 - …», «2017-2023 - …», «2 штуки - …».
+    """
+    if not name:
+        return None
+    m = _LEADING_CODE.match(name.strip())
+    if not m:
+        return None
+    token = m.group(1)
+    if _YEAR_RANGE.match(token):
+        return None
+    if not any(c.isdigit() for c in token):
+        return None
+    if not any(c.isalpha() for c in token) and len(token) < 6:
+        # чисто числовий шматок від 6+ цифр — це вже схоже на старий номер,
+        # «1234 - …» — ні
+        return None
+    return token

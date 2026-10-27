@@ -7,6 +7,12 @@ from sqlmodel.pool import StaticPool
 from database import get_session
 from auth import create_access_token, get_password_hash
 
+# У dev-БД лежать справжні реквізити бота — без цього кожен запуск тестів
+# відправляв у чат власника тестове замовлення.
+import routers.orders as orders_router
+
+orders_router.send_telegram_notification = lambda order: None
+
 # Use in-memory DB for tests
 sqlite_url = "sqlite:///:memory:"
 engine = create_engine(sqlite_url, connect_args={"check_same_thread": False}, poolclass=StaticPool)

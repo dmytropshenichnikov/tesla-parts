@@ -3,14 +3,31 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from database import get_session
-from models import Order, OrderItem
+from models import Order, OrderItem, Product
 from schemas import OrderCreate, OrderRead
+from services import part_numbers
 from services.telegram import send_telegram_notification
 from services.pricing import get_exchange_rate
 from dependencies import get_current_admin, get_optional_customer # Import for authentication
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+def _resolve_item_detail_number(item, session: Session) -> str | None:
+    """Артикул позиції замовлення, щоб у Telegram не було «N/A».
+
+    Ланцюжок: поле з кошика -> поле товару в БД (адмін міг доопрацювати після
+    додавання в кошик) -> номер з початку назви («118841100F - Кулак…»).
+    """
+    value = (item.detail_number or "").strip()
+    if value:
+        return value
+    if item.id:
+        product = session.get(Product, item.id)
+        if product and (product.detail_number or "").strip():
+            return product.detail_number.strip()
+    return part_numbers.extract_from_name(item.name)
 
 class UpdateTtnRequest(BaseModel):
     ttn: Optional[str] = None
@@ -34,12 +51,15 @@ def create_order(
             return item.priceUAH / rate
         return item.priceUAH or 0
 
+    subtotal_usd = sum(_item_price_usd(item) * item.quantity for item in order_data.items)
+
     total_usd = order_data.totalUSD
     recalculate_total = False
     if total_usd is None or total_usd <= 0:
-        total_usd = sum(_item_price_usd(item) * item.quantity for item in order_data.items)
+        total_usd = subtotal_usd
         recalculate_total = True
 
+    promo_saved: str | None = None
     if order_data.promocode:
         from models import PromoCode, CustomerPromoCodeLink
         promocode_str = order_data.promocode.upper().strip()
@@ -58,6 +78,9 @@ def create_order(
                     if not link:
                         valid = False
             
+            if valid:
+                promo_saved = promocode_str
+
             if valid and recalculate_total:
                 if promocode_obj.discount_type == "percent":
                     total_usd = total_usd * (1.0 - promocode_obj.discount_value / 100.0)
@@ -67,6 +90,16 @@ def create_order(
                     if rate:
                         discount_usd = promocode_obj.discount_value / rate
                         total_usd = max(0.0, total_usd - discount_usd)
+
+    # Скільки відступили: різниця між сумою позицій і фінальною сумою.
+    # Контекст обов'язковий — щоб не видумати знижку, якщо фронт просто
+    # надіслав застарілу суму. Під особистою знижкою клієнта коду не буде.
+    has_discount_context = bool(promo_saved) or bool(
+        customer and getattr(customer, "discount_type", None)
+    )
+    discount_usd = 0.0
+    if has_discount_context and subtotal_usd - total_usd >= 0.1:
+        discount_usd = round(subtotal_usd - total_usd, 2)
 
     order = Order(
         customer_first_name=order_data.customer.firstName,
@@ -78,7 +111,9 @@ def create_order(
         totalUSD=round(total_usd, 2),
         ttn=order_data.ttn, # Add TTN here
         note=order_data.note, # Add note here
-        customer_id=customer.id if customer else None
+        customer_id=customer.id if customer else None,
+        promocode=promo_saved,
+        discount_usd=discount_usd if discount_usd >= 0.1 else None,
     )
     session.add(order)
     session.commit()
@@ -91,7 +126,7 @@ def create_order(
             product_id=item.id,
             product_name=item.name,
             product_image=item.image,
-            product_detail_number=item.detail_number,
+            product_detail_number=_resolve_item_detail_number(item, session),
             quantity=item.quantity,
             price_at_purchase=round(price_usd, 2)
         )

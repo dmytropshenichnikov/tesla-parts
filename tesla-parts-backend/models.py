@@ -114,7 +114,12 @@ class Order(SQLModel, table=True):
     ttn: Optional[str] = None # Added TTN field
     note: Optional[str] = None # Added note field
     customer_id: Optional[int] = Field(default=None, foreign_key="customer.id")
-    
+    # Знижка: зберігаємо, щоб показати її в Telegram-сповіщенні та в адмінці
+    # (раніше знижка була лише у фінальній сумі — з неї неможливо було
+    # зрозуміти, що людині взагалі щось відступили).
+    promocode: Optional[str] = None
+    discount_usd: Optional[float] = None
+
     items: List["OrderItem"] = Relationship(back_populates="order")
 
 class OrderItem(SQLModel, table=True):

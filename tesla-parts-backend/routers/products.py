@@ -12,6 +12,7 @@ from schemas import ProductCreate, ProductRead, ProductBulkDeleteRequest, Produc
 from services.image_uploader import image_uploader
 from services.pricing import get_exchange_rate, compute_price_fields
 from services.product_slug import build_slug
+from services import part_numbers
 from dependencies import get_current_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -356,6 +357,12 @@ async def create_product(
         normalized_subcategories[0] if normalized_subcategories else None
     )
 
+    # Якщо адмін не заповнив «Артикул», але номер є в назві («118841100F - Кулак…»),
+    # беремо його: він потрібен у сповіщенні замовлення (щоб не було «N/A»),
+    # у JSON-LD (sku/mpn) і в slug. Знак питання не вгадуємо — нічого не вставляємо.
+    if not (detail_number or "").strip():
+        detail_number = part_numbers.extract_from_name(name)
+
     if sort_order is None:
         # Find current max sort_order within the group to place at bottom
         if primary_subcategory_id:
@@ -456,6 +463,9 @@ async def update_product(
     product.description = description
     product.inStock = inStock
     product.sort_order = sort_order
+    if not (detail_number or "").strip():
+        # назва могла отримати артикул на початку пізніше — підхоплюємо
+        detail_number = part_numbers.extract_from_name(name)
     product.detail_number = detail_number
     product.cross_number = cross_number
     product.search_keywords = search_keywords

@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, create_engine, Session, select
 from sqlalchemy import text, inspect
 import os
-from models import Product, Settings, User, SearchQueryLog, Schematic, SchematicHotspot # Import models
+from models import OrderItem, Product, Settings, User, SearchQueryLog, Schematic, SchematicHotspot # Import models
 from auth import get_password_hash # Import password hashing utility
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -36,7 +36,10 @@ def create_db_and_tables():
     _ensure_product_search_keywords_column()
     _ensure_product_meta_columns()
     _ensure_product_slug_column()
+    _ensure_product_detail_backfill()
     _ensure_order_note_column()
+    _ensure_order_discount_columns()
+    _ensure_order_item_detail_backfill()
     
     with Session(engine) as session:
         # Check if admin user exists, if not, create it
@@ -232,3 +235,75 @@ def _ensure_product_slug_column():
             ))
             conn.commit()
 
+
+def _ensure_order_discount_columns():
+    """Додає order.promocode та order.discount_usd (для знижки у сповіщенні)."""
+    inspector = inspect(engine)
+    columns = [c["name"] for c in inspector.get_columns("order")]
+    for name, sql_type in (("promocode", "VARCHAR"), ("discount_usd", "FLOAT")):
+        if name in columns:
+            continue
+        print(f"Adding '{name}' column to 'order' table...")
+        with engine.connect() as conn:
+            conn.execute(text(f'ALTER TABLE "order" ADD COLUMN {name} {sql_type}'))
+            conn.commit()
+
+
+def _ensure_product_detail_backfill():
+    """Підхоплює артикул із початку назви, якщо поле порожнє.
+
+    Таке трапляється з новими товарами: адмін пише «118841100F - Кулак…» у назву,
+    а поле «Артикул» лишає порожнім — і тоді в Telegram-сповіщенні замовлення
+    з'являлось «N/A», а в розмітці не було sku/mpn.
+    """
+    from services.part_numbers import extract_from_name
+
+    with Session(engine) as session:
+        products = session.exec(
+            select(Product).where((Product.detail_number.is_(None)) | (Product.detail_number == ""))
+        ).all()
+        changed = 0
+        for product in products:
+            code = extract_from_name(product.name)
+            if not code:
+                continue
+            product.detail_number = code
+            session.add(product)
+            changed += 1
+        if changed:
+            session.commit()
+            print(f"Backfilled detail_number for {changed} products")
+
+
+def _ensure_order_item_detail_backfill():
+    """Дозаповнює артикул у вже створених позиціях замовлень.
+
+    Історичні замовлення, оформлені поки артикул у товарі був порожній,
+    показували «N/A» — тепер підхоплюємо з товару в БД або з назви.
+    """
+    from services.part_numbers import extract_from_name
+
+    with Session(engine) as session:
+        items = session.exec(
+            select(OrderItem).where(
+                (OrderItem.product_detail_number.is_(None))
+                | (OrderItem.product_detail_number == "")
+            )
+        ).all()
+        changed = 0
+        for item in items:
+            value = None
+            if item.product_id:
+                product = session.get(Product, item.product_id)
+                if product and (product.detail_number or "").strip():
+                    value = product.detail_number.strip()
+            if not value:
+                value = extract_from_name(item.product_name)
+            if not value:
+                continue
+            item.product_detail_number = value
+            session.add(item)
+            changed += 1
+        if changed:
+            session.commit()
+            print(f"Backfilled detail_number for {changed} order items")
