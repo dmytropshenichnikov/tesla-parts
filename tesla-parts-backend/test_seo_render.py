@@ -246,6 +246,9 @@ def test_category_page_seeds_data_for_react(session):
     # у підкатегорії прямий товар і товар через зв'язок
     assert {p["id"] for p in seed["products"]} == {"prod-2", "prod-3"}
     assert seed["products"][0]["slug"]  # slug теж має їхати у фронт
+    # блок «Схема цього вузла» теж вбудований — інакше він зсуває товари вниз
+    assert seed["subcategoryId"] == 371
+    assert isinstance(seed["schemes"], list)
     assert "</script>" not in json.dumps(seed)
 
 

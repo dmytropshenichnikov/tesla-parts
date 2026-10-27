@@ -325,6 +325,15 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
                 "category": category_payload,
                 "products": [item.model_dump(exclude={"created_at"}) for item in products],
             }
+            if sub_id:
+                # Блок «Схема цього вузла» завантажувався після фарбування і
+                # зсував товари вниз (залишковий CLS ~0.25) — вбудовуємо в HTML.
+                from routers.schematics import get_schematics_for_subcategory  # noqa: WPS433
+
+                seed["subcategoryId"] = sub_id
+                seed["schemes"] = get_schematics_for_subcategory(sub_id, session).get(
+                    "schematics", []
+                )
             payload = json.dumps(seed, ensure_ascii=False, default=str).replace("<", "\\u003c")
             head_extra.append(f"<script>window.__CATEGORY_PAGE__={payload};</script>")
         except Exception as exc:  # noqa: BLE001 — поіт не має ламати рендеринг SEO

@@ -21,14 +21,45 @@ const pluralPoints = (n: number) => {
  * Якщо для підкатегорії («ЗАХИСТИ ПЕРЕДНІ») є схема — показуємо її поруч із
  * товарами, щоб клієнт міг піти і в деталі, і на схему вузла.
  */
+interface SchemeSeed {
+  subcategoryId?: number;
+  schemes?: SubcategorySchemeSummary[];
+}
+
+/**
+ * Схеми, вбудовані бекендом у prerender-HTML (`window.__CATEGORY_PAGE__`).
+ * Якщо вони належать саме цій підкатегорії — показуємо їх одразу: блок не
+ * з'являється після запиту і не зсуває товари нижче (CLS на /category/.../sub/...).
+ */
+const readSeedSchemes = (
+  subcategoryId: number | null | undefined
+): SubcategorySchemeSummary[] | null => {
+  if (!subcategoryId) return null;
+  try {
+    const raw = window.__CATEGORY_PAGE__ as SchemeSeed | undefined;
+    if (!raw || raw.subcategoryId !== subcategoryId) return null;
+    return Array.isArray(raw.schemes) ? raw.schemes : null;
+  } catch {
+    return null;
+  }
+};
+
 export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
   subcategoryId,
 }) => {
-  const [schemes, setSchemes] = useState<SubcategorySchemeSummary[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const seedSchemes = readSeedSchemes(subcategoryId);
+  const [schemes, setSchemes] = useState<SubcategorySchemeSummary[]>(
+    seedSchemes ?? []
+  );
+  const [loaded, setLoaded] = useState(seedSchemes !== null);
 
   useEffect(() => {
     let cancelled = false;
+    if (seedSchemes) {
+      // поіт уже в HTML — запит не робимо, вміст більше не змінюється
+      setLoaded(true);
+      return;
+    }
     if (!subcategoryId) {
       setSchemes([]);
       setLoaded(true);
@@ -45,7 +76,7 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
     return () => {
       cancelled = true;
     };
-  }, [subcategoryId]);
+  }, [subcategoryId, seedSchemes]);
 
   if (!loaded || schemes.length === 0) return null;
 
