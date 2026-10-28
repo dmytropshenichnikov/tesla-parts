@@ -1,8 +1,20 @@
 from datetime import datetime, timedelta
 from typing import Optional
 import os
+from pathlib import Path
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+
+# Load environment variables from .env if present
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).resolve().parent / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
 
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-jwt-key") # Use a strong, random key in production
