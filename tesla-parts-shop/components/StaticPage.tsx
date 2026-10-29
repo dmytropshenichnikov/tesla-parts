@@ -80,7 +80,7 @@ const StaticPage: React.FC<StaticPageProps> = ({ slug, seo }) => {
 
       {page ? (
         <div
-          className="text-gray-600 leading-relaxed prose prose-lg max-w-none"
+          className="static-content text-gray-600 leading-relaxed prose prose-lg max-w-none"
           dangerouslySetInnerHTML={{
             __html: page.content.replace(/\n/g, '<br />'),
           }}

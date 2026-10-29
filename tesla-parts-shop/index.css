@@ -14,6 +14,25 @@ body {
   color: #171a20;
 }
 
+/* Контент статичних сторінок (Контакти, Доставка, ...) приходить з БД як HTML.
+   Плагіна typography тут немає, тому посилання всередині нічим не виділялись:
+   робимо їх видимими (і телефон/email стають очевидно клікабельними). */
+.static-content a {
+  color: #171a20;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: rgba(23, 26, 32, 0.35);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.static-content a:hover {
+  color: #e82127;
+  text-decoration-color: #e82127;
+}
+.static-content a[href^='tel:'] {
+  white-space: nowrap;
+}
+
 /* Без цього браузер «прив'язує» прокрутку до елемента й стрибає вниз,
    коли на кроці змінюється контент (помітно на iPhone). */
 html,

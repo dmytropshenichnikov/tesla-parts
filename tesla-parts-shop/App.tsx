@@ -43,7 +43,7 @@ import {
   Page,
 } from './types';
 import { api } from './services/api';
-import { CheckCircle, Instagram, Send, ArrowLeft, X, Search, Phone } from 'lucide-react';
+import { CheckCircle, Instagram, Send, ArrowLeft, X, Search, Phone, Mail } from 'lucide-react';
 import TeslaPartsCenterLogo from './components/ShopLogo';
 import ViberIcon from './components/ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
@@ -706,9 +706,22 @@ const App: React.FC = () => {
                 );
               })()}
             </div>
-            <p className="text-sm mb-2">
-              {contactInfo.email || 'info@teslaparts.ua'}
-            </p>
+            <div className="mb-2">
+              {(() => {
+                const email = contactInfo.email || 'info@teslaparts.ua';
+                return (
+                  <a
+                    href={`mailto:${email}`}
+                    className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors break-all"
+                    title="Написати на email"
+                    aria-label={`Написати на email: ${email}`}
+                  >
+                    <Mail size={14} className="text-emerald-500 flex-shrink-0" />
+                    <span>{email}</span>
+                  </a>
+                );
+              })()}
+            </div>
             <div className="flex gap-4 mt-4 text-white">
               {socialLinks.instagram && (
                 <a
