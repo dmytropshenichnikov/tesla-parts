@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Layers, ArrowRight, MapPin } from 'lucide-react';
 import { api } from '../services/api';
 import { SubcategorySchemeSummary } from '../types';
+import { thumbUrl } from '../utils/imageUrl';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -157,10 +158,17 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
           <div className="w-full sm:w-28 h-24 sm:h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
             {scheme.image_url ? (
               <img
-                src={imageUrl(scheme.image_url)}
+                src={thumbUrl(imageUrl(scheme.image_url)) || imageUrl(scheme.image_url)}
+                srcSet={
+                  thumbUrl(imageUrl(scheme.image_url))
+                    ? `${thumbUrl(imageUrl(scheme.image_url))} 480w, ${imageUrl(scheme.image_url)} 1600w`
+                    : undefined
+                }
+                sizes="112px"
                 alt={scheme.title}
                 width={140}
                 height={140}
+                loading="lazy"
                 className="max-h-full max-w-full object-contain transition-transform duration-300"
               />
             ) : (

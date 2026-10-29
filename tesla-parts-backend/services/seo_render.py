@@ -308,6 +308,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
     body = (
         breadcrumb
         + f"<h1>{_e(heading)}</h1>"
+        + _category_cards(products[:4])
         + _links((f"/category/{slug}/sub/{c.id}", c.name) for c in children)
         + _links((_product_path(p), p.name) for p in products)
     )
@@ -322,8 +323,21 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
     for item in list(children) + list(products):
         if not item.image:
             continue
+        # Плитки/картки показуються ~190-380 px, тож preload має тягнути
+        # -sm.webp (480 px), а не 1600-піксельний оригінал: інакше браузер
+        # качає 130 КБ там, де досить 33 КБ (Lighthouse: «improve image delivery»).
+        media = _media(item.image)
+        href = media
+        srcset = ""
+        if media.startswith("/static/") and media.endswith(".webp"):
+            thumb = media[:-5] + "-sm.webp"
+            href = thumb
+            srcset = (
+                f' imagesrcset="{_e(thumb)} 480w, {_e(media[:-5])}-720.webp 720w, {_e(media)} 1600w"'
+                ' imagesizes="(min-width: 1280px) 380px, (min-width: 768px) 32vw, 45vw"'
+            )
         head_extra.append(
-            f'<link rel="preload" as="image" href="{_e(item.image)}" fetchpriority="high">'
+            f'<link rel="preload" as="image" href="{_e(href)}"{srcset} fetchpriority="high">'
         )
         if len(head_extra) >= 2:
             break
@@ -417,11 +431,101 @@ def _product(session: Session, identifier: str) -> Optional[PageSeo]:
         # Головне фото товару — LCP сторінки: завантажується одразу з HTML,
         # не чекаючи бандл і відповіді API.
         head_extra=(
-            [f'<link rel="preload" as="image" href="{_e(product.image)}" fetchpriority="high">']
-            if product.image
-            else []
-        ),
+            [_product_preload(product.image)] if product.image else []
+        )
+        + [_product_seed(product)],
     )
+
+
+def _category_cards(products: list[Product]) -> str:
+    """Перші фото товарів у тій самій сітці, що й ProductList.
+
+    Навіщо: картки малює React, тож LCP-фото з'являлось аж після виконання
+    бандла (~0.7-0.9 с). Розмітка й класи — як у ProductList.tsx, щоб після
+    заміни нічого не стрибало.
+    """
+    if not products:
+        return ""
+    cells = []
+    for index, product in enumerate(products):
+        image = _media(product.image) if product.image else ""
+        src, srcset = image, ""
+        if image.startswith("/static/") and image.endswith(".webp"):
+            thumb = image[:-5] + "-sm.webp"
+            src = thumb
+            srcset = (
+                f' srcset="{_e(thumb)} 480w, {_e(image[:-5])}-720.webp 720w, {_e(image)} 1600w"'
+                ' sizes="(min-width: 1280px) 380px, (min-width: 768px) 32vw, 45vw"'
+            )
+        eager = index == 0
+        img = (
+            f'<img src="{_e(src)}"{srcset} alt="{_e(product.name)}" width="300" height="300" '
+            f'{"fetchpriority=\"high\" " if eager else ""}'
+            'class="max-h-full max-w-full object-contain pointer-events-none">'
+            if image
+            else ""
+        )
+        cells.append(
+            '<div class="bg-white rounded-2xl shadow-xs border border-gray-100 overflow-hidden flex flex-col">'
+            '<div class="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center '
+            'overflow-hidden border-b border-gray-50">'
+            f"{img}</div></div>"
+        )
+    return (
+        '<div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">'
+        + "".join(cells)
+        + "</div>"
+    )
+
+
+def _product_preload(image: str) -> str:
+    """Preload головного фото товару: 480px-варіант замість 1600px оригіналу."""
+    href = _media(image)
+    if href.startswith("/static/") and href.endswith(".webp"):
+        thumb = href[:-5] + "-sm.webp"
+        return (
+            f'<link rel="preload" as="image" href="{_e(thumb)}" '
+            f'imagesrcset="{_e(thumb)} 480w, {_e(href[:-5])}-720.webp 720w, '
+            f'{_e(href[:-5])}-1200.webp 1200w, {_e(href)} 1600w" '
+            'imagesizes="(min-width: 768px) 480px, 100vw" fetchpriority="high">'
+        )
+    return f'<link rel="preload" as="image" href="{_e(image)}" fetchpriority="high">'
+
+
+def _product_seed(product: Product) -> str:
+    """window.__PRODUCT__ — щоб React малював сторінку одразу, без /api/products/{id}.
+
+    Раніше сторінка показувала скелет, поки не прийде відповідь API: головне
+    фото (LCP) з'являлось аж на ~0.9-1.9 с.
+    """
+    try:
+        from sqlalchemy.orm import selectinload  # noqa: WPS433
+        from sqlmodel import Session, select  # noqa: WPS433
+
+        from database import engine  # noqa: WPS433
+        from routers.products import _build_product_response, get_exchange_rate  # noqa: WPS433
+
+        with Session(engine) as session:
+            fresh = session.exec(
+                select(Product)
+                .where(Product.id == product.id)
+                .options(
+                    selectinload(Product.images),
+                    selectinload(Product.linked_subcategories),
+                )
+            ).first() or product
+            try:
+                rate = get_exchange_rate(session)
+            except Exception:  # noqa: BLE001 — курс не критичний для посіву
+                rate = 0
+            payload = _build_product_response(fresh, rate).model_dump(mode="json")
+
+        seed = {"path": _product_path(product), "product": payload}
+        data = json.dumps(seed, ensure_ascii=False, default=str).replace("<", "\\u003c")
+        return f"<script>window.__PRODUCT__={data};</script>"
+    except Exception as exc:  # noqa: BLE001 — посів не має ламати сторінку
+        print(f"product seed skipped: {exc}")
+        return ""
 
 
 def _clean_title(product: Product) -> str:
@@ -449,12 +553,29 @@ def _product_body(product: Product) -> str:
     for text, href in _product_breadcrumbs(product):
         crumbs.append(f'<a href="{_e(href)}">{_e(text)}</a>')
     parts.append(" / ".join(crumbs) + "</nav>")
-    parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
     if product.image:
+        # Той самий файл, що й у React (480w + srcset): інакше браузер тягне
+        # 1600-піксельний оригінал (130 КБ) лише для того, щоб React його замінив.
+        src = _media(product.image)
+        srcset = ""
+        if src.startswith("/static/") and src.endswith(".webp"):
+            thumb = src[:-5] + "-sm.webp"
+            src = thumb
+            big = _media(product.image)
+            srcset = (
+                f' srcset="{_e(thumb)} 480w, {_e(big[:-5])}-720.webp 720w, '
+                f'{_e(big[:-5])}-1200.webp 1200w, {_e(big)} 1600w"'
+                ' sizes="(min-width: 768px) 480px, 100vw"'
+            )
         parts.append(
-            f'<p><img src="{_e(product.image)}" alt="{_e(_clean_title(product))}" '
-            f'width="480" height="480" loading="eager"></p>'
+            '<div style="width:100%;max-width:480px;margin:0 auto 16px;'
+            'aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;'
+            'background:#fafafa;border-radius:16px">'
+            f'<img src="{_e(src)}"{srcset} alt="{_e(_clean_title(product))}" '
+            'width="480" height="480" loading="eager" fetchpriority="high" '
+            'style="max-width:100%;max-height:100%;object-fit:contain"></div>'
         )
+    parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
     stock = "В наявності" if product.inStock else "Під замовлення"
     parts.append(f"<p><strong>{_price(product.priceUAH)} грн</strong> · {stock}</p>")
     if part_numbers.split_numbers(product.detail_number):

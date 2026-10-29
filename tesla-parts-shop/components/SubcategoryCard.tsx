@@ -3,6 +3,7 @@ import { Subcategory } from '../types';
 import { ChevronRight, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { thumbUrl, onThumbError } from '../utils/imageUrl';
+import { mediaUrl } from '../utils/media';
 
 interface SubcategoryCardProps {
   subcategory: Subcategory;
@@ -14,7 +15,8 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
   to,
 }) => {
   // Картка показує максимум 192×108 CSS px — мініатюри 480px цілком досить
-  const thumb = thumbUrl(subcategory.image);
+  const cardImage = mediaUrl(subcategory.image);
+  const thumb = thumbUrl(cardImage);
   return (
     <Link
       to={to}
@@ -26,15 +28,15 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
           /* object-contain: картинки в каталозі вже обрізані по малюнку, тому
              «cover» дорізав би сам малюнок — показуємо повністю */
           <img
-            src={thumb || subcategory.image}
+            src={thumb || cardImage}
             srcSet={
-              thumb ? `${thumb} 480w, ${subcategory.image} 1600w` : undefined
+              thumb ? `${thumb} 480w, ${cardImage} 1600w` : undefined
             }
             sizes="(min-width: 640px) 192px, 96px"
             alt={subcategory.name}
             width={300}
             height={300}
-            onError={onThumbError(subcategory.image)}
+            onError={onThumbError(cardImage)}
             className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 ease-out"
           />
         ) : (
@@ -49,7 +51,7 @@ const SubcategoryCard: React.FC<SubcategoryCardProps> = ({
           {subcategory.name}
         </h2>
         {subcategory.code && (
-          <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded inline-block mt-1 sm:mt-2">
+          <span className="text-xs sm:text-sm text-gray-600 bg-gray-100 px-2 py-0.5 rounded inline-block mt-1 sm:mt-2">
             {subcategory.code}
           </span>
         )}

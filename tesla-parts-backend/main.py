@@ -28,7 +28,7 @@ from contextlib import asynccontextmanager
 import os
 from models import Product, Category, Subcategory, Page, StaticPageSEO, Schematic
 from services.seo_render import slugify
-from services.image_uploader import make_width_variants
+from services.image_uploader import make_variant, make_width_variants
 from urllib.parse import quote
 from schemas import StaticPageSEORead, StaticPageSEOUpdate
 from dependencies import get_current_admin
@@ -99,10 +99,12 @@ class VariantStaticFiles(StaticFiles):
         except StarletteHTTPException as exc:
             if exc.status_code != 404 or not re.search(r"-\d+\.webp$", path):
                 raise
+            match = re.search(r"-(\d+)\.webp$", path)
             original = Path("static") / re.sub(r"-\d+(?=\.webp$)", "", path)
-            if not original.exists():
+            if not match or not original.exists():
                 raise
-            make_width_variants(original)
+            # Генеруємо саме ту ширину, яку просить srcset (480/720/1000/160/...).
+            make_variant(original, int(match.group(1)))
             return await super().get_response(path, scope)
 
 

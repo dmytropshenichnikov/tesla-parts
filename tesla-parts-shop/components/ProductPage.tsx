@@ -40,6 +40,8 @@ import {
   withAlternate,
 } from '../utils/partNumbers';
 import { PartTypeBadge } from './PartTypeBadge';
+import { thumbUrl } from '../utils/imageUrl';
+import { mediaUrl } from '../utils/media';
 
 interface ProductPageProps {
   product: Product;
@@ -76,6 +78,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
     [product.image, product.images]
   );
   const [selectedImage, setSelectedImage] = useState(allImages[0]);
+  // 480px-мініатюра для головного фото: показ ~480 CSS px, тож 1600-піксельний
+  // оригінал (100-130 КБ) тут зайвий — він потрібен лише для зуму.
+  const mainImage = mediaUrl(selectedImage);
+  const mainThumb = thumbUrl(mainImage);
   const [added, setAdded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -379,7 +385,14 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 onClick={openLightbox}
               >
                 <img
-                  src={selectedImage}
+                  src={mainThumb || mainImage}
+                  srcSet={
+                    mainThumb
+                      ? `${mainThumb} 480w, ${mainImage.replace(/\.webp$/i, '-720.webp')} 720w, ${mainImage.replace(/\.webp$/i, '-1200.webp')} 1200w, ${mainImage} 1600w`
+                      : undefined
+                  }
+                  sizes="(min-width: 768px) 480px, 100vw"
+                  fetchPriority="high"
                   alt={product.name}
                   width={480}
                   height={480}
@@ -444,10 +457,17 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       }`}
                     >
                       <img
-                        src={img}
+                        src={thumbUrl(mediaUrl(img)) || mediaUrl(img)}
+                        srcSet={
+                          thumbUrl(mediaUrl(img))
+                            ? `${thumbUrl(mediaUrl(img))} 480w, ${mediaUrl(img)} 1600w`
+                            : undefined
+                        }
+                        sizes="80px"
                         alt=""
                         width={100}
                         height={100}
+                        loading="lazy"
                         className="w-full h-full object-contain"
                       />
                     </button>
@@ -489,7 +509,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200/80 transition-all active:scale-95 cursor-pointer text-xs font-mono font-medium group"
                     title="Натисніть, щоб скопіювати артикул"
                   >
-                    <span className="text-gray-500 font-sans font-normal text-[11px]">
+                    <span className="text-gray-600 font-sans font-normal text-[11px]">
                       Артикул OEM:
                     </span>
                     <span className="font-bold">{displayPartNumbers(product.detail_number)}</span>
@@ -532,7 +552,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <div className="bg-gray-50/90 rounded-2xl p-4 sm:p-5 border border-gray-100 mb-6">
                 <div className="flex items-baseline justify-between flex-wrap gap-2">
                   <div>
-                    <div className="text-xs text-gray-400 font-medium mb-0.5">Ціна:</div>
+                    <div className="text-xs text-gray-600 font-medium mb-0.5">Ціна:</div>
                     <div className="flex items-baseline gap-3">
                       {original > final && (
                         <span className="text-lg line-through text-gray-400 font-medium">
@@ -570,7 +590,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     added
                       ? 'bg-emerald-600 text-white shadow-emerald-600/30'
                       : product.inStock
-                        ? 'bg-tesla-red text-white hover:bg-red-700 shadow-red-600/25 hover:shadow-lg'
+                        ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/25 hover:shadow-lg'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                   }`}
                 >
@@ -647,7 +667,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       href={telegramLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#0088cc] border border-[#229ED9]/20 text-xs sm:text-sm font-semibold transition active:scale-95"
+                      className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#00639e] border border-[#229ED9]/20 text-xs sm:text-sm font-semibold transition active:scale-95"
                     >
                       <Send size={15} />
                       <span>Запитати в Telegram</span>
@@ -818,7 +838,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       <span className="block font-montserrat font-bold text-sm text-gray-900 group-hover:text-tesla-red transition-colors">
                         {usage.title}
                       </span>
-                      <span className="block text-[11px] text-gray-400 font-manrope mt-0.5">
+                      <span className="block text-[11px] text-gray-500 font-manrope mt-0.5">
                         {usage.model} {usage.generation} • {usage.section}
                         {usage.subsystem ? ` • ${usage.subsystem}` : ''}
                       </span>

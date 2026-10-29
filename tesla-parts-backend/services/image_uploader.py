@@ -56,6 +56,33 @@ CATEGORY_FOLDER = "tesla-parts/categories"
 VARIANT_WIDTHS = (480, 160)
 
 
+def make_variant(source: Path, width: int) -> Optional[str]:
+    """<назва>-<width>.webp поруч з оригіналом (ідемпотентно)."""
+    if not source.exists() or not source.name.lower().endswith(".webp"):
+        return None
+    target = source.with_name(f"{source.stem}-{width}.webp")
+    if target.exists():
+        return target.name
+    try:
+        from PIL import Image
+
+        Image.MAX_IMAGE_PIXELS = 200_000_000
+        with Image.open(source) as im:
+            im.load()
+            work = im.copy()
+            if work.width > width:
+                height = max(1, round(work.height * width / work.width))
+                work = work.resize((width, height), Image.LANCZOS)
+            if work.mode not in ("RGB", "RGBA"):
+                work = work.convert("RGBA" if "A" in work.getbands() else "RGB")
+            work.save(target, format="WEBP", quality=78, method=4)
+        return target.name
+    except Exception as exc:  # noqa: BLE001 — варіант не має ламати віддачу файлу
+        print(f"make_variant: {exc}")
+        target.unlink(missing_ok=True)
+        return None
+
+
 def make_width_variants(source: Path, widths=VARIANT_WIDTHS) -> list[str]:
     """<назва>-480.webp, <назва>-160.webp поруч з оригіналом."""
     if not source.exists() or not source.name.lower().endswith(".webp"):

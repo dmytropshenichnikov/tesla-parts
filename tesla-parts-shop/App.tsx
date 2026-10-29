@@ -203,6 +203,30 @@ const ScrollToTop = () => {
 
 // --- Main App Component ---
 
+interface SeededCategorySeed {
+  path: string;
+  category: { id: number; name: string; image?: string; subcategories?: unknown[] };
+}
+
+/**
+ * Категорія, яку бекенд уже вбудував у HTML (`window.__CATEGORY_PAGE__`).
+ *
+ * Навіщо: раніше сторінка категорії чекала на /api/categories/, бо шукала
+ * категорію в щойно завантаженому списку. Поки відповіді не було — показувався
+ * скелет, і перший товар (LCP) малювався аж на ~0.7-1.0 с. З посівом React
+ * рендерить сітку одразу після монтування.
+ */
+function seededCategoryFor(pathname: string): SeededCategorySeed['category'] | null {
+  try {
+    const raw = (window as unknown as { __CATEGORY_PAGE__?: SeededCategorySeed })
+      .__CATEGORY_PAGE__;
+    if (!raw || raw.path !== pathname || !raw.category) return null;
+    return raw.category;
+  } catch {
+    return null;
+  }
+}
+
 const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -485,10 +509,17 @@ const App: React.FC = () => {
   const currentCategorySlug = categoryMatch?.params?.slug;
   const currentCategory = useMemo(() => {
     if (!currentCategorySlug) return undefined;
-    return sortedCategories.find(
+    const fromList = sortedCategories.find(
       (c) => slugify(c.name) === currentCategorySlug
     );
-  }, [sortedCategories, currentCategorySlug]);
+    if (fromList) return fromList;
+    // Категорія вже є в HTML від бекенда — не чекаємо на /api/categories/.
+    const seeded = seededCategoryFor(location.pathname);
+    if (seeded && slugify(seeded.name) === currentCategorySlug) {
+      return { ...seeded, subcategories: [] } as unknown as (typeof sortedCategories)[number];
+    }
+    return undefined;
+  }, [sortedCategories, currentCategorySlug, location.pathname]);
 
   const categoryRouteElement = currentCategory ? (
     <CategoryView
@@ -1360,6 +1391,26 @@ const getProductBackUrl = (
   return '/';
 };
 
+interface SeededProduct {
+  path: string;
+  product: unknown;
+}
+
+/**
+ * Товар, який бекенд уже вбудував у HTML (`window.__PRODUCT__`).
+ * Дає перший рендер без очікування /api/products/{id} — головне фото (LCP)
+ * з'являється разом із бандлом, а не через 0.5-1 с.
+ */
+function readProductSeed(pathname: string): Product | null {
+  try {
+    const raw = (window as unknown as { __PRODUCT__?: SeededProduct }).__PRODUCT__;
+    if (!raw || raw.path !== pathname || !raw.product) return null;
+    return raw.product as Product;
+  } catch {
+    return null;
+  }
+}
+
 interface ProductDetailRouteProps {
   currency: Currency;
   uahPerUsd: number;
@@ -1382,9 +1433,13 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
   const { productId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const loadedProduct = useRef<Product | null>(null);
+  const seed = useMemo(
+    () => readProductSeed(location.pathname),
+    [location.pathname]
+  );
+  const [product, setProduct] = useState<Product | null>(seed);
+  const [loading, setLoading] = useState(!seed);
+  const loadedProduct = useRef<Product | null>(seed);
 
   useEffect(() => {
     loadedProduct.current = product;
@@ -1393,6 +1448,8 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
   useEffect(() => {
     const fetchProduct = async () => {
       if (!productId) return;
+      // Поіт з HTML: товар уже на екрані, повторний запит не потрібен.
+      if (seed && (seed.slug === productId || seed.id === productId)) return;
       // Після 301/заміни старого id на slug не робимо повторний запит.
       const current = loadedProduct.current;
       if (current && (current.slug === productId || current.id === productId)) {
@@ -1412,7 +1469,7 @@ const ProductDetailRoute: React.FC<ProductDetailRouteProps> = ({
       }
     };
     fetchProduct();
-  }, [productId]);
+  }, [productId, seed]);
 
   // Старий /product/prod-xxxx у браузері (клієнтська навігація) -> slug.
   // Серверні 301 обробляє backend prerender.

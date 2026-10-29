@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getProductPartType } from '../utils/partType';
 import { PartTypeBadge } from './PartTypeBadge';
 import { catalogModelForCar, isProductCompatibleWithCar, useActiveCar } from '../utils/garageMatch';
+import { mediaUrl } from '../utils/media';
 
 interface ProductListProps {
   products: Product[];
@@ -217,7 +218,8 @@ const ProductList: React.FC<ProductListProps> = ({
 
           // Мініатюра 480px для сітки: повний 1600px файл потрібен лише
           // на сторінці товару і для зуму (srcset сам підбере потрібний).
-          const thumb = thumbUrl(product.image);
+          const cardImage = mediaUrl(product.image);
+          const thumb = thumbUrl(cardImage);
 
           return (
             <div
@@ -237,9 +239,11 @@ const ProductList: React.FC<ProductListProps> = ({
                 className="relative w-full aspect-square bg-[#fbfbfb] p-3 flex items-center justify-center overflow-hidden border-b border-gray-50 cursor-pointer block"
               >
                 <img
-                  src={thumb || product.image}
+                  src={thumb || cardImage}
                   srcSet={
-                    thumb ? `${thumb} 480w, ${product.image} 1600w` : undefined
+                    thumb
+                      ? `${thumb} 480w, ${cardImage.replace(/\.webp$/i, '-720.webp')} 720w, ${cardImage} 1600w`
+                      : undefined
                   }
                   sizes="(min-width: 1280px) 380px, (min-width: 768px) 32vw, 45vw"
                   alt={product.name}
@@ -247,7 +251,7 @@ const ProductList: React.FC<ProductListProps> = ({
                   height={300}
                   loading="lazy"
                   draggable={false}
-                  onError={onThumbError(product.image)}
+                  onError={onThumbError(cardImage)}
                   className="max-h-full max-w-full object-contain transition-transform duration-300 pointer-events-none"
                 />
                 
