@@ -13,9 +13,12 @@ import { useAuth } from './context/AppContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
-import { SubcategoryScheme } from './components/SubcategoryScheme';
-import CartDrawer from './components/CartDrawer';
-import SubcategoryCard from './components/SubcategoryCard';
+// Не потрібні на першому екрані головної — окремі чанки (менший стартовий JS).
+const SubcategoryScheme = React.lazy(() =>
+  import('./components/SubcategoryScheme').then((m) => ({ default: m.SubcategoryScheme }))
+);
+const CartDrawer = React.lazy(() => import('./components/CartDrawer'));
+const SubcategoryCard = React.lazy(() => import('./components/SubcategoryCard'));
 import { ReviewsPage } from './components/ReviewsPage';
 const lazyNamed = (loader: () => Promise<Record<string, any>>, name: string) =>
   React.lazy(() => loader().then((m: any) => ({ default: m[name] })));
@@ -243,6 +246,8 @@ const App: React.FC = () => {
   // Cart & Settings
   const [cart, setCart] = useState<CartItem[]>(() => getInitialCart());
   const [isCartOpen, setIsCartOpen] = useState(false);
+  // Чанк кошика вантажимо лише при першому відкритті: на головній він не потрібен.
+  const [isCartMounted, setIsCartMounted] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [uahPerUsd, setUahPerUsd] = useState(DEFAULT_EXCHANGE_RATE_UAH_PER_USD);
@@ -548,7 +553,10 @@ const App: React.FC = () => {
         uahPerUsd={uahPerUsd}
         categories={sortedCategories}
         setCurrency={setCurrency}
-        onCartClick={() => setIsCartOpen(true)}
+        onCartClick={() => {
+          setIsCartMounted(true);
+          setIsCartOpen(true);
+        }}
         onSearch={handleSearch}
         socialLinks={socialLinks}
         phoneNumber={contactInfo.phone}
@@ -792,19 +800,23 @@ const App: React.FC = () => {
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
       />
 
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cart}
-        currency={currency}
-        uahPerUsd={uahPerUsd}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeItem}
-        onCheckout={() => {
-          setIsCartOpen(false);
-          navigate('/checkout');
-        }}
-      />
+      {isCartMounted && (
+        <React.Suspense fallback={null}>
+          <CartDrawer
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            items={cart}
+            currency={currency}
+            uahPerUsd={uahPerUsd}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeItem}
+            onCheckout={() => {
+              setIsCartOpen(false);
+              navigate('/checkout');
+            }}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 };
