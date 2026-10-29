@@ -822,6 +822,14 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             <div
               className="relative w-full"
               style={{
+                // Полотно точок = рівно пропорції картинки. Точки позиціонуються
+                // у відсотках від цього боксу, тому будь-який зайвий відступ
+                // контейнера (min-height, padding) зсував би їх — тепер бокс
+                // завжди має форму файлу, ще до його завантаження.
+                aspectRatio:
+                  schematic.image_width && schematic.image_height
+                    ? `${schematic.image_width} / ${schematic.image_height}`
+                    : undefined,
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
                 transition: dragRef.current.active ? 'none' : 'transform 120ms ease-out',
@@ -843,7 +851,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                   setNaturalWidth(e.currentTarget.naturalWidth);
                   setBaseWidth(e.currentTarget.clientWidth);
                 }}
-                className="block w-full h-auto object-contain pointer-events-none"
+                className="block w-full h-full object-contain pointer-events-none"
               />
             ) : (
               <div className="text-gray-500 text-sm font-manrope p-8">Зображення схеми відсутнє</div>
