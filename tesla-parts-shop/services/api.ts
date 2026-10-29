@@ -278,6 +278,8 @@ export const api = {
 
   getMe: async () => {
     const res = await fetchWithAuth(`/customers/me`);
+    // 401 — сесія скінчилась, це не помилка: користувач просто не залогінений.
+    if (res.status === 401 || res.status === 403) return null;
     if (!res.ok) throw new Error('Failed to fetch profile');
     return res.json();
   },

@@ -5,19 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
 
     <!-- Google Tag Manager -->
-    <!-- Must stay a classic (non-module) script above the importmap below:
-         an importmap has to be declared before any module script starts loading. -->
+    <!-- Must stay a classic (non-module) script above the importmap below: an
+         importmap has to be declared before any module script starts loading.
+
+         Контейнер GTM (≈500 КБ: gtm.js + GA4 + Google Ads) давав довгі задачі
+         на головному потоці й забирає TBT. Тому вантажимо його після першої
+         реальної взаємодії зі сторінкою (клік/тап/клавіша/скрол колесом), а
+         як страховку — через 15 с. Події, які сайт кладе в dataLayer до старту
+         контейнера, не губляться: GTM обробляє чергу при ініціалізації. -->
     <script>
-      (function (w, d, s, l, i) {
-        w[l] = w[l] || [];
-        w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-        var f = d.getElementsByTagName(s)[0],
-          j = d.createElement(s),
-          dl = l != 'dataLayer' ? '&l=' + l : '';
-        j.async = true;
-        j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-        f.parentNode.insertBefore(j, f);
-      })(window, document, 'script', 'dataLayer', 'GTM-W2HKHCLB');
+      (function (w, d) {
+        w.dataLayer = w.dataLayer || [];
+        w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+        var started = false;
+        function loadGTM() {
+          if (started) return;
+          started = true;
+          var j = d.createElement('script');
+          j.async = true;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-W2HKHCLB';
+          d.head.appendChild(j);
+        }
+        // wheel, а не scroll: програматичний скрол (пререндер, скріншоти,
+        // Lighthouse) не має запускати аналітику.
+        ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (type) {
+          w.addEventListener(type, loadGTM, { once: true, passive: true });
+        });
+        w.setTimeout(loadGTM, 15000);
+      })(window, document);
     </script>
     <!-- End Google Tag Manager -->
 

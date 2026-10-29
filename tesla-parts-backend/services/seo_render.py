@@ -3,6 +3,7 @@
 Шаблони збігаються з fallback-ами SeoHead у tesla-parts-shop: Google отримує
 те саме, що React потім ставить у браузері.
 """
+import dataclasses
 import html
 import json
 import os
@@ -141,6 +142,16 @@ def _category_by_slug(session: Session, slug: str) -> Optional[Category]:
     return None
 
 
+API_ORIGIN = "https://api.teslapartscenter.com.ua"
+
+
+def _media(url: str) -> str:
+    """Фото з api.* -> свій домен: nginx шлюзу проксіює /static/ у бекенд."""
+    if url.startswith(API_ORIGIN + "/static/"):
+        return url[len(API_ORIGIN) :]
+    return url
+
+
 def _home_hero_card(category: Category, position: int) -> str:
     """Плитка моделі — рівно та сама розмітка, що й у Hero.tsx (компонент магазину).
 
@@ -149,7 +160,11 @@ def _home_hero_card(category: Category, position: int) -> str:
     """
     href = f"/category/{slugify(category.name)}"
     image = category.image or ""
-    priority = ' fetchpriority="high"' if position < 2 else ""
+    priority = (
+        ' fetchpriority="high" loading="eager" decoding="async"'
+        if position < 2
+        else ' loading="lazy" decoding="async"'
+    )
     card = (
         f'<a href="{_e(href)}" class="group relative h-64 md:h-96 rounded-2xl overflow-hidden '
         'cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-300 ease-out '
@@ -158,8 +173,17 @@ def _home_hero_card(category: Category, position: int) -> str:
         'group-hover:via-black/25 transition-all duration-300 z-10"></div>'
     )
     if image:
+        # 480w-варіант (генерується поряд з оригіналом): картка ~400 px завширшки,
+        # тому 900-піксельний файл — це +50 КБ на картку і повільніший LCP.
+        image = _media(image)
+        srcset = ""
+        # Варіанти існують лише для локальних файлів (/static/...). Для зовнішніх
+        # сховищ (Cloudinary) srcset не додаємо, інакше картинка 404.
+        if image.lower().endswith(".webp") and image.startswith("/static/"):
+            small = image[:-5] + "-480.webp"
+            srcset = f' srcset="{_e(small)} 480w, {_e(image)} 900w" sizes="(min-width: 1024px) 33vw, 100vw"'
         card += (
-            f'<img src="{_e(image)}" alt="{_e(category.name)}" width="800" height="500"{priority} '
+            f'<img src="{_e(image)}"{srcset} alt="{_e(category.name)}" width="800" height="500"{priority} '
             'class="absolute inset-0 w-full h-full object-cover transform transition-transform '
             'duration-500 ease-out">'
         )
@@ -200,9 +224,18 @@ def _home(session: Session) -> PageSeo:
     # Прелоуд перших плиток: LCP-картинки стартують разом із HTML, а не після JS.
     for c in categories[:2]:
         if c.image:
-            head_extra.append(
-                f'<link rel="preload" as="image" href="{_e(c.image)}" fetchpriority="high">'
-            )
+            media = _media(c.image)
+            if media.lower().endswith(".webp") and media.startswith("/static/"):
+                small = media[:-5] + "-480.webp"
+                head_extra.append(
+                    f'<link rel="preload" as="image" href="{_e(small)}" '
+                    f'imagesrcset="{_e(small)} 480w, {_e(media)} 900w" '
+                    'imagesizes="(min-width: 1024px) 33vw, 100vw" fetchpriority="high">'
+                )
+            else:
+                head_extra.append(
+                    f'<link rel="preload" as="image" href="{_e(media)}" fetchpriority="high">'
+                )
     # React має ті самі категорії при ПЕРШОМУ рендері (useState(() => window.__...)),
     # інакше плитки зникнуть біжучим запитом і сторінка знову стрибне.
     payload = json.dumps(
@@ -670,6 +703,15 @@ def render(index_html: str, seo: PageSeo) -> str:
         count=1,
         flags=re.S,
     )
-    page = page.replace("</head>", f"    {_head_tags(seo)}\n  </head>", 1)
+    # head_extra — одразу після <head>: preload LCP-картинки має бути знайдено
+    # до інлайн-CSS і скриптів, інакше браузер виявляє його на 10-20 мс пізніше.
+    preloads = [t for t in seo.head_extra if t.startswith("<link")]
+    scripts = [t for t in seo.head_extra if not t.startswith("<link")]
+    if preloads:
+        page = page.replace("<head>", "<head>\n    " + "\n    ".join(preloads), 1)
+    # _head_tags сам додає head_extra — тут він не потрібен, інакше теги дублюються
+    base_seo = dataclasses.replace(seo, head_extra=[])
+    extra = scripts + [t for t in _head_tags(base_seo).split("\n    ") if t.strip()]
+    page = page.replace("</head>", "    " + "\n    ".join(extra) + "\n  </head>", 1)
     # createRoot у index.tsx замінює вміст #root своєю розміткою
     return page.replace('<div id="root"></div>', f'<div id="root">{seo.body}</div>', 1)

@@ -29,6 +29,7 @@ const GarageModal = React.lazy(() =>
   import('./GarageModal').then((m) => ({ default: m.GarageModal }))
 );
 import ViberIcon from './ViberIcon';
+import { mediaUrl, sizedMediaUrl } from '../utils/media';
 
 interface HeaderProps {
   cartCount: number;
@@ -351,10 +352,12 @@ const Header: React.FC<HeaderProps> = ({
                         <div className="w-14 h-14 shrink-0 rounded-xl overflow-hidden bg-gray-200/50 flex items-center justify-center">
                           {cat.image ? (
                             <img
-                              src={cat.image}
+                              src={mediaUrl(sizedMediaUrl(cat.image, 160))}
                               alt={cat.name}
                               width={300}
                               height={300}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                             />
                           ) : (
@@ -553,7 +556,7 @@ const Header: React.FC<HeaderProps> = ({
                   className={`px-2 py-0.5 text-[11px] font-montserrat font-bold rounded-md transition cursor-pointer ${
                     currency === cur
                       ? 'bg-white text-gray-950 shadow-xs'
-                      : 'text-gray-400 hover:text-gray-700'
+                      : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   {cur}

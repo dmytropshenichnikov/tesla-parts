@@ -177,19 +177,6 @@ const getProductUsdPrice = (product: Product, rate: number): number => {
   return 0;
 };
 
-// --- Image Preloader ---
-const preloadImages = async (imageUrls: (string | undefined)[]) => {
-  const promises = imageUrls.filter(Boolean).map((src) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = src!;
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-  });
-  await Promise.all(promises);
-};
-
 const ScrollToTop = () => {
   // Реагуємо і на зміну шляху, і на зміну параметрів: кроки в схемах
   // (авто → розділ → підсистема) живуть саме в query, і без цього сторінка
@@ -319,9 +306,9 @@ const App: React.FC = () => {
         setSocialLinks(socialLinksData);
         setHeaderPages(pagesData);
 
-        // Preload critical images
-        const heroImages = sortedCats.slice(0, 4).map((c) => c.image);
-        await preloadImages(heroImages);
+        // Картинки першого екрана вже є в prerender-HTML з preload-хінтом.
+        // Додатковий new Image() тут лише дублював ті самі файли (окремо з
+        // api.*) і затримував зняття скелетонів.
       } catch (e) {
         console.error('Failed to load data', e);
       } finally {

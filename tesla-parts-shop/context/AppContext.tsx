@@ -53,10 +53,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchProfile = async () => {
     try {
       const profile = await api.getMe();
+      if (!profile) {
+        // Протермінований/відкликаний токен: fetchWithAuth уже надіслав
+        // customer-logged-out. Це нормальний сценарій, а не помилка —
+        // console.error тут псував Lighthouse «errors in console».
+        return;
+      }
       setCustomerProfile(profile);
     } catch (error) {
-      console.error('Failed to fetch profile', error);
-      // Auto logout will trigger if 401
+      // Мережевий збій: не заважаємо роботі сторінки і не пишемо в error.
+      console.warn('Failed to fetch profile', error);
     }
   };
 

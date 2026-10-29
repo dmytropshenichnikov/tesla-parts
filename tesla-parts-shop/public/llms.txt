@@ -1,0 +1,33 @@
+# Tesla Parts Center
+
+> Інтернет-магазин нових запчастин, аксесуарів і схем для електромобілів Tesla
+> (Model 3, Model Y, Model S, Model X). Доставка по Україні, гарантія, оплата
+> карткою або післяплатою. Сайт: https://teslapartscenter.com.ua
+
+## Каталог
+
+- [Запчастини для Tesla](https://teslapartscenter.com.ua/): головна, вибір моделі
+- [Схеми та каталоги деталей](https://teslapartscenter.com.ua/schemes): OEM-схеми вузлів
+- [Відгуки покупців](https://teslapartscenter.com.ua/reviews)
+- [Мій гараж](https://teslapartscenter.com.ua/garage): збережені авто за VIN
+
+## Інформація
+
+- [Доставка та оплата](https://teslapartscenter.com.ua/info/delivery)
+- [Повернення та гарантія](https://teslapartscenter.com.ua/info/returns)
+- [Про магазин](https://teslapartscenter.com.ua/info/about)
+- [Контакти](https://teslapartscenter.com.ua/info/contacts)
+
+## Контакти
+
+- Телефон: +38 096 636 36 31 (Viber, Telegram, WhatsApp)
+- Email: teslapartscenterua@gmail.com
+- Telegram: https://t.me/teslapartscenter
+- Адреса: м. Полтава, Харківське шосе, 6А
+- Графік: ПН-ПТ 9:00-16:00
+
+## Для агентів
+
+- Ціни вказані в гривні (₴), курс USD перемикається в шапці сайту.
+- Наявність і ціна товару — на сторінці товару, актуальні дані з API.
+- Замовлення оформлюється на сайті; підтримка — за телефоном або в Telegram.

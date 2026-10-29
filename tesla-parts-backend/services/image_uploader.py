@@ -48,6 +48,42 @@ def optimize_to_webp(file_path: Path, max_side: int = 1600, quality: int = 82) -
 # Сітки карток (товари/підкатегорії) показують 180-460 CSS px — повні файли
 # 1600px там зайві. Для цих папок поруч з оригіналом кладемо <назва>-sm.webp.
 THUMB_FOLDERS = {"tesla-parts/products", "tesla-parts/subcategories"}
+# Плитки моделей на головній і іконки в шапці беруть зменшені варіанти
+# (<uuid>-480.webp / -160.webp): 900-піксельний оригінал у сітці — це зайві
+# 50 КБ на картку і повільніший LCP. Генеруємо їх при завантаженні, щоб нові
+# категорії не ламали srcset.
+CATEGORY_FOLDER = "tesla-parts/categories"
+VARIANT_WIDTHS = (480, 160)
+
+
+def make_width_variants(source: Path, widths=VARIANT_WIDTHS) -> list[str]:
+    """<назва>-480.webp, <назва>-160.webp поруч з оригіналом."""
+    if not source.exists() or not source.name.lower().endswith(".webp"):
+        return []
+    if any(source.stem.endswith(f"-{w}") for w in widths):
+        return []
+    made: list[str] = []
+    try:
+        from PIL import Image
+
+        Image.MAX_IMAGE_PIXELS = 200_000_000
+        with Image.open(source) as im:
+            im.load()
+            for width in widths:
+                target = source.with_name(f"{source.stem}-{width}.webp")
+                if target.exists():
+                    continue
+                work = im.copy()
+                if work.width > width:
+                    height = max(1, round(work.height * width / work.width))
+                    work = work.resize((width, height), Image.LANCZOS)
+                if work.mode not in ("RGB", "RGBA"):
+                    work = work.convert("RGBA" if "A" in work.getbands() else "RGB")
+                work.save(target, format="WEBP", quality=78, method=4)
+                made.append(target.name)
+    except Exception as exc:  # noqa: BLE001 — варіанти не мають ламати завантаження
+        print(f"make_width_variants: {exc}")
+    return made
 
 
 def make_thumbnail(source: Path, side: int = 480) -> Optional[str]:
@@ -233,6 +269,10 @@ class ImageUploader:
             source = upload_dir / unique_filename
             if source.exists():
                 make_thumbnail(source)
+
+        if folder == CATEGORY_FOLDER:
+            source = upload_dir / unique_filename
+            make_width_variants(source)
 
         # Картинку зберігаємо ЯК Є — без обрізання полів.
         # Автоматичне обрізання пробували: воно визначає межі малюнка по темних

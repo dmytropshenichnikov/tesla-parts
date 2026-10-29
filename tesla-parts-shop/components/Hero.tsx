@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { slugify } from '../utils/slugify';
 import { catalogModelForCar, useActiveCar } from '../utils/garageMatch';
 import { HOME_H1 } from '../utils/seoTemplates';
+import { mediaUrl, sizedMediaUrl } from '../utils/media';
 
 interface HeroProps {}
 
@@ -63,6 +64,13 @@ const Hero: React.FC<HeroProps> = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {orderedCategories.map((category, index) => {
           const isMine = Boolean(myModel) && category.name.trim().toLowerCase() === myModel.toLowerCase();
+          // Плитка завширшки ~400 px (3 колонки) або ~390 px (мобільний), тож
+          // 900-піксельний оригінал — зайві ~50 КБ на кожну картку.
+          const heroOriginal = mediaUrl(category.image);
+          const heroImage = heroOriginal;
+          const heroSrcSet = /\/static\//.test(heroOriginal)
+            ? `${sizedMediaUrl(heroOriginal, 480)} 480w, ${heroOriginal} 900w`
+            : undefined;
           return (
             <Link
               key={category.id}
@@ -76,11 +84,15 @@ const Hero: React.FC<HeroProps> = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 group-hover:via-black/25 transition-all duration-300 z-10" />
               <img
-                src={category.image || 'https://via.placeholder.com/800'}
+                src={heroImage || 'https://via.placeholder.com/800'}
+                srcSet={heroSrcSet}
+                sizes="(min-width: 1024px) 33vw, 100vw"
                 alt={category.name}
                 width={800}
                 height={500}
                 fetchPriority={index < 2 ? 'high' : undefined}
+                loading={index < 2 ? 'eager' : 'lazy'}
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-500 ease-out"
               />
               {isMine && (

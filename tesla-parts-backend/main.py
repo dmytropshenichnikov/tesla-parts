@@ -1,6 +1,10 @@
+import re
+
 from fastapi import FastAPI, Response, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+from starlette.exceptions import HTTPException as StarletteHTTPException
 import mimetypes
 
 # Контейнер не має /etc/mime.types, тому .webp віддавався як
@@ -24,6 +28,7 @@ from contextlib import asynccontextmanager
 import os
 from models import Product, Category, Subcategory, Page, StaticPageSEO, Schematic
 from services.seo_render import slugify
+from services.image_uploader import make_width_variants
 from urllib.parse import quote
 from schemas import StaticPageSEORead, StaticPageSEOUpdate
 from dependencies import get_current_admin
@@ -79,7 +84,29 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+class VariantStaticFiles(StaticFiles):
+    """Статика + підстраховка для зменшених варіантів фото.
+
+    Сайт просить <uuid>-480.webp / -160.webp (srcset у плитках моделей). Нові
+    завантаження генерують їх одразу, але для старих файлів або після переносу
+    на інший сервер варіанта може не бути — тоді створюємо його на першому
+    запиті, щоб картинка не віддала 404.
+    """
+
+    async def get_response(self, path, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or not re.search(r"-\d+\.webp$", path):
+                raise
+            original = Path("static") / re.sub(r"-\d+(?=\.webp$)", "", path)
+            if not original.exists():
+                raise
+            make_width_variants(original)
+            return await super().get_response(path, scope)
+
+
+app.mount("/static", VariantStaticFiles(directory="static"), name="static")
 
 # CORS Configuration
 # Add your production frontend URLs here
