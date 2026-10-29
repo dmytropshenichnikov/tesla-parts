@@ -100,8 +100,22 @@ class VariantStaticFiles(StaticFiles):
             if exc.status_code != 404 or not re.search(r"-\d+\.webp$", path):
                 raise
             match = re.search(r"-(\d+)\.webp$", path)
-            original = Path("static") / re.sub(r"-\d+(?=\.webp$)", "", path)
-            if not match or not original.exists():
+            base = re.sub(r"-\d+(?=\.webp$)", "", path)
+            if not match:
+                raise
+            # Оригінал може бути .webp, .png або .jpg (скріншоти відгуків — PNG).
+            original = next(
+                (cand for cand in (Path("static") / base,) if cand.exists()),
+                None,
+            )
+            if original is None:
+                stem = (Path("static") / base).with_suffix("")
+                original = next(
+                    (p for ext in (".webp", ".png", ".jpg", ".jpeg")
+                     if (p := stem.with_suffix(ext)).exists()),
+                    None,
+                )
+            if original is None:
                 raise
             # Генеруємо саме ту ширину, яку просить srcset (480/720/1000/160/...).
             make_variant(original, int(match.group(1)))

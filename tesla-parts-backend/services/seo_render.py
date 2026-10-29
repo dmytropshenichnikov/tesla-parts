@@ -547,37 +547,54 @@ def _product_breadcrumbs(product: Product) -> list:
 
 
 def _product_body(product: Product) -> str:
-    # Повноцінний серверний HTML товару: Google бачить його без виконання JS.
+    """Серверний HTML товару в ТІЙ САМІЙ геометрії, що й ProductPage.tsx.
+
+    Так перший екран малюється з HTML (LCP не чекає бандла), а коли React
+    замінює розмітку — елементи не стрибають (CLS). Google при цьому бачить
+    повний текст без виконання JS.
+    """
     parts = ['<nav aria-label="breadcrumbs">']
     crumbs = []
     for text, href in _product_breadcrumbs(product):
         crumbs.append(f'<a href="{_e(href)}">{_e(text)}</a>')
     parts.append(" / ".join(crumbs) + "</nav>")
+
+    title = _e(_clean_title(product))
+    image_html = ""
     if product.image:
-        # Той самий файл, що й у React (480w + srcset): інакше браузер тягне
-        # 1600-піксельний оригінал (130 КБ) лише для того, щоб React його замінив.
         src = _media(product.image)
         srcset = ""
         if src.startswith("/static/") and src.endswith(".webp"):
+            big = src
             thumb = src[:-5] + "-sm.webp"
             src = thumb
-            big = _media(product.image)
             srcset = (
                 f' srcset="{_e(thumb)} 480w, {_e(big[:-5])}-720.webp 720w, '
                 f'{_e(big[:-5])}-1200.webp 1200w, {_e(big)} 1600w"'
                 ' sizes="(min-width: 768px) 480px, 100vw"'
             )
-        parts.append(
-            '<div style="width:100%;max-width:480px;margin:0 auto 16px;'
-            'aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;'
-            'background:#fafafa;border-radius:16px">'
-            f'<img src="{_e(src)}"{srcset} alt="{_e(_clean_title(product))}" '
-            'width="480" height="480" loading="eager" fetchpriority="high" '
-            'style="max-width:100%;max-height:100%;object-fit:contain"></div>'
+        image_html = (
+            f'<img src="{_e(src)}"{srcset} alt="{title}" width="480" height="480" '
+            'loading="eager" fetchpriority="high" '
+            'style="max-width:100%;max-height:100%;object-fit:contain">'
         )
-    parts.append(f"<h1>{_e(_clean_title(product))}</h1>")
+
     stock = "В наявності" if product.inStock else "Під замовлення"
-    parts.append(f"<p><strong>{_price(product.priceUAH)} грн</strong> · {stock}</p>")
+    parts.append(
+        '<div class="bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-gray-100 overflow-hidden mb-8">'
+        '<div class="flex flex-col md:flex-row">'
+        '<div class="md:w-1/2 p-3 sm:px-6 sm:pt-5 sm:pb-6 bg-[#fafafa] flex flex-col justify-between '
+        'border-b md:border-b-0 md:border-r border-gray-100">'
+        '<div class="relative rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 '
+        'shadow-2xs flex items-center justify-center aspect-square">'
+        f"{image_html}</div></div>"
+        '<div class="md:w-1/2 p-4 pt-3 sm:p-6 sm:pt-4 md:px-8 md:pt-5 md:pb-8 flex flex-col justify-between">'
+        "<div>"
+        f'<h1 class="text-xl sm:text-2xl font-bold text-tesla-dark leading-tight mb-3">{title}</h1>'
+        f'<p class="text-2xl font-bold text-tesla-dark mb-4">{_price(product.priceUAH)} грн · {stock}</p>'
+        "</div></div></div></div>"
+    )
+
     if part_numbers.split_numbers(product.detail_number):
         parts.append(f"<p>Артикул: {_e(part_numbers.display(product.detail_number))}</p>")
     if part_numbers.split_numbers(product.cross_number):
@@ -675,6 +692,12 @@ def _schematic(session: Session, schematic_id: int) -> Optional[PageSeo]:
         canonical=f"{SITE_URL}/schemes/{schematic.id}",
         image=schematic.image_url,
         body=_schematic_body(session, schematic),
+        # Схема — LCP сторінки: вантажимо одразу з HTML, не чекаючи бандла.
+        head_extra=(
+            [f'<link rel="preload" as="image" href="{_e(_media(schematic.image_url))}" fetchpriority="high">']
+            if schematic.image_url
+            else []
+        ),
     )
 
 

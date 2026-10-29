@@ -24,6 +24,7 @@ import {
 import { api } from '../services/api';
 import { Schematic, SchematicHotspot, HotspotVariant, Currency, Product, SavedCar, SchematicSubsystem } from '../types';
 import { formatCurrency } from '../utils/currency';
+import { mediaUrl } from '../utils/media';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -492,7 +493,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-20 text-center max-w-7xl">
-        <div className="text-gray-400 font-manrope">Завантаження схеми вузла...</div>
+        <div className="text-gray-500 font-manrope">Завантаження схеми вузла...</div>
       </div>
     );
   }
@@ -509,7 +510,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
         </p>
         <Link
           to="/schemes"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-tesla-red text-white rounded-xl font-montserrat font-bold text-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-montserrat font-bold text-sm"
         >
           <ArrowLeft size={16} /> Повернутися до каталогу схем
         </Link>
@@ -632,7 +633,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
           розділу, тож «ЗАХИСТИ ПЕРЕДНІ» → «ЗАХИСТИ ЗАДНІ» — один клік. */}
       {siblingSubsystems.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap mb-4">
-          <span className="text-[11px] font-montserrat font-bold uppercase tracking-wider text-gray-400 shrink-0">
+          <span className="text-[11px] font-montserrat font-bold uppercase tracking-wider text-gray-600 shrink-0">
             Підсистеми розділу
           </span>
           {siblingSubsystems.map((sub) => {
@@ -640,7 +641,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             return isCurrent ? (
               <span
                 key={sub.subsystem}
-                className="px-3 py-1.5 rounded-xl bg-tesla-red text-white text-xs font-montserrat font-bold"
+                className="px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-montserrat font-bold"
               >
                 {sub.subsystem}
               </span>
@@ -819,7 +820,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
             {/* Все, що масштабується разом: креслення + точки деталей */}
             <div
-              className="relative w-full"
+              className="relative w-full min-h-[420px] sm:min-h-[520px]"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
@@ -829,9 +830,11 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             >
             {schematic.image_url ? (
               <img
-                src={getFullImageUrl(schematic.image_url)}
+                src={mediaUrl(getFullImageUrl(schematic.image_url))}
                 alt={schematic.title}
                 draggable={false}
+                fetchPriority="high"
+                loading="eager"
                 onLoad={(e) => {
                   setNaturalWidth(e.currentTarget.naturalWidth);
                   setBaseWidth(e.currentTarget.clientWidth);
@@ -839,7 +842,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 className="block w-full h-auto object-contain pointer-events-none"
               />
             ) : (
-              <div className="text-gray-400 text-sm font-manrope p-8">Зображення схеми відсутнє</div>
+              <div className="text-gray-500 text-sm font-manrope p-8">Зображення схеми відсутнє</div>
             )}
 
             {/* Red Hotspot Pins */}
@@ -876,7 +879,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
             </div>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-400 font-manrope px-1">
+          <div className="mt-2.5 flex items-center justify-between text-[11px] text-gray-500 font-manrope px-1">
             <span className="hidden sm:inline">
               Наведіть на номер — підсвітиться деталь у списку (і навпаки). Клік закріплює вибір
               • масштаб: +/− , коліщатко з Ctrl або подвійний клік, тягніть мишкою щоб рухати
@@ -974,7 +977,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                       <div>
                         {/* Part Number */}
                         {h.part_number && (
-                          <div className="font-mono text-xs font-bold text-gray-400 tracking-wider">
+                          <div className="font-mono text-xs font-bold text-gray-600 tracking-wider">
                             {h.part_number}
                           </div>
                         )}
@@ -1014,7 +1017,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                     {/* Price & Action Button */}
                     <div className="text-right shrink-0 flex flex-col items-end">
                       {hasAvailable && minPrice !== null ? (
-                        <div className="text-xs text-gray-400 font-manrope">
+                        <div className="text-xs text-gray-500 font-manrope">
                           {hasMultipleVariants ? 'від ' : ''}
                           <strong className="text-base font-black font-montserrat text-gray-900">
                             {convertPrice(minPrice)}
@@ -1133,7 +1136,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                                 </button>
                               </>
                             ) : (
-                              <span className="text-[11px] font-manrope text-gray-400 font-semibold">
+                              <span className="text-[11px] font-manrope text-gray-500 font-semibold">
                                 Немає в наявності
                               </span>
                             )}

@@ -665,7 +665,7 @@ const App: React.FC = () => {
             </p>
           </div>
           <div>
-            <h3 className="text-white font-bold mb-4">Навігація</h3>
+            <h2 className="text-white font-bold mb-4">Навігація</h2>
             <ul className="space-y-2 text-sm">
               {sortedCategories.slice(0, 4).map((cat) => (
                 <li key={cat.id}>
@@ -681,7 +681,7 @@ const App: React.FC = () => {
             </ul>
           </div>
           <div>
-            <h3 className="text-white font-bold mb-4">Клієнтам</h3>
+            <h2 className="text-white font-bold mb-4">Клієнтам</h2>
             <ul className="space-y-2 text-sm">
               {/* ЗАМІНЕНО: button -> Link для індексації */}
               <li>
@@ -707,7 +707,7 @@ const App: React.FC = () => {
             </ul>
           </div>
           <div>
-            <h3 className="text-white font-bold mb-4">Контакти</h3>
+            <h2 className="text-white font-bold mb-4">Контакти</h2>
             <div className="mb-2">
               {(() => {
                 const phone = contactInfo.phone || '+38 (099) 123-45-67';

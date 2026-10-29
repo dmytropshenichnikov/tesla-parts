@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import SeoHead from './SeoHead';
 import { Review } from '../types';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { mediaUrl } from '../utils/media';
 
 export const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -87,10 +88,27 @@ export const ReviewsPage: React.FC = () => {
                 onClick={() => openImage(index)}
               >
                 <img
-                  src={review.image_url}
+                  src={mediaUrl(review.image_url)}
+                  srcSet={
+                    // Скріншоти показуються ~330 px: 480/720-WebP замість
+                    // 60-90 КБ PNG (вони ж і LCP сторінки).
+                    `${mediaUrl(review.image_url).replace(/\.(webp|png|jpe?g)$/i, '-480.webp')} 480w, ` +
+                    `${mediaUrl(review.image_url).replace(/\.(webp|png|jpe?g)$/i, '-720.webp')} 720w`
+                  }
+                  sizes="(min-width: 1024px) 330px, (min-width: 640px) 45vw, 90vw"
                   alt="Відгук клієнта"
+                  width={800}
+                  height={1000}
                   className="w-full h-auto block hover:scale-[1.02] transition-transform duration-300"
                   loading="lazy"
+                  onError={(e) => {
+                    // Варіанта може не бути (старий файл) — показуємо оригінал.
+                    const img = e.currentTarget;
+                    if (img.getAttribute('src') !== mediaUrl(review.image_url)) {
+                      img.removeAttribute('srcset');
+                      img.src = mediaUrl(review.image_url);
+                    }
+                  }}
                 />
               </div>
             ))}

@@ -530,9 +530,11 @@ const Header: React.FC<HeaderProps> = ({
                         navigate('/');
                       }
                     }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-700 bg-gray-200/80 rounded-full cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-700 bg-gray-200/80 rounded-full cursor-pointer"
+                    aria-label="Очистити поле пошуку"
+                    title="Очистити поле пошуку"
                   >
-                    <X size={11} />
+                    <X size={13} />
                   </button>
                 )}
               </div>

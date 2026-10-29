@@ -57,8 +57,12 @@ VARIANT_WIDTHS = (480, 160)
 
 
 def make_variant(source: Path, width: int) -> Optional[str]:
-    """<назва>-<width>.webp поруч з оригіналом (ідемпотентно)."""
-    if not source.exists() or not source.name.lower().endswith(".webp"):
+    """<назва>-<width>.webp поруч з оригіналом (ідемпотентно).
+
+    Джерелом може бути webp/png/jpg: скріншоти відгуків лежать у PNG і важать
+    60-90 КБ, а показуються у колонці ~330 px.
+    """
+    if not source.exists():
         return None
     target = source.with_name(f"{source.stem}-{width}.webp")
     if target.exists():

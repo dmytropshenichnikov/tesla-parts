@@ -18,6 +18,7 @@ import { api } from '../services/api';
 import { SchematicSummary, SavedCar, SchematicModelOption, SchematicSectionGroup, Product } from '../types';
 import { slugify } from '../utils/slugify';
 import { GarageModal } from './GarageModal';
+import { mediaUrl } from '../utils/media';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -576,7 +577,7 @@ export const SchemesCatalog: React.FC = () => {
             </div>
             <button
               type="submit"
-              className="px-6 py-3.5 bg-tesla-red hover:bg-red-700 text-white rounded-2xl font-montserrat font-bold text-sm transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+              className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-montserrat font-bold text-sm transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
             >
               Знайти
             </button>
@@ -676,7 +677,15 @@ export const SchemesCatalog: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10 group-hover:via-black/30 transition-all duration-300 z-10" />
                   {o.image ? (
                     <img
-                      src={o.image}
+                      src={mediaUrl(o.image)}
+                      srcSet={
+                        /\.webp$/i.test(o.image)
+                          ? `${mediaUrl(o.image).replace(/\.webp$/i, '-480.webp')} 480w, ` +
+                            `${mediaUrl(o.image).replace(/\.webp$/i, '-720.webp')} 720w, ` +
+                            `${mediaUrl(o.image)} 900w`
+                          : undefined
+                      }
+                      sizes="(min-width: 1024px) 33vw, 100vw"
                       alt={o.category}
                       width={400}
                       height={300}
@@ -1094,11 +1103,29 @@ export const SchemesCatalog: React.FC = () => {
                 <div className="relative h-52 bg-[#fbfbfb] p-6 flex items-center justify-center border-b border-gray-50 overflow-hidden">
                   {s.image_url ? (
                     <img
-                      src={getFullImageUrl(s.image_url)}
+                      src={
+                        /\.webp$/i.test(getFullImageUrl(s.image_url))
+                          ? mediaUrl(getFullImageUrl(s.image_url)).replace(/\.webp$/i, '-480.webp')
+                          : getFullImageUrl(s.image_url)
+                      }
+                      srcSet={
+                        /\.webp$/i.test(getFullImageUrl(s.image_url))
+                          ? `${mediaUrl(getFullImageUrl(s.image_url)).replace(/\.webp$/i, '-480.webp')} 480w, ` +
+                            `${mediaUrl(getFullImageUrl(s.image_url)).replace(/\.webp$/i, '-720.webp')} 720w, ` +
+                            `${mediaUrl(getFullImageUrl(s.image_url))} 1600w`
+                          : undefined
+                      }
+                      sizes="(min-width: 768px) 400px, 90vw"
                       alt={s.title}
                       width={400}
                       height={400}
                       decoding="async"
+                      loading="lazy"
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        img.removeAttribute('srcset');
+                        img.src = getFullImageUrl(s.image_url);
+                      }}
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (
