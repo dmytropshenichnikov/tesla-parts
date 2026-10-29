@@ -592,9 +592,12 @@ const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onCartClick}
               aria-label={
+                // Імʼя має містити видимий текст кнопки одним рядком
+                // («Кошик» + сума + лічильник), інакше Lighthouse ловить
+                // label-content-name-mismatch (WCAG 2.5.3).
                 cartCount > 0
-                  ? `Кошик: ${cartCount} товарів на ${formatPrice(displayCartTotal)}`
-                  : 'Кошик, порожній'
+                  ? `Кошик ${formatPrice(displayCartTotal)} (${cartCount} шт)`
+                  : `Кошик ${formatPrice(displayCartTotal)}`
               }
               className="flex items-center gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gray-950 hover:bg-black text-white active:scale-95 transition-all shadow-sm cursor-pointer group select-none flex-shrink-0"
             >
@@ -610,6 +613,10 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="text-[9px] text-gray-400 uppercase font-montserrat font-bold tracking-wider">
                   {cartCount > 0 ? `${cartCount} шт` : 'Кошик'}
                 </div>
+                {/* {' '} — реальний пробіл між підписом і сумою: без нього
+                    textContent склеюється («Кошик0 грн») і не збігається з
+                    aria-label (Lighthouse label-content-name-mismatch, WCAG 2.5.3). */}
+                {' '}
                 <div className="font-montserrat font-black text-xs text-white">
                   {formatPrice(displayCartTotal)}
                 </div>
