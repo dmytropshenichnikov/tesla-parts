@@ -43,7 +43,7 @@ import {
   Page,
 } from './types';
 import { api } from './services/api';
-import { CheckCircle, Instagram, Send, ArrowLeft, X, Search } from 'lucide-react';
+import { CheckCircle, Instagram, Send, ArrowLeft, X, Search, Phone } from 'lucide-react';
 import TeslaPartsCenterLogo from './components/ShopLogo';
 import ViberIcon from './components/ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from './constants';
@@ -690,9 +690,22 @@ const App: React.FC = () => {
           </div>
           <div>
             <h3 className="text-white font-bold mb-4">Контакти</h3>
-            <p className="text-sm mb-2">
-              {contactInfo.phone || '+38 (099) 123-45-67'}
-            </p>
+            <div className="mb-2">
+              {(() => {
+                const phone = contactInfo.phone || '+38 (099) 123-45-67';
+                return (
+                  <a
+                    href={`tel:${phone.replace(/\s+/g, '')}`}
+                    className="inline-flex items-center gap-1.5 text-sm font-mono text-gray-300 hover:text-white transition-colors"
+                    title="Зателефонувати нам"
+                    aria-label={`Зателефонувати: ${phone}`}
+                  >
+                    <Phone size={14} className="text-emerald-500 flex-shrink-0" />
+                    <span>{phone}</span>
+                  </a>
+                );
+              })()}
+            </div>
             <p className="text-sm mb-2">
               {contactInfo.email || 'info@teslaparts.ua'}
             </p>
