@@ -42,12 +42,53 @@
     <link rel="preconnect" href="https://api.teslapartscenter.com.ua" />
 
     <title>Tesla Parts Center</title>
-    <script type="application/ld+json">
+    <!-- Назва сайту в Google (site name). Google бере її з WebSite.name на
+         головній, з og:site_name і з бренду в логотипі/заголовку. Без цього
+         у видачі показувався домен: teslapartscenter.com.ua. -->
+    <script type="application/ld+json" data-site-name="website">
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
+        "@id": "https://teslapartscenter.com.ua/#website",
+        "url": "https://teslapartscenter.com.ua/",
         "name": "Tesla Parts Center",
-        "url": "https://teslapartscenter.com.ua"
+        "alternateName": ["Tesla Parts Center Ukraine", "Tesla Parts Center UA"],
+        "inLanguage": "uk-UA",
+        "publisher": { "@id": "https://teslapartscenter.com.ua/#organization" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://teslapartscenter.com.ua/search?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": "https://teslapartscenter.com.ua/#organization",
+        "name": "Tesla Parts Center",
+        "alternateName": "Tesla Parts Center Ukraine",
+        "url": "https://teslapartscenter.com.ua/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://teslapartscenter.com.ua/tesla-favicon.png",
+          "width": 300,
+          "height": 300
+        },
+        "image": "https://teslapartscenter.com.ua/tesla-favicon.png",
+        "telephone": "+380966363631",
+        "email": "teslapartscenterua@gmail.com",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Харківське шосе, 6А",
+          "addressLocality": "Полтава",
+          "addressCountry": "UA"
+        },
+        "sameAs": ["https://t.me/teslapartscenter"]
       }
     </script>
     <link

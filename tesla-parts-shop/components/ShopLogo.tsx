@@ -13,9 +13,11 @@ const TeslaPartsCenterLogo = ({ variant = 'default' }: TeslaPartsCenterLogoProps
     <Link to="/" className="cursor-pointer flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group">
       <img
         src={teslaLogo}
-        alt="Tesla Logo"
-        width={1600}
-        height={1600}
+        // alt = назва бренду: Google бере його як один із сигналів «site name»
+        // (і це коректніше для скрін-рідерів, ніж «Tesla Logo»)
+        alt="Tesla Parts Center"
+        width={256}
+        height={256}
         className="h-7 w-7 sm:h-8 sm:w-8 object-contain transition-transform duration-300 group-hover:scale-105"
       />
       <div className="flex flex-col select-none justify-center">

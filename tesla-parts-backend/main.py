@@ -189,11 +189,16 @@ def get_sitemap():
 
     category_map = {c.id: _slugify(c.name) for c in categories if c.id and c.name}
 
+    # lastmod — чесна дата останньої зміни контенту (найновіший товар). Google
+    # використовує її як підказку для переобходу, зокрема головної сторінки.
+    last_content = max((p.created_at for p in products if p.created_at), default=None)
+    lastmod = f"<lastmod>{last_content.date().isoformat()}</lastmod>" if last_content else ""
+
     xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
     xml_parts.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
     
     # 1. Homepage & Reviews
-    xml_parts.append(f'<url><loc>{base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>')
+    xml_parts.append(f'<url><loc>{base_url}/</loc>{lastmod}<changefreq>daily</changefreq><priority>1.0</priority></url>')
     xml_parts.append(f'<url><loc>{base_url}/reviews</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>')
 
     # 2. Informational pages

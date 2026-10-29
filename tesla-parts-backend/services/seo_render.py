@@ -815,8 +815,18 @@ def _head_tags(seo: PageSeo) -> str:
     return "\n    ".join(tags)
 
 
+_WEBSITE_LD = re.compile(
+    r'\s*<script type="application/ld\+json" data-site-name="website">.*?</script>',
+    re.S,
+)
+
+
 def render(index_html: str, seo: PageSeo) -> str:
     page = _OG_TAG.sub("", index_html)
+    # Google просить WebSite-розмітку лише на головній: на інших сторінках
+    # прибираємо, щоб не дублювати сигнал про назву сайту.
+    if seo.canonical.rstrip("/") != SITE_URL.rstrip("/"):
+        page = _WEBSITE_LD.sub("", page, count=1)
     page = re.sub(
         r"<title>.*?</title>",
         lambda _: f"<title>{html.escape(seo.title)}</title>",
