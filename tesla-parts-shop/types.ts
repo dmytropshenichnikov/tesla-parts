@@ -235,6 +235,8 @@ export interface Schematic {
   sort_order: number;
   created_at?: string;
   hotspots: SchematicHotspot[];
+  image_width?: number | null;
+  image_height?: number | null;
 }
 
 export interface VinDecodeResult {

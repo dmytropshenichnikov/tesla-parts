@@ -1131,6 +1131,10 @@ def get_schematic(schematic_id: int, session: Session = Depends(get_session)):
 
     formatted_hotspots = [_format_hotspot(h, products_by_id) for h in sorted_hotspots]
 
+    from services.image_dims import image_size  # noqa: WPS433 — ліниво, щоб не тягнути PIL на старті
+
+    size = image_size(schematic.image_url) if schematic.image_url else None
+
     return SchematicRead(
         id=schematic.id,
         title=schematic.title,
@@ -1141,6 +1145,8 @@ def get_schematic(schematic_id: int, session: Session = Depends(get_session)):
         image_url=schematic.image_url,
         sort_order=schematic.sort_order,
         created_at=schematic.created_at,
+        image_width=size[0] if size else None,
+        image_height=size[1] if size else None,
         hotspots=formatted_hotspots
     )
 

@@ -721,7 +721,31 @@ def _schematic_body(session: Session, schematic: Schematic) -> str:
         else:
             items.append(f"<li>{_e(label)}</li>")
     heading = f"<h1>{_e(schematic.title)} • {_e(schematic.model)} {_e(schematic.generation)}</h1>"
-    return heading + (f"<ul>{''.join(items)}</ul>" if items else "")
+    # Розмітка повторює сітку SchematicView (фото зліва, деталі справа):
+    # React замінює її без стрибків (CLS), а Google бачить текст без JS.
+    image_html = ""
+    if schematic.image_url:
+        from services.image_dims import image_size  # noqa: WPS433
+
+        size = image_size(schematic.image_url)
+        dims = f' width="{size[0]}" height="{size[1]}"' if size else ""
+        image_html = (
+            '<div class="lg:col-span-6 xl:col-span-7 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col '
+            'bg-white p-3 sm:p-5 border border-gray-100">'
+            f'<img src="{_e(_media(schematic.image_url))}"{dims} alt="{_e(schematic.title)}" '
+            'loading="eager" fetchpriority="high" style="width:100%;height:auto">'
+            '<p class="mt-2.5 text-[11px] text-gray-500 font-manrope px-1">'
+            'Натисніть на червоний номер — деталь підсвітиться у списку</p></div>'
+        )
+    items_html = ''.join(items)
+    list_html = f'<ul class="lg:col-span-6 xl:col-span-5">{items_html}</ul>' if items_html else ""
+    return (
+        heading
+        + '<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">'
+        + image_html
+        + list_html
+        + "</div>"
+    )
 
 
 # маршрути магазину без власних SEO-даних — віддаємо як є, з кодом 200

@@ -28,7 +28,7 @@ from contextlib import asynccontextmanager
 import os
 from models import Product, Category, Subcategory, Page, StaticPageSEO, Schematic
 from services.seo_render import slugify
-from services.image_uploader import make_variant, make_width_variants
+from services.image_uploader import make_thumbnail, make_variant, make_width_variants
 from urllib.parse import quote
 from schemas import StaticPageSEORead, StaticPageSEOUpdate
 from dependencies import get_current_admin
@@ -97,10 +97,13 @@ class VariantStaticFiles(StaticFiles):
         try:
             return await super().get_response(path, scope)
         except StarletteHTTPException as exc:
-            if exc.status_code != 404 or not re.search(r"-\d+\.webp$", path):
+            is_sm = path.endswith("-sm.webp")
+            if exc.status_code != 404 or not (
+                is_sm or re.search(r"-\d+\.webp$", path)
+            ):
                 raise
-            match = re.search(r"-(\d+)\.webp$", path)
-            base = re.sub(r"-\d+(?=\.webp$)", "", path)
+            match = None if is_sm else re.search(r"-(\d+)\.webp$", path)
+            base = re.sub(r"-(?:sm|\d+)(?=\.webp$)", "", path)
             if not match:
                 raise
             # Оригінал може бути .webp, .png або .jpg (скріншоти відгуків — PNG).
@@ -117,8 +120,12 @@ class VariantStaticFiles(StaticFiles):
                 )
             if original is None:
                 raise
-            # Генеруємо саме ту ширину, яку просить srcset (480/720/1000/160/...).
-            make_variant(original, int(match.group(1)))
+            if is_sm:
+                # Мініатюра для карток («-sm.webp») — 480 px, як у завантажувачі.
+                make_thumbnail(original)
+            else:
+                # Генеруємо саме ту ширину, яку просить srcset (480/720/1000/160/...).
+                make_variant(original, int(match.group(1)))
             return await super().get_response(path, scope)
 
 

@@ -387,6 +387,10 @@ class SchematicUpdate(BaseModel):
 class SchematicRead(SchematicBase):
     id: int
     created_at: datetime | None = None
+    # Реальні розміри файлу: фронт ставить їх у width/height, щоб контейнер
+    # збігався з картинкою (інакше точки схеми з'їжджають).
+    image_width: int | None = None
+    image_height: int | None = None
     hotspots: List[SchematicHotspotRead] = []
 
 

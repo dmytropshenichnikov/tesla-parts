@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Layers, ArrowRight, MapPin } from 'lucide-react';
 import { api } from '../services/api';
 import { SubcategorySchemeSummary } from '../types';
-import { thumbUrl } from '../utils/imageUrl';
+import { mediaUrl } from '../utils/media';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -84,6 +84,13 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
   const imageUrl = (url: string) =>
     !url ? '' : url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 
+  // 480w-WebP для будь-якого формату: частина схем — PNG на 100+ КБ, а картка
+  // показує їх ~140 px. Варіант генерується на першому запиті (VariantStaticFiles).
+  const thumb480 = (url: string) => {
+    const full = mediaUrl(imageUrl(url));
+    return /\.(webp|png|jpe?g)$/i.test(full) ? full.replace(/\.(webp|png|jpe?g)$/i, '-480.webp') : null;
+  };
+
   // Одна схема — показуємо звичайну широку картку.
   // Кілька схем (напр. на сторінці розділу «ЗОВНІШНЄ ОЗДОБЛЕННЯ») — компактний
   // рядок, що гортається: раніше сім карток займали пів екрана.
@@ -119,10 +126,14 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
               <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                 {scheme.image_url ? (
                   <img
-                    src={imageUrl(scheme.image_url)}
+                    src={thumb480(scheme.image_url) || mediaUrl(imageUrl(scheme.image_url))}
                     alt={scheme.title}
                     width={100}
                     height={100}
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      img.src = mediaUrl(imageUrl(scheme.image_url));
+                    }}
                     className="max-h-full max-w-full object-contain transition-transform duration-300"
                   />
                 ) : (
@@ -158,10 +169,10 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
           <div className="w-full sm:w-28 h-24 sm:h-20 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
             {scheme.image_url ? (
               <img
-                src={thumbUrl(imageUrl(scheme.image_url)) || imageUrl(scheme.image_url)}
+                src={thumb480(scheme.image_url) || mediaUrl(imageUrl(scheme.image_url))}
                 srcSet={
-                  thumbUrl(imageUrl(scheme.image_url))
-                    ? `${thumbUrl(imageUrl(scheme.image_url))} 480w, ${imageUrl(scheme.image_url)} 1600w`
+                  thumb480(scheme.image_url)
+                    ? `${thumb480(scheme.image_url)} 480w, ${mediaUrl(imageUrl(scheme.image_url))} 1600w`
                     : undefined
                 }
                 sizes="112px"
@@ -169,6 +180,13 @@ export const SubcategoryScheme: React.FC<{ subcategoryId?: number | null }> = ({
                 width={140}
                 height={140}
                 loading="lazy"
+                onError={(e) => {
+                  // Мініатюри може не бути (стара схема) — показуємо оригінал,
+                  // щоб картка ніколи не лишалась з битою картинкою.
+                  const img = e.currentTarget;
+                  img.removeAttribute('srcset');
+                  img.src = imageUrl(scheme.image_url);
+                }}
                 className="max-h-full max-w-full object-contain transition-transform duration-300"
               />
             ) : (

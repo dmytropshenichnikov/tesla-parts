@@ -820,7 +820,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
 
             {/* Все, що масштабується разом: креслення + точки деталей */}
             <div
-              className="relative w-full min-h-[420px] sm:min-h-[520px]"
+              className="relative w-full"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: 'center center',
@@ -833,6 +833,10 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                 src={mediaUrl(getFullImageUrl(schematic.image_url))}
                 alt={schematic.title}
                 draggable={false}
+                // Реальні пропорції з API: контейнер = картинка, точки не з'їжджають
+                // (і місце під фото зарезервоване ще до завантаження — без CLS).
+                width={schematic.image_width || undefined}
+                height={schematic.image_height || undefined}
                 fetchPriority="high"
                 loading="eager"
                 onLoad={(e) => {
@@ -868,8 +872,8 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                     isActive
                       ? 'bg-white text-tesla-red ring-4 sm:ring-[5px] ring-tesla-red scale-[1.45] z-40 shadow-lg shadow-red-500/50 animate-pulse'
                       : isHovered
-                        ? 'bg-tesla-red text-white ring-4 ring-red-200 scale-125 z-30 shadow-lg shadow-red-500/40'
-                        : 'bg-tesla-red text-white hover:scale-110 z-10 shadow-sm hover:shadow'
+                        ? 'bg-red-600 text-white ring-4 ring-red-200 scale-125 z-30 shadow-lg shadow-red-500/40'
+                        : 'bg-red-600 text-white hover:scale-110 z-10 shadow-sm hover:shadow'
                   }`}
                 >
                   {h.number}
@@ -967,7 +971,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                         }}
                         className={`w-7 h-7 rounded-full flex items-center justify-center font-montserrat font-bold text-xs shrink-0 cursor-pointer transition-all ${
                           isActive || isHovered
-                            ? 'bg-tesla-red text-white ring-2 ring-red-200'
+                            ? 'bg-red-600 text-white ring-2 ring-red-200'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -1038,7 +1042,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                           }}
                           className={`mt-2 inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl text-xs font-montserrat font-bold transition-all cursor-pointer ${
                             isExpanded
-                              ? 'bg-tesla-red text-white shadow-xs'
+                              ? 'bg-red-600 text-white shadow-xs'
                               : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
                           }`}
                         >
@@ -1129,7 +1133,7 @@ export const SchematicView: React.FC<SchematicViewProps> = ({
                                     e.stopPropagation();
                                     handleAddToCart(h, v);
                                   }}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tesla-red hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-montserrat font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
                                 >
                                   <ShoppingCart size={13} />
                                   В кошик
