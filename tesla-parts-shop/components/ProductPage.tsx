@@ -155,7 +155,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
    * Якщо такої схеми ще немає — не підсовуємо чужу модель, а чесно кажемо про це
    * (схеми інших моделей лишаються нижче, у блоці «Є на схемах»).
    */
-  const primaryScheme = browseModel ? sameModelScheme : sortedSchematics[0] || null;
   const showNoSchemeNotice =
     Boolean(browseModel) && !sameModelScheme && productSchematics.length > 0;
 
@@ -607,37 +606,62 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   )}
                 </button>
 
-                {/* Перехід на схему вузла: доступний одразу під кнопкою купівлі,
-                    без прокрутки — саме те, що потрібно, коли деталь шукали зі схеми. */}
-                {primaryScheme && (
-                  <Link
-                    to={`/schemes/${primaryScheme.schematic_id}`}
-                    className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-red-100 bg-red-50/60 hover:bg-red-50 hover:border-tesla-red transition-colors group"
-                  >
-                    <span className="flex items-center gap-2.5 min-w-0">
+                {/* Усі схеми, де стоїть деталь — одразу під кнопкою купівлі.
+                    Раніше показували лише першу схему й підпис «та ще N», який
+                    не був посиланням: з картки можна було піти тільки на одну
+                    модель. Тепер кожна схема — окремий клікабельний рядок. */}
+                {sortedSchematics.length > 0 && (
+                  <div className="rounded-xl border border-red-100 bg-red-50/60 overflow-hidden">
+                    <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2.5">
                       <span className="w-8 h-8 rounded-lg bg-white text-tesla-red flex items-center justify-center shrink-0 shadow-2xs">
                         <Layers size={16} />
                       </span>
                       <span className="min-w-0">
                         <span className="block text-[11px] font-manrope text-gray-500">
-                          Ця деталь на схемі
+                          {sortedSchematics.length > 1
+                            ? 'Ця деталь на схемах'
+                            : 'Ця деталь на схемі'}
                         </span>
-                        <span className="block font-montserrat font-bold text-sm text-gray-900 truncate">
-                          {primaryScheme.title}
-                          <span className="font-manrope font-normal text-gray-500">
-                            {' '}• {primaryScheme.model} {primaryScheme.generation}
-                          </span>
-                          {!browseModel && sortedSchematics.length > 1
-                            ? ` та ще ${sortedSchematics.length - 1}`
-                            : ''}
+                        <span className="block font-montserrat font-bold text-sm text-gray-900">
+                          {sortedSchematics.length > 1
+                            ? `Доступно на схемах: ${sortedSchematics.length} — оберіть свою модель`
+                            : `${sortedSchematics[0].title} • ${sortedSchematics[0].model} ${sortedSchematics[0].generation}`}
                         </span>
                       </span>
-                    </span>
-                    <ArrowRight
-                      size={16}
-                      className="text-tesla-red shrink-0 group-hover:translate-x-0.5 transition-transform"
-                    />
-                  </Link>
+                    </div>
+                    <div className="border-t border-red-100/70 bg-white/70">
+                      {sortedSchematics.map((usage, index) => (
+                        <Link
+                          key={`${usage.schematic_id}-${usage.number}-${index}`}
+                          to={`/schemes/${usage.schematic_id}`}
+                          className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-red-100/50 last:border-b-0 hover:bg-red-50 transition-colors group"
+                        >
+                          <span className="w-6 h-6 rounded-full bg-red-50 text-tesla-red font-montserrat font-bold text-[11px] flex items-center justify-center shrink-0">
+                            {usage.number}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-montserrat font-bold text-[13px] text-gray-900 group-hover:text-tesla-red transition-colors truncate">
+                              {usage.title}
+                            </span>
+                            <span className="block text-[11px] text-gray-500 font-manrope truncate">
+                              {usage.model} {usage.generation}
+                              {usage.section ? ` • ${usage.section}` : ''}
+                              {usage.subsystem ? ` • ${usage.subsystem}` : ''}
+                            </span>
+                          </span>
+                          {browseModel && schemeScore(usage, key(browseModel)) >= 3 && (
+                            <span className="shrink-0 text-[10px] font-montserrat font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                              інша модель
+                            </span>
+                          )}
+                          <ArrowRight
+                            size={16}
+                            className="text-tesla-red shrink-0 group-hover:translate-x-0.5 transition-transform"
+                          />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {/* Схеми цієї моделі ще немає — не ведемо на чужу модель */}
