@@ -101,6 +101,13 @@ $COMPOSE build "${SERVICES[@]}"
 log "Піднімаю: ${SERVICES[*]}"
 $COMPOSE up -d "${SERVICES[@]}"
 
+# --- 3.5. Скидаємо кеш HTML --------------------------------------------------
+# nginx кешує сторінки на 60 с. Після деплою старий HTML міг би посилатись на
+# вже видалені хешовані JS/CSS і сайт на хвилину став би білим. Тому чистимо
+# кеш одразу після підйому контейнерів.
+log "Очищаю кеш HTML nginx"
+$COMPOSE exec -T gateway sh -c 'rm -rf /var/cache/nginx/tesla_pages/*' || warn "не вдалось очистити кеш HTML"
+
 # --- 4. Якщо змінювався nginx-шлюз — перезавантажуємо його -------------------
 if git diff --name-only "HEAD@{1}" HEAD 2>/dev/null | grep -q '^nginx-gateway/'; then
   log "Конфіг nginx змінився — перевіряю та перезавантажую шлюз"
