@@ -1,13 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PaymentMethod, CartItem, Currency, OrderData } from '../types';
 import { api } from '../services/api';
 import { Truck, Building, Wallet } from 'lucide-react';
 import NovaPostWidget from '../components/NovaPostWidget'; // Ensure this path is correct
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
 import { formatCurrency } from '../utils/currency';
-import { trackPurchase } from '../utils/analytics';
+import {
+  trackAddPaymentInfo,
+  trackAddShippingInfo,
+  trackBeginCheckout,
+  trackPurchase,
+} from '../utils/analytics';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
+
+/**
+ * Назва способу доставки для GA4. Зараз віджет Нової пошти дає відділення
+ * або поштомат; кур'єр/самовивіз лишаємо на майбутнє, щоб не зламати звіт,
+ * якщо такий варіант додадуть.
+ */
+const getShippingTier = (data: {
+  description: string;
+  branch: string;
+  address: string;
+}): string => {
+  const haystack = `${data.description} ${data.branch} ${data.address}`.toLowerCase();
+  if (haystack.includes('поштомат')) return 'Нова пошта поштомат';
+  if (haystack.includes('кур') || haystack.includes('адресна')) {
+    return 'Нова пошта курʼєр';
+  }
+  if (haystack.includes('самовив')) return 'Самовивіз';
+  return 'Нова пошта відділення';
+};
 
 interface CheckoutProps {
   cartItems: CartItem[];
@@ -85,6 +109,12 @@ const Checkout: React.FC<CheckoutProps> = ({
   } | null>(null);
 
   const [processing, setProcessing] = useState(false);
+
+  // GA4 checkout funnel: один begin_checkout за захід, далі — по зміні
+  // способу доставки/оплати, без дублів на кожен ре-рендер.
+  const beginCheckoutSent = useRef(false);
+  const sentShippingTier = useRef<string | null>(null);
+  const sentPaymentType = useRef<string | null>(null);
 
   // Scrolls the view to the upper side of the screen
   useEffect(() => {
@@ -288,6 +318,39 @@ const Checkout: React.FC<CheckoutProps> = ({
       );
     }
   }
+
+  // Значення в UAH, яке покупець бачить у підсумку (з урахуванням знижки).
+  const checkoutValueUAH =
+    Math.round(finalUsdAmount * effectiveRate * 100) / 100;
+
+  // 1.1. Відкрили оформлення з непорожнім кошиком — один раз за захід.
+  useEffect(() => {
+    if (beginCheckoutSent.current || cartItems.length === 0) return;
+    beginCheckoutSent.current = true;
+    trackBeginCheckout(cartItems, effectiveRate, checkoutValueUAH);
+    // Навмисно один раз на монтування сторінки оформлення.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 1.2. Обрали доставку — фіксуємо спосіб (відділення/поштомат/кур'єр).
+  useEffect(() => {
+    if (!deliveryData || cartItems.length === 0) return;
+    const tier = getShippingTier(deliveryData);
+    if (sentShippingTier.current === tier) return;
+    sentShippingTier.current = tier;
+    trackAddShippingInfo(cartItems, effectiveRate, tier, checkoutValueUAH);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryData]);
+
+  // 1.3. Спосіб оплати. Відправляємо після вибору доставки, коли в формі вже
+  // є обраний (у т.ч. типовий) спосіб оплати; далі — при кожній зміні.
+  useEffect(() => {
+    if (!deliveryData || cartItems.length === 0) return;
+    if (sentPaymentType.current === paymentMethod) return;
+    sentPaymentType.current = paymentMethod;
+    trackAddPaymentInfo(cartItems, effectiveRate, paymentMethod, checkoutValueUAH);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryData, paymentMethod]);
 
   if (cartItems.length === 0) {
     return <div className="p-8 text-center text-gray-500">Кошик порожній</div>;

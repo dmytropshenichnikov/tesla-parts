@@ -624,7 +624,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                         </span>
                         <span className="block font-montserrat font-bold text-sm text-gray-900">
                           {sortedSchematics.length > 1
-                            ? `Доступно на схемах: ${sortedSchematics.length} — оберіть свою модель`
+                            ? `Є на ${sortedSchematics.length} схемах — оберіть свою модель`
                             : `${sortedSchematics[0].title} • ${sortedSchematics[0].model} ${sortedSchematics[0].generation}`}
                         </span>
                       </span>

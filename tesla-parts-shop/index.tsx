@@ -13,6 +13,11 @@ import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import { AuthProvider } from './context/AppContext';
+import { initInternalTrafficFlag } from './utils/analytics';
+
+// ?kit_internal=1 один раз позначає браузер менеджера в магазині; далі всі
+// події отримують traffic_type=internal, щоб їх можна було відфільтрувати.
+initInternalTrafficFlag();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
