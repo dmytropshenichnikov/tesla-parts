@@ -79,6 +79,29 @@ const useWideLayout = (): boolean => {
   return isWide;
 };
 
+/**
+ * Широкий екран (>= 1280px): саме з цієї ширини фото в лівій колонці стає
+ * достатньо великим, щоб колонка з додатковими фото була вищою за колонку
+ * купівлі. Нижче 1280px права колонка вища, тому відгуки там лишаються під
+ * фото.
+ */
+const useXlLayout = (): boolean => {
+  const [isXl, setIsXl] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1280px)').matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1280px)');
+    const onChange = () => setIsXl(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return isXl;
+};
+
 const ProductPage: React.FC<ProductPageProps> = ({
   product,
   currency,
@@ -124,6 +147,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
   // Відгуки на цю деталь керуються з адмінки, тому вантажимо окремо.
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const isWideLayout = useWideLayout();
+  const isXlLayout = useXlLayout();
+  // Куди поставити відгуки на ПК: під фото чи під кнопкою купівлі. На
+  // широкому екрані з додатковими фото ліва колонка вища за праву - тоді
+  // відгуки заповнюють порожнє місце справа, а не розтягують ліву.
+  const reviewsOnRight = isXlLayout && allImages.length > 1;
   const [showAllSchematics, setShowAllSchematics] = useState(false);
   // Модель, з якої прийшли в каталог. Раніше передавали ?model=... у URL  - 
   // це псувало SEO-адресу. Тепер модель летить у react-router state, а query
@@ -569,7 +597,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
             {/* На широкому екрані відгуки стоять під фото: правий стовпчик
                 коротший, і картка виглядає рівніше. */}
-            {isWideLayout && (
+            {isWideLayout && !reviewsOnRight && (
               <ProductReviews reviews={reviews} productId={product.id} />
             )}
           </div>
@@ -811,7 +839,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
               {/* На телефоні відгуки лишаються під кнопкою купівлі: не
                   відсуваємо ціну й кнопку вниз. */}
-              {!isWideLayout && (
+              {(!isWideLayout || reviewsOnRight) && (
                 <ProductReviews reviews={reviews} productId={product.id} />
               )}
             </div>
