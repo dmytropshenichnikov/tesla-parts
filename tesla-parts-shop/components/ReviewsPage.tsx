@@ -64,8 +64,8 @@ export const ReviewsPage: React.FC = () => {
         <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Відгуки про магазин</h1>
           <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto">
-            Ми цінуємо довіру наших клієнтів. Тут ви можете переглянути реальні
-            відгуки з месенджерів про нашу роботу та запчастини.
+            Ми цінуємо довіру наших клієнтів. Тут зібрані реальні відгуки
+            покупців про нашу роботу та запчастини.
           </p>
         </div>
 
