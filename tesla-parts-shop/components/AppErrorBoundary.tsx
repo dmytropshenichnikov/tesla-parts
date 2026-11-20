@@ -1,6 +1,10 @@
 import React from 'react';
 import { isChunkLoadError, reloadOnceForChunks } from '../utils/lazyImport';
 
+interface Props {
+  children?: React.ReactNode;
+}
+
 interface State {
   hasError: boolean;
 }
@@ -10,10 +14,8 @@ interface State {
  * екран. Для помилок завантаження чанків пробуємо одне перезавантаження,
  * інакше показуємо зрозумілий екран із кнопкою.
  */
-class AppErrorBoundary extends React.Component<
-  React.PropsWithChildren,
-  State
-> {
+class AppErrorBoundary extends React.Component<Props, State> {
+  declare props: Readonly<Props>;
   state: State = { hasError: false };
 
   static getDerivedStateFromError(): State {

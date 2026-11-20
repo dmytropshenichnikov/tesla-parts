@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { Product, Currency, SchematicUsage, ProductReview } from '../types';
 import {
   ShoppingCart,
@@ -109,6 +109,14 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const mainThumb = thumbUrl(mainImage);
   const [added, setAdded] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  // Свайп по фото на телефоні. Тримаємо старт дотику й прапорець, щоб
+  // після свайпу не відкривався лайтбокс від того ж дотику.
+  const galleryTouchStart = useRef<{
+    x: number;
+    y: number;
+    at: number;
+  } | null>(null);
+  const gallerySwiped = useRef(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
@@ -267,6 +275,52 @@ const ProductPage: React.FC<ProductPageProps> = ({
     setSelectedImage(allImages[nextIndex]);
   };
 
+  const handleGalleryTouchStart = (e: React.TouchEvent) => {
+    if (allImages.length < 2) return;
+    const touch = e.touches[0];
+    galleryTouchStart.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      at: Date.now(),
+    };
+    gallerySwiped.current = false;
+  };
+
+  const handleGalleryTouchEnd = (e: React.TouchEvent) => {
+    const start = galleryTouchStart.current;
+    galleryTouchStart.current = null;
+    if (!start || allImages.length < 2) return;
+
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    const elapsed = Date.now() - start.at;
+
+    // Горизонтальний свайп: достатня довжина, переважає над вертикальним і
+    // не перетворився на довге утримання.
+    const isSwipe =
+      Math.abs(dx) >= 45 &&
+      Math.abs(dx) > Math.abs(dy) * 1.2 &&
+      elapsed < 800;
+    if (!isSwipe) return;
+
+    gallerySwiped.current = true;
+    if (dx < 0) {
+      handleNextImage();
+    } else {
+      handlePrevImage();
+    }
+  };
+
+  const handleGalleryClick = () => {
+    // Клік після свайпу не має відкривати лайтбокс.
+    if (gallerySwiped.current) {
+      gallerySwiped.current = false;
+      return;
+    }
+    openLightbox();
+  };
+
   const openLightbox = () => {
     setIsLightboxOpen(true);
     document.body.style.overflow = 'hidden';
@@ -275,6 +329,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const closeLightbox = () => {
     setIsLightboxOpen(false);
     document.body.style.overflow = 'auto';
+  };
+
+  const closeLightboxSafely = () => {
+    // Після свайпу дотик не має закривати лайтбокс.
+    if (gallerySwiped.current) {
+      gallerySwiped.current = false;
+      return;
+    }
+    closeLightbox();
   };
 
   const { customerProfile } = useAuth();
@@ -419,8 +482,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
           <div className="md:w-1/2 p-3 sm:px-6 sm:pt-5 sm:pb-6 bg-[#fafafa] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
             <div>
               <div
-                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-square"
-                onClick={openLightbox}
+                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-square touch-pan-y"
+                onClick={handleGalleryClick}
+                onTouchStart={handleGalleryTouchStart}
+                onTouchEnd={handleGalleryTouchEnd}
               >
                 <img
                   src={mainThumb || mainImage}
@@ -941,8 +1006,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
       {/* Lightbox Modal */}
       {isLightboxOpen && (
         <div
-          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 md:p-8 animate-fade-in"
-          onClick={closeLightbox}
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 md:p-8 animate-fade-in touch-pan-y"
+          onClick={closeLightboxSafely}
+          onTouchStart={handleGalleryTouchStart}
+          onTouchEnd={handleGalleryTouchEnd}
         >
           <button
             className="absolute top-4 right-4 text-white hover:text-tesla-red transition-colors p-2 z-[110] cursor-pointer"
