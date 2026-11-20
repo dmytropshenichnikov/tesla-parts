@@ -303,6 +303,12 @@ export const ApiService = {
     if (product.part_type !== undefined) {
       formData.append('part_type', product.part_type || '');
     }
+    formData.append(
+      'pack_quantity',
+      product.pack_quantity === '' || product.pack_quantity === undefined || product.pack_quantity === null
+        ? '0'
+        : String(product.pack_quantity)
+    );
 
     const res = await _authenticatedFetch(`${API_URL}/products/`, {
       method: 'POST',
@@ -357,6 +363,12 @@ export const ApiService = {
     if (product.part_type !== undefined) {
       formData.append('part_type', product.part_type || '');
     }
+    formData.append(
+      'pack_quantity',
+      product.pack_quantity === '' || product.pack_quantity === undefined || product.pack_quantity === null
+        ? '0'
+        : String(product.pack_quantity)
+    );
 
     if (product.kept_images !== undefined) {
       const keptList: string[] = Array.isArray(product.kept_images)

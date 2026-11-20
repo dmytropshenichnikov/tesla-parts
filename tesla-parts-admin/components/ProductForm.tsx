@@ -101,6 +101,7 @@ export const ProductForm: React.FC = () => {
     meta_title: '',
     meta_description: '',
     part_type: '' as '' | 'original' | 'analog',
+    pack_quantity: '' as string,
   });
 
   const [exchangeRate, setExchangeRate] = useState<number>(40); // Default fallback
@@ -175,6 +176,7 @@ export const ProductForm: React.FC = () => {
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
         part_type: (product.part_type as '' | 'original' | 'analog') || '',
+        pack_quantity: product.pack_quantity ? String(product.pack_quantity) : '',
       });
 
       if (product.images && product.images.length > 0) {
@@ -810,6 +812,26 @@ export const ProductForm: React.FC = () => {
                 Курс: {exchangeRate} UAH/USD
               </p>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Кількість у комплекті, шт
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.pack_quantity}
+              onChange={(e) =>
+                setFormData({ ...formData, pack_quantity: e.target.value })
+              }
+              onWheel={(e) => e.currentTarget.blur()}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Наприклад: 2"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Показується в характеристиках картки. Порожнє поле — рядок не виводиться.
+            </p>
           </div>
 
           <div>

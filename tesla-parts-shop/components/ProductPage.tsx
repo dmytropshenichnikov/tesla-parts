@@ -977,6 +977,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
               </div>
             )}
 
+            {product.pack_quantity ? (
+              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <span className="text-gray-500 font-medium">У комплекті:</span>
+                <span className="text-gray-900 font-medium">
+                  {product.pack_quantity} шт
+                </span>
+              </div>
+            ) : null}
+
             {isTpms && (
               <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                 <span className="text-gray-500 font-medium">Налаштування:</span>

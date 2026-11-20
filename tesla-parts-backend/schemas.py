@@ -20,6 +20,7 @@ class ProductBase(BaseModel):
     meta_description: str | None = None
     is_popular: bool = False
     part_type: str | None = None
+    pack_quantity: int | None = None
     created_at: datetime | None = None
 
 

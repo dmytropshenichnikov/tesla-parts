@@ -44,6 +44,7 @@ export interface Product {
   meta_description?: string;
   is_popular: boolean;
   part_type?: 'original' | 'analog' | null;
+  pack_quantity?: number | null;
   created_at?: string;
 }
 

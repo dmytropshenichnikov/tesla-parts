@@ -84,6 +84,9 @@ class Product(SQLModel, table=True):
     meta_description: Optional[str] = None
     is_popular: bool = Field(default=False, index=True)
     part_type: Optional[str] = Field(default=None, index=True) # 'original', 'analog', or None (auto)
+    # Скільки штук у комплекті (фільтри, ключ-карти тощо). Показуємо в
+    # характеристиках картки; порожньо - рядок не виводимо.
+    pack_quantity: Optional[int] = None
     created_at: datetime = naive_created_at()
     
     subcategory: Optional[Subcategory] = Relationship(back_populates="products")

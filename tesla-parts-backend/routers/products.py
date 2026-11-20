@@ -327,6 +327,7 @@ async def create_product(
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
     part_type: Optional[str] = Form(None),
+    pack_quantity: Optional[int] = Form(None),
     image: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     session: Session = Depends(get_session)
@@ -398,6 +399,7 @@ async def create_product(
         meta_description=meta_description,
         is_popular=is_popular,
         part_type=part_type if part_type != "" else None,
+        pack_quantity=pack_quantity or None,
         image=main_image
     )
     if priceUSD:
@@ -446,6 +448,7 @@ async def update_product(
     meta_description: Optional[str] = Form(None),
     is_popular: bool = Form(False),
     part_type: Optional[str] = Form(None),
+    pack_quantity: Optional[int] = Form(None),
     image: Optional[str] = Form(None),
     files: List[UploadFile] = File(None),
     kept_images: List[str] = Form(None),
@@ -474,6 +477,8 @@ async def update_product(
     product.is_popular = is_popular
     if part_type is not None:
         product.part_type = part_type if part_type != "" else None
+    # 0 або порожнє значення очищає поле; інакше зберігаємо кількість.
+    product.pack_quantity = pack_quantity or None
 
     # Slug не змінюємо при редагуванні назви — він має лишатися стабільним.
     # Але якщо його чомусь немає (імпорт/стара БД), догенеровуємо.
