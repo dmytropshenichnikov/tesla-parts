@@ -24,6 +24,7 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  MessageCircle,
 } from 'lucide-react';
 import ViberIcon from './ViberIcon';
 import { DEFAULT_EXCHANGE_RATE_UAH_PER_USD } from '../constants';
@@ -251,6 +252,13 @@ const ProductPage: React.FC<ProductPageProps> = ({
       .filter(Boolean);
   }, [product.category]);
 
+  // Датчики TPMS самі прив'язуються до авто після кількох кілометрів їзди -
+  // це головне питання покупців, тому показуємо окремим рядком.
+  const isTpms = useMemo(() => {
+    const haystack = `${product.name} ${product.detail_number || ''}`.toLowerCase();
+    return /tpms|датчик[а-яіїєґ\s]*тиску|тиску в шинах/.test(haystack);
+  }, [product.name, product.detail_number]);
+
   // Parse cross numbers
   const crossNumbers = useMemo(() => {
     if (!product.cross_number) return [];
@@ -449,6 +457,12 @@ const ProductPage: React.FC<ProductPageProps> = ({
     }
     return `viber://chat?number=${cleanDigits}&draft=${prefilledText}`;
   }, [socialLinks?.viber, prefilledText]);
+
+  const whatsappLink = React.useMemo(() => {
+    const digits = (phoneNumber || '').replace(/\D/g, '');
+    if (digits.length < 10) return null;
+    return `https://wa.me/${digits}?text=${prefilledText}`;
+  }, [phoneNumber, prefilledText]);
 
   return (
     <div className="max-w-6xl mx-auto pb-12">
@@ -804,10 +818,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
                 {/* Обіцянка відправки: показуємо лише для товарів у наявності,
                     для «під замовлення» вона була б неправдою. */}
-                {product.inStock && (
+                {product.inStock ? (
                   <div className="flex items-center justify-center gap-1.5 pt-0.5 text-[11px] sm:text-xs font-medium text-gray-500">
                     <Clock size={13} className="text-gray-400 shrink-0" />
                     <span>Замовте до 15:00 - відправимо сьогодні</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-1.5 pt-0.5 text-[11px] sm:text-xs font-medium text-gray-500">
+                    <Clock size={13} className="text-gray-400 shrink-0" />
+                    <span>Під замовлення · термін 7-14 днів</span>
                   </div>
                 )}
 
@@ -840,10 +859,18 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
                   <div
                     className={`grid ${
-                      telegramLink && (viberLink || phoneNumber)
-                        ? 'grid-cols-2 divide-x divide-gray-100'
-                        : 'grid-cols-1'
-                    } ${sortedSchematics.length > 0 ? 'border-t border-gray-100' : ''}`}
+                      (telegramLink ? 1 : 0) +
+                        (viberLink || phoneNumber ? 1 : 0) +
+                        (whatsappLink ? 1 : 0) ===
+                      3
+                        ? 'grid-cols-3'
+                        : (telegramLink ? 1 : 0) +
+                              (viberLink || phoneNumber ? 1 : 0) +
+                              (whatsappLink ? 1 : 0) ===
+                            2
+                          ? 'grid-cols-2'
+                          : 'grid-cols-1'
+                    } divide-x divide-gray-100 ${sortedSchematics.length > 0 ? 'border-t border-gray-100' : ''}`}
                   >
                     {telegramLink && (
                       <a
@@ -872,10 +899,22 @@ const ProductPage: React.FC<ProductPageProps> = ({
                         href={`tel:${phoneNumber.replace(/\s+/g, '')}`}
                         className="flex items-center justify-center gap-2 py-2.5 px-3 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                       >
-                        <Phone size={14} className="text-emerald-500" />
+                        <Phone size={14} className="text-gray-400" />
                         <span>Зателефонувати</span>
                       </a>
                     ) : null}
+
+                    {whatsappLink && (
+                      <a
+                        href={whatsappLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <MessageCircle size={15} className="text-[#25D366]" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -934,6 +973,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       Якісний аналог
                     </>
                   )}
+                </span>
+              </div>
+            )}
+
+            {isTpms && (
+              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <span className="text-gray-500 font-medium">Налаштування:</span>
+                <span className="text-gray-900">
+                  Прописуються самі після 10 км їзди
                 </span>
               </div>
             )}
