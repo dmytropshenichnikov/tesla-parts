@@ -500,7 +500,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
           <div className="md:w-1/2 p-3 sm:px-6 sm:pt-5 sm:pb-6 bg-[#fafafa] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
             <div>
               <div
-                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-[4/3] sm:aspect-square touch-pan-y"
+                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-[5/4] sm:aspect-square touch-pan-y"
                 onClick={handleGalleryClick}
                 onTouchStart={handleGalleryTouchStart}
                 onTouchEnd={handleGalleryTouchEnd}
