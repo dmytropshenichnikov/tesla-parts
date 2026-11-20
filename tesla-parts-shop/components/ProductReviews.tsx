@@ -186,7 +186,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
             <button
               type="button"
               onClick={openForm}
-              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-gray-800 transition-colors cursor-pointer"
+              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-[11px] font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Залишити відгук
             </button>
