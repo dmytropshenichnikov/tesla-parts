@@ -169,3 +169,13 @@ export interface Schematic {
   created_at?: string;
   hotspots: SchematicHotspot[];
 }
+
+export interface ProductReview {
+  id: number;
+  product_id: string;
+  author: string;
+  rating: number;
+  text: string;
+  created_at: string;
+  sort_order: number;
+}

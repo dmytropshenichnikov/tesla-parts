@@ -185,6 +185,31 @@ class ReviewRead(BaseModel):
 class ReviewReorderRequest(BaseModel):
     review_ids: List[int]
 
+
+class ProductReviewCreate(BaseModel):
+    product_id: str
+    author: str
+    rating: int = 5
+    text: str
+    sort_order: int | None = 0
+
+
+class ProductReviewUpdate(BaseModel):
+    author: str | None = None
+    rating: int | None = None
+    text: str | None = None
+    sort_order: int | None = None
+
+
+class ProductReviewRead(BaseModel):
+    id: int
+    product_id: str
+    author: str
+    rating: int
+    text: str
+    created_at: datetime
+    sort_order: int
+
 class CustomerRegisterRequest(BaseModel):
     email: str
 

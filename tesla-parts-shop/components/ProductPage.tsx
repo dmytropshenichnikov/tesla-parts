@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
-import { Product, Currency, SchematicUsage } from '../types';
+import { Product, Currency, SchematicUsage, ProductReview } from '../types';
 import {
   ShoppingCart,
   ArrowLeft,
@@ -32,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
 import { trackViewItem } from '../utils/analytics';
 import { getProductPartType } from '../utils/partType';
-import ReviewStrip from './ReviewStrip';
+import ProductReviews from './ProductReviews';
 import {
   appendAlternates,
   displayPartNumbers,
@@ -88,6 +88,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
+  // Відгуки на цю деталь — керуються з адмінки, тому вантажимо окремо.
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
   // Модель, з якої прийшли в каталог. Раніше передавали ?model=... у URL —
   // це псувало SEO-адресу. Тепер модель летить у react-router state, а query
   // лишаємо лише як fallback для старих зовнішніх посилань.
@@ -199,6 +201,16 @@ const ProductPage: React.FC<ProductPageProps> = ({
   useEffect(() => {
     trackViewItem(product, effectiveRate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  useEffect(() => {
+    let alive = true;
+    api.getProductReviews(product.id).then((data) => {
+      if (alive) setReviews(data);
+    });
+    return () => {
+      alive = false;
+    };
   }, [product.id]);
 
   const handleAddToCart = () => {
@@ -607,10 +619,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   )}
                 </button>
 
-                {/* Компактний рядок довіри: оцінка магазину на АвтоПро і
-                    перехід до відгуків. Один рядок — картка не роздувається. */}
-                <ReviewStrip />
-
                 {/* Усі схеми, де стоїть деталь — одразу під кнопкою купівлі.
                     Раніше показували лише першу схему й підпис «та ще N», який
                     не був посиланням: з картки можна було піти тільки на одну
@@ -744,6 +752,8 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   <span>Швидка відправка</span>
                 </div>
               </div>
+
+              <ProductReviews reviews={reviews} />
             </div>
           </div>
         </div>

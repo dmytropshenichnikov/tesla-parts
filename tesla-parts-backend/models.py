@@ -168,6 +168,23 @@ class Review(SQLModel, table=True):
     created_at: datetime = naive_created_at()
     sort_order: int = Field(default=0, index=True)
 
+
+class ProductReview(SQLModel, table=True):
+    """Відгук на конкретний товар.
+
+    Окремі відгуки на товар не змішуються з галереєю фото-відгуків (Review):
+    галерея показує магазин загалом, а тут — оцінка й текст саме про цю
+    деталь, які менеджер додає з адмінки.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: str = Field(index=True)
+    author: str
+    rating: int = Field(default=5)
+    text: str
+    created_at: datetime = naive_created_at()
+    sort_order: int = Field(default=0, index=True)
+
 class CustomerPromoCodeLink(SQLModel, table=True):
     customer_id: int = Field(foreign_key="customer.id", primary_key=True)
     promocode_id: int = Field(foreign_key="promocode.id", primary_key=True)

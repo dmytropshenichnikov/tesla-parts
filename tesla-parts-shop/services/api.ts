@@ -1,4 +1,4 @@
-import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, SubcategorySchemeSummary, VinDecodeResult, PlateLookupResult, SavedCar } from '../types';
+import { Product, OrderData, Category, StaticSeoRecord, Page, SchematicSummary, Schematic, SchematicModelOption, SchematicSectionGroup, SchematicUsage, SubcategorySchemeSummary, VinDecodeResult, PlateLookupResult, SavedCar, ProductReview } from '../types';
 
 /**
  * Абсолютна адреса бекенду (api.teslapartscenter.com.ua).
@@ -205,19 +205,17 @@ export const api = {
     return res.json();
   },
 
-  // Рейтинг продавця на АвтоПро. Бекенд кешує його на 6 годин, тож запит
-  // дешевий; null означає «не вдалося» — тоді показуємо резервні цифри.
-  getAvtoproSummary: async (): Promise<{
-    rating: number;
-    reviews: number;
-    year_reviews?: number | null;
-  } | null> => {
+  // Відгуки саме на цей товар (керуються з адмінки). Повертає порожній
+  // масив, якщо відгуків ще немає — картка тоді просто не показується.
+  getProductReviews: async (productId: string): Promise<ProductReview[]> => {
     try {
-      const res = await apiFetch(`/reviews/avtopro`);
-      if (!res.ok) return null;
+      const res = await apiFetch(
+        `/product-reviews/?product_id=${encodeURIComponent(productId)}`
+      );
+      if (!res.ok) return [];
       return await res.json();
     } catch {
-      return null;
+      return [];
     }
   },
 

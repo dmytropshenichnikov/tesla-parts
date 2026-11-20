@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ApiService } from '../services/api';
-import { ArrowLeft, Upload, X, Plus } from 'lucide-react';
-import { Category, Subcategory } from '../types';
+import { ArrowLeft, Upload, X, Plus, Star, Trash2 } from 'lucide-react';
+import { Category, Subcategory, ProductReview } from '../types';
 
 interface CategoryAssignment {
   id: string;
@@ -105,11 +105,31 @@ export const ProductForm: React.FC = () => {
 
   const [exchangeRate, setExchangeRate] = useState<number>(40); // Default fallback
 
+  // Відгуки на товар: додаються/видаляються одразу, без збереження форми.
+  const [productReviews, setProductReviews] = useState<ProductReview[]>([]);
+  const [reviewDraft, setReviewDraft] = useState({
+    author: '',
+    rating: 5,
+    text: '',
+  });
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  const loadProductReviews = async (productId: string) => {
+    try {
+      const data = await ApiService.getProductReviews(productId);
+      setProductReviews(data);
+    } catch (e) {
+      console.error('Failed to load product reviews', e);
+    }
+  };
+
   useEffect(() => {
     loadCategories();
     loadExchangeRate();
     if (isEditMode && id) {
       loadProduct(id);
+      loadProductReviews(id);
     }
   }, [id]);
 
@@ -393,6 +413,44 @@ export const ProductForm: React.FC = () => {
       }
       return prev.filter((assignment) => assignment.id !== assignmentId);
     });
+  };
+
+  const handleAddReview = async () => {
+    if (!id) return;
+    const author = reviewDraft.author.trim();
+    const text = reviewDraft.text.trim();
+    if (!author || !text) {
+      setReviewError('Заповніть імʼя та текст відгуку');
+      return;
+    }
+    setReviewSaving(true);
+    setReviewError(null);
+    try {
+      const created = await ApiService.createProductReview({
+        product_id: id,
+        author,
+        rating: reviewDraft.rating,
+        text,
+      });
+      setProductReviews((prev) => [created, ...prev]);
+      setReviewDraft({ author: '', rating: 5, text: '' });
+    } catch (e) {
+      console.error('Failed to create product review', e);
+      setReviewError('Не вдалося зберегти відгук. Спробуйте ще раз.');
+    } finally {
+      setReviewSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    if (!window.confirm('Видалити цей відгук?')) return;
+    try {
+      await ApiService.deleteProductReview(reviewId);
+      setProductReviews((prev) => prev.filter((item) => item.id !== reviewId));
+    } catch (e) {
+      console.error('Failed to delete product review', e);
+      setReviewError('Не вдалося видалити відгук');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -862,8 +920,147 @@ export const ProductForm: React.FC = () => {
                   Рекомендовано до 160 символів
                 </p>
               </div>
+
             </div>
           </div>
+
+          {isEditMode && (
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Відгуки на товар
+                </h2>
+                <span className="text-xs text-gray-500 mt-1">
+                  {productReviews.length} шт.
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Показуються в картці товару під кнопкою купівлі. Додаються
+                одразу, зберігати товар для цього не потрібно.
+              </p>
+
+              {productReviews.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {productReviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="bg-white border border-gray-200 rounded-lg p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="flex items-center gap-0.5">
+                              {[0, 1, 2, 3, 4].map((index) => (
+                                <Star
+                                  key={index}
+                                  size={13}
+                                  className={
+                                    index < review.rating
+                                      ? 'fill-amber-400 text-amber-400'
+                                      : 'fill-gray-200 text-gray-200'
+                                  }
+                                />
+                              ))}
+                            </span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {review.author}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(review.created_at).toLocaleDateString(
+                                'uk-UA'
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">
+                            {review.text}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReview(review.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          aria-label="Видалити відгук"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mb-4">
+                  Відгуків на цей товар ще немає.
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Імʼя покупця
+                  </label>
+                  <input
+                    type="text"
+                    value={reviewDraft.author}
+                    onChange={(e) =>
+                      setReviewDraft({ ...reviewDraft, author: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Наприклад: Ігор"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Оцінка
+                  </label>
+                  <select
+                    value={reviewDraft.rating}
+                    onChange={(e) =>
+                      setReviewDraft({
+                        ...reviewDraft,
+                        rating: Number(e.target.value),
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
+                  >
+                    {[5, 4, 3, 2, 1].map((value) => (
+                      <option key={value} value={value}>
+                        {value} з 5
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Текст відгуку
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewDraft.text}
+                  onChange={(e) =>
+                    setReviewDraft({ ...reviewDraft, text: e.target.value })
+                  }
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Коротко: що сподобалось, чи підійшло, як працює"
+                />
+              </div>
+
+              {reviewError && (
+                <p className="text-sm text-red-600 mt-2">{reviewError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAddReview}
+                disabled={reviewSaving}
+                className="mt-3 inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition disabled:opacity-50 text-sm font-medium"
+              >
+                <Plus size={16} />
+                {reviewSaving ? 'Збереження...' : 'Додати відгук'}
+              </button>
+            </div>
+          )}
 
           <div className="pt-4">
             <button

@@ -292,3 +292,13 @@ declare global {
 }
 
 export {};
+
+export interface ProductReview {
+  id: number;
+  product_id: string;
+  author: string;
+  rating: number;
+  text: string;
+  created_at: string;
+  sort_order: number;
+}

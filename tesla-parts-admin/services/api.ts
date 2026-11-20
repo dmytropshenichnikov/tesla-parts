@@ -1,4 +1,4 @@
-import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption } from '../types';
+import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption, ProductReview } from '../types';
 import { trimImageFile } from '../utils/trimImageFile';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -994,6 +994,39 @@ export const ApiService = {
     await _authenticatedFetch(`${API_URL}/reviews/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  // Відгуки на конкретний товар — окремо від галереї фото-відгуків.
+  getProductReviews: async (productId: string): Promise<ProductReview[]> => {
+    const res = await _authenticatedFetch(
+      `${API_URL}/product-reviews/?product_id=${encodeURIComponent(productId)}`,
+      { headers: getHeaders() }
+    );
+    if (!res.ok) throw new Error('Failed to fetch product reviews');
+    return res.json();
+  },
+
+  createProductReview: async (payload: {
+    product_id: string;
+    author: string;
+    rating: number;
+    text: string;
+    sort_order?: number;
+  }): Promise<ProductReview> => {
+    const res = await _authenticatedFetch(`${API_URL}/product-reviews/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create product review');
+    return res.json();
+  },
+
+  deleteProductReview: async (id: number): Promise<void> => {
+    const res = await _authenticatedFetch(`${API_URL}/product-reviews/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete product review');
   },
 
   // --- Customers API ---

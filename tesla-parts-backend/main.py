@@ -23,7 +23,7 @@ for _ext, _type in (
 from sqlmodel import Session, select
 from typing import List
 from database import create_db_and_tables, engine, get_session
-from routers import products, orders, categories, settings, pages, auth, feeds, reviews, customers, promocodes, email_campaigns, analytics, schematics, vin, garage, prerender
+from routers import products, orders, categories, settings, pages, auth, feeds, reviews, product_reviews, customers, promocodes, email_campaigns, analytics, schematics, vin, garage, prerender
 from contextlib import asynccontextmanager
 import os
 from models import Product, Category, Subcategory, Page, StaticPageSEO, Schematic
@@ -180,6 +180,7 @@ app.include_router(pages.router)
 app.include_router(auth.router) # Include auth router
 app.include_router(feeds.router) # Include feeds router
 app.include_router(reviews.router) # Include reviews router
+app.include_router(product_reviews.router) # Per-product reviews
 app.include_router(customers.router)
 app.include_router(promocodes.router)
 app.include_router(email_campaigns.router)

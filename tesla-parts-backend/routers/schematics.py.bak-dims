@@ -1,0 +1,1300 @@
+import json
+import re
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from sqlmodel import Session, select, func, col
+from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
+
+from database import get_session
+from models import Schematic, SchematicHotspot, Product, Category, Subcategory
+from schemas import (
+    SchematicRead,
+    SchematicSummary,
+    SchematicMatchedPart,
+    SchematicCreate,
+    SchematicUpdate,
+    SchematicHotspotRead,
+    HotspotVariant,
+    ProductRead
+)
+from dependencies import get_current_admin
+from services.image_uploader import image_uploader
+
+router = APIRouter(prefix="/schematics", tags=["schematics"])
+
+# Той самий rule, що й у магазині (tesla-parts-shop/utils/partType.ts):
+# поле part_type → назва товару → опис. Потрібно, щоб «Оригінал/Аналог» на схемі,
+# у кошику та на сторінці товару завжди збігались.
+_ORIGINAL_RE = re.compile(r"ориг[іи]нал|original", re.IGNORECASE)
+_ANALOG_RE = re.compile(r"аналог", re.IGNORECASE)
+
+# --- Пошук деталі за парт-номером --------------------------------------------
+# Парт-номер пишуть по-різному: «1499151-00-C», «149915100C», «1499151 00 C».
+# Тому додатково порівнюємо «стиснуті» значення — без розділових знаків.
+_COMPACT_SQL_RE = r"[^0-9a-zа-яіїєґ]"
+_COMPACT_PY_RE = re.compile(_COMPACT_SQL_RE)
+# Мінімальна довжина стиснутого запиту, щоб не ловити все підряд на «1» чи «a».
+_COMPACT_MIN_LEN = 3
+
+
+def _compact_part(value: Optional[str]) -> str:
+    """«1499151-00-C» → «149915100c» (для порівняння номерів без розділювачів)."""
+    return _COMPACT_PY_RE.sub("", (value or "").lower())
+
+
+def _sql_compact(column):
+    """Те саме стиснення, але на боці Postgres (для WHERE)."""
+    return func.regexp_replace(
+        func.lower(func.coalesce(column, "")), _COMPACT_SQL_RE, "", "g"
+    )
+
+
+def _variant_parts(variants_json: Optional[str]) -> List[dict]:
+    """Варіанти деталі зі схеми: [{name, product_id, ...}, ...]."""
+    if not variants_json:
+        return []
+    try:
+        parsed = json.loads(variants_json)
+    except (ValueError, TypeError):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
+def _variant_code(name: str) -> str:
+    """«110681800A - Датчик температури…» → «110681800A»."""
+    head = (name or "").split(" - ")[0].strip()
+    return head if head and head.upper() == head else ""
+
+
+def _search_term_matches(term: str, compact: str, *values: Optional[str]) -> bool:
+    """Чи збігається запит хоч з одним значенням (звичайно або без розділювачів)."""
+    low = term.lower()
+    for value in values:
+        if not value:
+            continue
+        text = value.lower()
+        if low in text:
+            return True
+        if len(compact) >= _COMPACT_MIN_LEN and compact in _compact_part(value):
+            return True
+    return False
+
+
+def _resolve_part_type(product) -> Optional[str]:
+    if product is None:
+        return None
+    if product.part_type in ("original", "analog"):
+        return product.part_type
+    name = product.name or ""
+    if _ANALOG_RE.search(name):
+        return "analog"
+    if _ORIGINAL_RE.search(name):
+        return "original"
+    description = product.description or ""
+    if _ANALOG_RE.search(description):
+        return "analog"
+    if _ORIGINAL_RE.search(description):
+        return "original"
+    return None
+
+def _format_hotspot(
+    hotspot: SchematicHotspot,
+    products_by_id: Optional[dict] = None
+) -> SchematicHotspotRead:
+    variants = []
+    if hotspot.variants_json:
+        try:
+            parsed = json.loads(hotspot.variants_json)
+            if isinstance(parsed, list):
+                variants = [HotspotVariant(**v) for v in parsed]
+        except Exception:
+            variants = []
+
+    # Варіант, привʼязаний до товару каталогу, показує АКТУАЛЬНІ ціну,
+    # наявність і НАЗВУ з каталогу, а не знімок на момент привʼязки. Саме тому
+    # зміна ціни чи перейменування в каталозі одразу видно на схемах.
+    # (Раніше назва лишалась знімком — після перейменування товару схеми
+    # показували стару назву.)
+    if products_by_id:
+        for variant in variants:
+            product = products_by_id.get(variant.product_id) if variant.product_id else None
+            if not product:
+                continue
+            variant.priceUAH = product.priceUAH or 0.0
+            if product.priceUSD:
+                variant.priceUSD = product.priceUSD
+            variant.inStock = product.inStock
+            # Картинка товару: у кошику показуємо фото деталі, а не схему вузла
+            if product.image:
+                variant.image = product.image
+            # Тип («Оригінал»/«Аналог») теж беремо з товару каталогу — саме він
+            # показується на сторінці товару, тож на схемі й у кошику має бути той самий
+            resolved_type = _resolve_part_type(product)
+            if resolved_type:
+                variant.type = resolved_type
+            # Назва — з товару. Артикул не дублюємо: назва товару в каталозі
+            # його вже містить («189618900A - Комплект ...») — перевіряємо префікс.
+            live_name = (product.name or "").strip()
+            detail_no = (product.detail_number or "").strip()
+            if detail_no and live_name and not live_name.lower().startswith(detail_no.lower()):
+                live_name = f"{detail_no} - {live_name}"
+            elif not live_name:
+                live_name = detail_no
+            if live_name:
+                variant.name = live_name
+    
+    product_read = None
+    if hotspot.product:
+        product_read = ProductRead(
+            id=hotspot.product.id,
+            name=hotspot.product.name,
+            category=hotspot.product.category,
+            priceUSD=hotspot.product.priceUSD,
+            priceUAH=hotspot.product.priceUAH,
+            image=hotspot.product.image,
+            description=hotspot.product.description,
+            inStock=hotspot.product.inStock,
+            detail_number=hotspot.product.detail_number,
+            cross_number=hotspot.product.cross_number,
+            part_type=_resolve_part_type(hotspot.product),
+            created_at=hotspot.product.created_at,
+            images=[img.url for img in hotspot.product.images] if hotspot.product.images else []
+        )
+
+    return SchematicHotspotRead(
+        id=hotspot.id,
+        schematic_id=hotspot.schematic_id,
+        number=hotspot.number,
+        x=hotspot.x,
+        y=hotspot.y,
+        part_number=hotspot.part_number,
+        name=hotspot.name,
+        product_id=hotspot.product_id,
+        variants_json=hotspot.variants_json,
+        sort_order=hotspot.sort_order,
+        product=product_read,
+        variants=variants
+    )
+
+@router.get("", response_model=List[SchematicSummary])
+def list_schematics(
+    model: Optional[str] = None,
+    generation: Optional[str] = None,
+    section: Optional[str] = None,
+    subsystem: Optional[str] = None,
+    q: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    query = select(Schematic)
+    if model and model != "all" and model != "Всі моделі":
+        clean_model = model.strip()
+        category_names = [
+            c.name for c in session.exec(select(Category)).all() if c.name
+        ]
+        base_category = _base_category_name(clean_model, category_names)
+        target_model = base_category or clean_model
+        if base_category and (not generation or generation == "Всі покоління"):
+            generation = clean_model[len(base_category):].strip()
+        for condition in _owns_name_conditions(target_model, generation, category_names):
+            query = query.where(condition)
+
+    if generation and generation != "Всі покоління":
+        gen_clean = generation.strip().lower()
+        if "highland" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%highland%"))
+        elif "juniper" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%juniper%"))
+        elif "classic" in gen_clean:
+            query = query.where(func.lower(Schematic.generation).like("%classic%"))
+        else:
+            query = query.where(func.lower(Schematic.generation).like(f"%{gen_clean}%"))
+    # Порівняння через TRIM з обох боків: у БД трапляються записи із зайвими
+    # пробілами (напр. subsystem '...ОХОЛОДЖЕННЯ ' у схеми 96), а сайт шле чисте
+    # значення зі списку каталогу — exact-match давав (0) «Схем не знайдено».
+    if section:
+        query = query.where(func.trim(Schematic.section) == section.strip())
+    if subsystem:
+        query = query.where(func.trim(Schematic.subsystem) == subsystem.strip())
+    if q:
+        query = query.where(_search_condition(q.strip()))
+
+    query = query.order_by(Schematic.sort_order, Schematic.id)
+    schematics = session.exec(query).all()
+
+    matched_by_schematic: dict = {}
+    if q:
+        matched_by_schematic = _matched_parts_for(
+            session, [s.id for s in schematics], q.strip()
+        )
+
+    results = []
+    for s in schematics:
+        count = session.exec(
+            select(func.count(SchematicHotspot.id)).where(SchematicHotspot.schematic_id == s.id)
+        ).first() or 0
+        results.append(
+            SchematicSummary(
+                id=s.id,
+                title=s.title,
+                model=s.model,
+                generation=s.generation,
+                section=s.section,
+                subsystem=s.subsystem,
+                image_url=s.image_url,
+                sort_order=s.sort_order,
+                created_at=s.created_at,
+                hotspots_count=count,
+                matched_parts=[
+                    SchematicMatchedPart(**item)
+                    for item in matched_by_schematic.get(s.id, [])
+                ]
+            )
+        )
+    return results
+
+
+def _search_condition(term: str):
+    """Умова пошуку схеми за рядком.
+
+    Шукаємо не лише в назві схеми/підсистеми, а й у ДЕТАЛЯХ на ній: парт-номер,
+    назва точки та варіанти (саме так клієнт шукає «де стоїть ця деталь»).
+    Без цього пошук за кодом товару не знаходив нічого — скарга клієнта.
+    """
+    pattern = f"%{term.lower()}%"
+    compact = _compact_part(term)
+
+    # Деталі схеми, що збігаються напряму.
+    hotspot_ids = select(SchematicHotspot.schematic_id).where(
+        func.lower(SchematicHotspot.name).like(pattern)
+        | func.lower(func.coalesce(SchematicHotspot.part_number, "")).like(pattern)
+        | func.lower(func.coalesce(SchematicHotspot.variants_json, "")).like(pattern)
+    )
+
+    conditions = [
+        func.lower(Schematic.title).like(pattern),
+        func.lower(Schematic.subsystem).like(pattern),
+        Schematic.id.in_(hotspot_ids),
+    ]
+
+    if len(compact) >= _COMPACT_MIN_LEN:
+        compact_pattern = f"%{compact}%"
+        # Товари каталогу, чий номер/назва збігається.
+        product_ids = select(Product.id).where(
+            _sql_compact(Product.detail_number).like(compact_pattern)
+            | _sql_compact(Product.cross_number).like(compact_pattern)
+            | func.lower(Product.name).like(pattern)
+            | func.lower(func.coalesce(Product.search_keywords, "")).like(pattern)
+        )
+        compact_hotspot_ids = select(SchematicHotspot.schematic_id).where(
+            _sql_compact(SchematicHotspot.part_number).like(compact_pattern)
+            | _sql_compact(SchematicHotspot.variants_json).like(compact_pattern)
+            | SchematicHotspot.product_id.in_(product_ids)
+        )
+        conditions.append(Schematic.id.in_(compact_hotspot_ids))
+
+    return or_(*conditions)
+
+
+def _matched_parts_for(session: Session, schematic_ids: List[int], term: str) -> dict:
+    """Які саме деталі збіглися зі запитом — щоб у магазині показати причину.
+
+    Повертає {schematic_id: [{"number", "part_number", "name", "code"}, ...]}.
+    """
+    if not schematic_ids:
+        return {}
+    compact = _compact_part(term)
+    hotspots = session.exec(
+        select(SchematicHotspot)
+        .where(SchematicHotspot.schematic_id.in_(schematic_ids))
+        .order_by(SchematicHotspot.schematic_id, SchematicHotspot.number)
+    ).all()
+    if not hotspots:
+        return {}
+
+    product_ids = {h.product_id for h in hotspots if h.product_id}
+    products = {}
+    if product_ids:
+        for product in session.exec(select(Product).where(Product.id.in_(product_ids))).all():
+            products[product.id] = product
+
+    matched: dict = {}
+    for hotspot in hotspots:
+        product = products.get(hotspot.product_id) if hotspot.product_id else None
+        hit = _search_term_matches(
+            term, compact,
+            hotspot.part_number,
+            hotspot.name,
+            product.detail_number if product else None,
+            product.cross_number if product else None,
+            product.name if product else None,
+            product.search_keywords if product else None,
+        )
+        code = (hotspot.part_number or "").strip()
+        if not hit:
+            for variant in _variant_parts(hotspot.variants_json):
+                name = variant.get("name") or ""
+                if _search_term_matches(term, compact, name):
+                    hit = True
+                    code = code or _variant_code(name) or name.split(" - ")[0].strip()
+                    break
+        if not hit:
+            continue
+        matched.setdefault(hotspot.schematic_id, []).append({
+            "number": hotspot.number,
+            "part_number": code or None,
+            "name": hotspot.name,
+            "product_id": hotspot.product_id,
+        })
+    return matched
+
+def _category_for_images(
+    model_name: str,
+    generation: Optional[str],
+    all_names: List[str],
+    session,
+) -> Optional[Category]:
+    """Категорія, з якої беремо картинки розділів/підсистем.
+
+    «Model 3 Highland» → сама категорія Highland (а не базова «Model 3»),
+    «Model 3» + покоління «Highland» → теж Highland,
+    «Model 3» без покоління → базова Model 3.
+    """
+    clean = (model_name or "").strip()
+    if not clean:
+        return None
+
+    def find(name: str) -> Optional[Category]:
+        return session.exec(
+            select(Category).where(func.lower(Category.name) == name.strip().lower())
+        ).first()
+
+    # 1) якщо вказано покоління — спершу шукаємо категорію-варіант
+    #    («Model 3» + «Highland» → «Model 3 Highland»), інакше фото буде
+    #    з базової моделі, хоча схема належить варіанту
+    gen = (generation or "").strip().lower()
+    if gen and gen != "всі покоління":
+        for name in all_names:
+            low = (name or "").lower()
+            if low.startswith(clean.lower() + " ") and gen in low:
+                found = find(name)
+                if found:
+                    return found
+
+    # 2) точна назва категорії (магазин передає саме її)
+    return find(clean)
+
+
+@router.get("/sections")
+def get_schematic_sections(
+    model: Optional[str] = None,
+    generation: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """Дерево «розділ → підсистеми» для схем обраної моделі.
+
+    Потрібне, щоб у магазині шлях до схеми був як у каталозі:
+    авто → розділ (КУЗОВ, НАРУЖНЫЕ КРЕПЛЕНИЯ...) → підсистема → схема.
+    """
+    category_names_for_order = [
+        c.name for c in session.exec(select(Category)).all() if c.name
+    ]
+
+    query = select(Schematic)
+    if model and model != "all" and model != "Всі моделі":
+        clean_model = model.strip()
+        base_category = _base_category_name(clean_model, category_names_for_order)
+        target_model = base_category or clean_model
+        if base_category and (not generation or generation == "Всі покоління"):
+            generation = clean_model[len(base_category):].strip()
+        for condition in _owns_name_conditions(
+            target_model, generation, category_names_for_order
+        ):
+            query = query.where(condition)
+
+    if generation and generation != "Всі покоління":
+        query = query.where(func.lower(Schematic.generation).like(f"%{generation.strip().lower()}%"))
+
+    schematics = session.exec(query.order_by(Schematic.sort_order, Schematic.id)).all()
+
+    grouped: dict = {}
+    for item in schematics:
+        section_name = (item.section or "Інше").strip()
+        subsystem_name = (item.subsystem or "Інше").strip()
+        bucket = grouped.setdefault(section_name, {"section": section_name, "count": 0, "subsystems": {}, "image": None})
+        bucket["count"] += 1
+        # Запасне фото: перше фото схеми цього розділу/підсистеми. Якщо фото
+        # підкатегорії немає (видалили підкатегорію або назви не збігаються),
+        # картка візьме фото схеми — заливка картинки в схему одразу повертає
+        # превью, а не лишає порожню плашку.
+        if not bucket["image"] and item.image_url:
+            bucket["image"] = item.image_url
+        sub = bucket["subsystems"].setdefault(subsystem_name, {"count": 0, "image": None})
+        sub["count"] += 1
+        if not sub["image"] and item.image_url:
+            sub["image"] = item.image_url
+
+    # Порядок і картинки беремо ЛИШЕ з підкатегорій обраної категорії каталогу.
+    # Раніше картинка шукалась по всьому каталогу за назвою, тому чужа категорія
+    # «віддавала» своє фото (Highland показував кузов від Model 3 тощо).
+    images_by_name: dict = {}
+    # Рівнева відповідність картинок (баг 15.10: батько 56 і дитина 163
+    # називаються ОДНАКОВО «ВНУТРІШНЄ ОЗДОБЛЕННЯ», а картинки різні: у батька —
+    # рендер кузова, у дитини — креслення стійок. setdefault за самою назвою
+    # брав першу-ліпшу, і картка РОЗДІЛУ показувала креслення дитини).
+    # Тому розділ бере фото лише з верхнього рівня, підсистема — лише з дітей.
+    section_images: dict = {}
+    subsystem_images: dict = {}
+    catalog_order: dict = {}
+    if model and model != "all" and model != "Всі моделі":
+        clean = model.strip()
+        category = _category_for_images(clean, generation, category_names_for_order, session)
+        if category:
+            category_subs = session.exec(
+                select(Subcategory).where(Subcategory.category_id == category.id)
+            ).all()
+            for sub in sorted(category_subs, key=lambda r: r.id):
+                if not sub.image:
+                    continue
+                key = sub.name.strip().lower()
+                images_by_name.setdefault(key, sub.image)
+                if sub.parent_id is None:
+                    section_images.setdefault(key, sub.image)
+                else:
+                    subsystem_images.setdefault(key, sub.image)
+            rows = session.exec(
+                select(Subcategory)
+                .where(Subcategory.category_id == category.id)
+                .order_by(Subcategory.sort_order.desc(), Subcategory.id)
+            ).all()
+            position = 0
+            for top in [r for r in rows if r.parent_id is None]:
+                catalog_order.setdefault(top.name.strip().lower(), position)
+                position += 1
+                for child in [r for r in rows if r.parent_id == top.id]:
+                    catalog_order.setdefault(child.name.strip().lower(), position)
+                    position += 1
+
+    sections = []
+    for bucket in grouped.values():
+        sections.append({
+            "section": bucket["section"],
+            # Спочатку фото підкатегорії каталогу, інакше — фото схеми
+            # (див. fallback вище): картка не лишається порожньою.
+            # Розділ — фото верхнього рівня; якщо його нема — будь-яке фото
+            # каталогу з такою назвою; в останню чергу — фото схеми.
+            "image": section_images.get(bucket["section"].strip().lower()) or images_by_name.get(bucket["section"].strip().lower()) or bucket.get("image"),
+            "count": bucket["count"],
+            "subsystems": [
+                {
+                    "subsystem": name,
+                    "count": info["count"],
+                    "image": subsystem_images.get(name.strip().lower()) or images_by_name.get(name.strip().lower()) or info.get("image"),
+                }
+                for name, info in sorted(bucket["subsystems"].items())
+            ],
+        })
+
+    for section in sections:
+        section["subsystems"].sort(
+            key=lambda sub: (
+                catalog_order.get(sub["subsystem"].strip().lower(), 10 ** 6),
+                sub["subsystem"],
+            )
+        )
+    sections.sort(
+        key=lambda item: (
+            catalog_order.get(item["section"].strip().lower(), 10 ** 6),
+            -item["count"],
+            item["section"],
+        )
+    )
+    return {"sections": sections, "total": len(schematics)}
+
+
+def _section_and_subsystem_for_subcategory(
+    subcategory: Subcategory,
+    by_id: dict
+) -> tuple:
+    """Як підкатегорія каталогу співвідноситься з полями схеми.
+
+    Верхній рівень підкатегорій — це «розділ» схеми, їхні діти — «підсистема».
+    Тобто «ЗАХИСТИ ПЕРЕДНІ» (id 142, батько «ЗОВНІШНЄ ОЗДОБЛЕННЯ») → схема
+    з section = «ЗОВНІШНЄ ОЗДОБЛЕННЯ» і subsystem = «ЗАХИСТИ ПЕРЕДНІ».
+    """
+    if subcategory.parent_id:
+        parent = by_id.get(subcategory.parent_id)
+        if parent:
+            return parent.name, subcategory.name
+    return subcategory.name, ""
+
+
+@router.get("/for-subcategory/{subcategory_id}")
+def get_schematics_for_subcategory(
+    subcategory_id: int,
+    session: Session = Depends(get_session)
+):
+    """Схеми, які відповідають підкатегорії каталогу.
+
+    Потрібно, щоб у каталозі поруч із товарами підкатегорії була кнопка
+    «Схема» — як в інших каталогах запчастин.
+    """
+    subcategory = session.get(Subcategory, subcategory_id)
+    if not subcategory:
+        return {"schematics": [], "subcategory": None}
+
+    all_subcategories = session.exec(select(Subcategory)).all()
+    by_id = {item.id: item for item in all_subcategories}
+    section, subsystem = _section_and_subsystem_for_subcategory(subcategory, by_id)
+
+    query = select(Schematic).where(Schematic.section == section)
+    if subsystem:
+        query = query.where(Schematic.subsystem == subsystem)
+
+    # Головне: схема належить тій САМІЙ категорії, у якій лежить підкатегорія.
+    # Інакше схема з «Model 3 Highland» показувалась і на звичайній «Model 3».
+    category = session.get(Category, subcategory.category_id) if subcategory.category_id else None
+    if category and category.name:
+        category_names = [c.name for c in session.exec(select(Category)).all() if c.name]
+        base_category = _base_category_name(category.name, category_names)
+        target_model = base_category or category.name
+        variant = category.name[len(base_category):].strip() if base_category else None
+        for condition in _owns_name_conditions(target_model, variant, category_names):
+            query = query.where(condition)
+
+    schematics = session.exec(query.order_by(Schematic.sort_order, Schematic.id)).all()
+    results = []
+    for item in schematics:
+        hotspots_count = session.exec(
+            select(func.count(SchematicHotspot.id)).where(SchematicHotspot.schematic_id == item.id)
+        ).first() or 0
+        results.append({
+            "id": item.id,
+            "title": item.title,
+            "model": item.model,
+            "generation": item.generation,
+            "section": item.section,
+            "subsystem": item.subsystem,
+            "image_url": item.image_url,
+            "hotspots_count": hotspots_count,
+        })
+
+    return {
+        "subcategory": {"id": subcategory.id, "name": subcategory.name},
+        "section": section,
+        "subsystem": subsystem,
+        "schematics": results,
+    }
+
+
+@router.get("/subsystem-info")
+def get_subsystem_info(
+    model: Optional[str] = None,
+    section: Optional[str] = None,
+    subsystem: Optional[str] = None,
+    session: Session = Depends(get_session)
+):
+    """Підкатегорія каталогу, яка відповідає підсистемі схеми.
+
+    Дає магазину id підкатегорії, щоб на кроці «підсистема» показати деталі
+    саме цього вузла, а не весь каталог.
+    """
+    if not subsystem:
+        return {"subcategory_id": None}
+
+    subcategories = session.exec(select(Subcategory)).all()
+    wanted = subsystem.strip().lower()
+
+    # 1) спершу шукаємо в межах категорії обраної моделі
+    category_ids = []
+    if model:
+        category = session.exec(
+            select(Category).where(func.lower(Category.name) == model.strip().lower())
+        ).first()
+        if category:
+            # Категорію знайдено точно — працюємо ЛИШЕ в ній, щоб «Model 3»
+            # не підтягувала підкатегорії «Model 3 Highland».
+            category_ids.append(category.id)
+        else:
+            for category in session.exec(select(Category)).all():
+                if model.strip().lower().startswith(category.name.strip().lower()):
+                    category_ids.append(category.id)
+
+    by_id = {item.id: item for item in subcategories}
+    section_name = (section or "").strip().lower()
+
+    def find_in(scope):
+        # Якщо відомий розділ — шукаємо саме в ньому: схема живе за точним
+        # шляхом каталогу (категорія → розділ → підсистема)
+        if section_name:
+            for item in subcategories:
+                if scope is not None and item.category_id not in scope:
+                    continue
+                if item.name.strip().lower() != wanted:
+                    continue
+                parent = by_id.get(item.parent_id) if item.parent_id else None
+                if parent and parent.name.strip().lower() == section_name:
+                    return item
+        for item in subcategories:
+            if scope is not None and item.category_id not in scope:
+                continue
+            if item.name.strip().lower() == wanted:
+                return item
+        return None
+
+    match = find_in(category_ids) if category_ids else None
+    if not match and not model:
+        # Без позначки про модель (напр. пошук за VIN) шукаємо по всьому каталогу
+        match = find_in(None)
+
+    if not match:
+        return {"subcategory_id": None}
+
+    return {
+        "subcategory_id": match.id,
+        "subcategory_name": match.name,
+        "category_id": match.category_id,
+    }
+
+
+@router.get("/by-product/{product_id}")
+def get_schematics_by_product(
+    product_id: str,
+    session: Session = Depends(get_session)
+):
+    """Схеми, у яких використовується ця деталь.
+
+    Зворотний бік екосистеми: на сторінці товару показуємо, у яких вузлах
+    він стоїть, щоб клієнт міг піти від деталі до схеми.
+    """
+    # Префільтр по БД, далі точна перевірка JSON — так не тягнемо всі схеми
+    hotspots = session.exec(
+        select(SchematicHotspot).where(
+            (SchematicHotspot.product_id == product_id)
+            | (func.coalesce(SchematicHotspot.variants_json, "").like(f"%{product_id}%"))
+        )
+    ).all()
+
+    def matches(hotspot: SchematicHotspot) -> bool:
+        if hotspot.product_id == product_id:
+            return True
+        if not hotspot.variants_json:
+            return False
+        try:
+            for raw in json.loads(hotspot.variants_json):
+                if isinstance(raw, dict) and raw.get("product_id") == product_id:
+                    return True
+        except Exception:
+            return False
+        return False
+
+    hits = [h for h in hotspots if matches(h)]
+    if not hits:
+        return {"schematics": []}
+
+    schematic_ids = {h.schematic_id for h in hits}
+    schematics = session.exec(
+        select(Schematic).where(Schematic.id.in_(schematic_ids))
+    ).all()
+    by_id = {s.id: s for s in schematics}
+
+    results = []
+    # Одна схема — один рядок: деталь може стояти в кількох точках одного вузла
+    # (дві точки №4), але в «Є на схемах» схема не має дублюватись.
+    # Бейдж показує найменший номер точки.
+    seen_schematics = set()
+    for hotspot in sorted(hits, key=lambda h: (h.schematic_id, h.number, h.sort_order)):
+        if hotspot.schematic_id in seen_schematics:
+            continue
+        schematic = by_id.get(hotspot.schematic_id)
+        if not schematic:
+            continue
+        seen_schematics.add(hotspot.schematic_id)
+        results.append({
+            "schematic_id": schematic.id,
+            "title": schematic.title,
+            "model": schematic.model,
+            "generation": schematic.generation,
+            "section": schematic.section,
+            "subsystem": schematic.subsystem,
+            "number": hotspot.number,
+            "part_number": hotspot.part_number,
+        })
+
+    return {"schematics": results}
+
+
+@router.get("/section-options")
+def get_section_options(
+    category_id: Optional[int] = None,
+    session: Session = Depends(get_session)
+):
+    """Розділи й підсистеми для схем — з підкатегорій КАТАЛОГУ.
+
+    Щоб «КУЗОВ», «Кузов» і «кузов» не розповзались на три різні розділи,
+    адміністратор обирає значення зі списку каталогу, а не вписує текст.
+    Верхній рівень підкатегорій = розділ схеми, їхні діти = підсистема.
+    """
+    if not category_id:
+        return {"sections": []}
+
+    rows = session.exec(
+        select(Subcategory)
+        .where(Subcategory.category_id == category_id)
+        .order_by(Subcategory.sort_order.desc(), Subcategory.id)
+    ).all()
+
+    children: dict = {}
+    tops = []
+    for item in rows:
+        if item.parent_id is None:
+            tops.append(item)
+        else:
+            children.setdefault(item.parent_id, []).append(item.name)
+
+    return {
+        "sections": [
+            {"section": top.name, "subsystems": children.get(top.id, [])}
+            for top in tops
+        ]
+    }
+
+
+@router.get("/meta/filters")
+def get_schematic_filters(session: Session = Depends(get_session)):
+    schematics = session.exec(select(Schematic)).all()
+    models = sorted(list(set(s.model for s in schematics if s.model)))
+    generations = sorted(list(set(s.generation for s in schematics if s.generation)))
+    sections = sorted(list(set(s.section for s in schematics if s.section)))
+    subsystems = sorted(list(set(s.subsystem for s in schematics if s.subsystem)))
+    return {
+        "models": models,
+        "generations": generations,
+        "sections": sections,
+        "subsystems": subsystems
+    }
+
+# --- Опції «Модель / Покоління» для схем -------------------------------------
+# Джерело істини — категорії каталогу (таблиця category). Жодних хардкод-списків
+# у фронтенді: і адмінка, і магазин беруть ці опції звідси.
+#
+# Категорія-варіант (напр. «Model 3 Highland») — це базова модель («Model 3»)
+# плюс уточнення покоління. Для таких категорій покоління визначається
+# автоматично, тому в редакторі схем воно підставляється й не «висить» окремо.
+
+# Покоління за замовчуванням для категорії, під якою ще немає жодної схеми.
+DEFAULT_GENERATION = "Стандартна"
+# Категорії-аксесуари не прив'язані до конкретного авто.
+ACCESSORY_GENERATION = "Універсальні"
+ACCESSORY_KEYWORDS = ("аксесуар", "аксессуар", "accessor")
+
+
+def _is_accessory_category(name: str) -> bool:
+    low = (name or "").strip().lower()
+    return any(keyword in low for keyword in ACCESSORY_KEYWORDS)
+
+
+def _base_category_name(name: str, all_names: List[str]) -> Optional[str]:
+    """Повертає базову категорію, якщо name є її варіантом.
+
+    «Model 3 Highland» → «Model 3»;  «Model 3» → None.
+    Беріться найдовший збіг, щоб «Model 3 Highland» не злипалося з «Model».
+    """
+    low = (name or "").strip().lower()
+    if not low:
+        return None
+    base: Optional[str] = None
+    for candidate in all_names:
+        cand = (candidate or "").strip()
+        if not cand or cand.lower() == low:
+            continue
+        if low.startswith(cand.lower() + " ") and (base is None or len(cand) > len(base)):
+            base = cand
+    return base
+
+
+def _variant_suffixes(base_name: str, all_names: List[str]) -> List[str]:
+    """Покоління-варіанти, під які є окремі категорії.
+
+    «Model 3» → ['Highland'],  «Model Y» → ['Juniper'],  «Model 3» (без варіантів) → [].
+    """
+    base = (base_name or "").strip().lower()
+    if not base:
+        return []
+    suffixes: List[str] = []
+    for name in all_names:
+        candidate = (name or "").strip()
+        if not candidate or candidate.lower() == base:
+            continue
+        if candidate.lower().startswith(base + " "):
+            suffix = candidate[len(base):].strip()
+            if suffix and suffix not in suffixes:
+                suffixes.append(suffix)
+    return suffixes
+
+
+def _owns_name_conditions(model_name: str, generation: Optional[str], all_names: List[str]) -> list:
+    """Умови «схема належить САМЕ цій моделі/поколінню».
+
+    «Model 3» і «Model 3 Highland» — це різні категорії каталогу, тому під
+    базовою моделлю показуємо лише те, що НЕ належить категоріям-варіантам.
+    Без цього схема з Highland «підтягувалась» і на звичайну Model 3.
+    """
+    model = (model_name or "").strip()
+    if not model:
+        return []
+    conditions = [func.lower(Schematic.model) == model.lower()]
+    variant = (generation or "").strip()
+    if variant and variant != "Всі покоління":
+        conditions.append(func.lower(Schematic.generation).like(f"%{variant.lower()}%"))
+    else:
+        for suffix in _variant_suffixes(model, all_names):
+            conditions.append(~func.lower(Schematic.generation).like(f"%{suffix.lower()}%"))
+    return conditions
+
+
+def _category_scope_conditions(session: Session, category_name: str) -> tuple:
+    """Умови вибірки схем, що належать категорії каталогу.
+
+    Та сама логіка, що у for-subcategory: базова категорія забирає лише
+    СВОЇ схеми (без поколінь-варіантів), категорія-варіант — свої.
+    """
+    names = [c.name for c in session.exec(select(Category)).all() if c.name]
+    base = _base_category_name(category_name, names)
+    target = base or category_name
+    variant = category_name[len(base):].strip() if base else None
+    return target, variant, _owns_name_conditions(target, variant, names)
+
+
+def cascade_category_rename(session: Session, old_name: str, new_name: str) -> int:
+    """Каскад перейменування категорії каталогу на тексти схем.
+
+    Схеми зберігають model/generation ТЕКСТОМ (без category_id) — копію
+    імені категорії на момент створення. Без каскаду перейменована
+    категорія перестає знаходити свої схеми: в адмінці фільтр
+    `GET /schematics?model=<нова назва>` повертає 0 («схема зникла»),
+    а сайт далі показує схему під старою назвою (дані групуються
+    з тексту самих схем).
+
+    Викликати ДО присвоєння нового імені — scope рахується за старими.
+    Повертає кількість оновлених схем.
+    """
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old == new:
+        return 0
+    names = [c.name for c in session.exec(select(Category)).all() if c.name]
+    old_base = _base_category_name(old, names)
+    # Нове ім'я міряємо БЕЗ старого: інакше «КУЗОВ» → «КУЗОВ НОВИЙ»
+    # виглядало б як «база → варіант» (старе ім'я — префікс нового),
+    # хоча це звичайне перейменування бази.
+    names_without_old = [n for n in names if (n or "").strip().lower() != old.lower()]
+    new_base = _base_category_name(new, names_without_old)
+    updated = 0
+    if not old_base and not new_base:
+        # База → база: забираємо ВСІ рядки зі старою моделлю,
+        # включно з поколіннями (у Highland model теж «Model 3»).
+        rows = session.exec(
+            select(Schematic).where(func.lower(Schematic.model) == old.lower())
+        ).all()
+        for item in rows:
+            item.model = new
+            session.add(item)
+            updated += 1
+    elif old_base and new_base:
+        # Варіант → варіант («Model 3 Highland» → «Model 3 Classic»):
+        # міняємо базу і замінюємо суфікс у поколінні.
+        old_suffix = old[len(old_base):].strip()
+        new_suffix = new[len(new_base):].strip()
+        if not old_suffix:
+            return 0
+        rows = session.exec(
+            select(Schematic).where(
+                func.lower(Schematic.model) == old_base.lower(),
+                func.lower(Schematic.generation).like(f"%{old_suffix.lower()}%"),
+            )
+        ).all()
+        for item in rows:
+            item.model = new_base
+            if new_suffix and old_suffix.lower() != new_suffix.lower():
+                item.generation = re.sub(
+                    re.escape(old_suffix), new_suffix, item.generation or "",
+                    flags=re.IGNORECASE,
+                )
+            session.add(item)
+            updated += 1
+    elif not old_base and new_base:
+        # База → варіант (рідкість): забираємо лише СВОЇ схеми —
+        # без рядків, що належать іншим категоріям-варіантам.
+        conditions = _owns_name_conditions(old, None, names)
+        query = select(Schematic)
+        for condition in conditions:
+            query = query.where(condition)
+        new_suffix = new[len(new_base):].strip()
+        for item in session.exec(query).all():
+            item.model = new_base
+            generation = (item.generation or "").strip()
+            if (not generation or generation == DEFAULT_GENERATION) and new_suffix:
+                item.generation = new_suffix
+            session.add(item)
+            updated += 1
+    else:
+        # Варіант → база: покоління лишаємо як є, міняємо лише модель.
+        old_suffix = old[len(old_base):].strip()
+        if not old_suffix:
+            return 0
+        rows = session.exec(
+            select(Schematic).where(
+                func.lower(Schematic.model) == old_base.lower(),
+                func.lower(Schematic.generation).like(f"%{old_suffix.lower()}%"),
+            )
+        ).all()
+        for item in rows:
+            item.model = new
+            session.add(item)
+            updated += 1
+    return updated
+
+
+def cascade_subcategory_rename(session: Session, subcategory: Subcategory, old_name: str, new_name: str) -> int:
+    """Каскад перейменування підкатегорії на section/subsystem схем.
+
+    Верхній рівень підкатегорій = розділ схеми, діти = підсистема.
+    Оновлюємо лише схеми ТІЄЇ Ж категорії (scope як у for-subcategory),
+    щоб однакові назви в інших моделях не чіпались.
+    Викликати ДО присвоєння нового імені. Повертає кількість схем.
+    """
+    old = (old_name or "").strip()
+    new = (new_name or "").strip()
+    if not old or not new or old == new:
+        return 0
+    category = session.get(Category, subcategory.category_id) if subcategory.category_id else None
+    if not category or not (category.name or "").strip():
+        return 0
+    _, _, scope = _category_scope_conditions(session, category.name)
+    query = select(Schematic)
+    for condition in scope:
+        query = query.where(condition)
+    if subcategory.parent_id is None:
+        query = query.where(func.lower(Schematic.section) == old.lower())
+        field = "section"
+    else:
+        query = query.where(func.lower(Schematic.subsystem) == old.lower())
+        field = "subsystem"
+    updated = 0
+    for item in session.exec(query).all():
+        setattr(item, field, new)
+        session.add(item)
+        updated += 1
+    return updated
+
+
+@router.get("/model-options")
+def get_schematic_model_options(session: Session = Depends(get_session)):
+    """Опції моделей і поколінь для редактора схем — побудовані з категорій."""
+    # Той самий порядок, що і в каталозі/адмінці (sort_order DESC) — щоб
+    # перетягування категорій в адмінці одразу міняло порядок карток у магазині
+    categories = session.exec(
+        select(Category).order_by(Category.sort_order.desc(), Category.id)
+    ).all()
+    names = [c.name for c in categories if c.name]
+
+    known_rows = session.exec(select(Schematic.model, Schematic.generation)).all()
+    generations_by_model: dict = {}
+    for model, generation in known_rows:
+        if not model or not generation:
+            continue
+        bucket = generations_by_model.setdefault(model.strip().lower(), [])
+        if generation not in bucket:
+            bucket.append(generation)
+
+    vehicles: List[dict] = []
+    accessories: List[dict] = []
+
+    for category in categories:
+        name = (category.name or "").strip()
+        if not name:
+            continue
+
+        base = _base_category_name(name, names)
+        existing = generations_by_model.get((base or name).lower(), [])
+
+        if base:
+            # Категорія-варіант: покоління визначається категорією.
+            variant = name[len(base):].strip()
+            generations = [g for g in existing if variant.lower() in g.lower()]
+            if not generations:
+                generations = [variant]
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "image": category.image,
+                "model": base,
+                "generation": generations[0],
+                "generations": generations,
+                "pinned_generation": True,
+                "is_accessory": False,
+            }
+            schematics_count = session.exec(
+                select(func.count(Schematic.id)).where(
+                    func.lower(Schematic.model) == base.lower(),
+                    func.lower(Schematic.generation).like(f"%{variant.lower()}%"),
+                )
+            ).first() or 0
+        elif _is_accessory_category(name):
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "image": category.image,
+                "model": name,
+                "generation": ACCESSORY_GENERATION,
+                "generations": [ACCESSORY_GENERATION],
+                "pinned_generation": True,
+                "is_accessory": True,
+            }
+            schematics_count = session.exec(
+                select(func.count(Schematic.id)).where(
+                    func.lower(Schematic.model) == name.lower()
+                )
+            ).first() or 0
+        else:
+            # Базова модель: їй належать ЛИШЕ схеми, які не пішли у варіанти
+            # («Model 3 Highland», «Model Y Juniper»). Інакше та сама схема
+            # рахувалась і під «Model 3», і під «Model 3 Highland».
+            variants = _variant_suffixes(name, names)
+            own_generations = [
+                g for g in existing
+                if not any(v.lower() in (g or "").lower() for v in variants)
+            ]
+            generations = own_generations or [DEFAULT_GENERATION]
+            option = {
+                "category": name,
+                "category_id": category.id,
+                "image": category.image,
+                "model": name,
+                "generation": generations[0],
+                "generations": generations,
+                "pinned_generation": len(generations) == 1,
+                "is_accessory": False,
+            }
+            scope = select(func.count(Schematic.id)).where(
+                func.lower(Schematic.model) == name.lower()
+            )
+            for suffix in variants:
+                scope = scope.where(
+                    ~func.lower(Schematic.generation).like(f"%{suffix.lower()}%")
+                )
+            schematics_count = session.exec(scope).first() or 0
+
+        option["schematics_count"] = schematics_count
+        # Чи показувати цю категорію в схемах (керується в «Категоріях»)
+        option["show_in_schematics"] = bool(getattr(category, "show_in_schematics", True))
+        (accessories if option["is_accessory"] else vehicles).append(option)
+
+    return {"options": vehicles + accessories}
+
+
+@router.get("/{schematic_id}", response_model=SchematicRead)
+def get_schematic(schematic_id: int, session: Session = Depends(get_session)):
+    schematic = session.exec(
+        select(Schematic)
+        .where(Schematic.id == schematic_id)
+        .options(
+            selectinload(Schematic.hotspots).selectinload(SchematicHotspot.product).selectinload(Product.images)
+        )
+    ).first()
+    
+    if not schematic:
+        raise HTTPException(status_code=404, detail="Схему не знайдено")
+    
+    sorted_hotspots = sorted(schematic.hotspots, key=lambda h: (h.number, h.sort_order))
+
+    # Збираємо всі товари, до яких привʼязані варіанти точок, одним запитом —
+    # щоб віддати на фронт актуальні ціни з каталогу.
+    variant_product_ids = set()
+    for hotspot in sorted_hotspots:
+        if not hotspot.variants_json:
+            continue
+        try:
+            for raw in json.loads(hotspot.variants_json):
+                if isinstance(raw, dict) and raw.get("product_id"):
+                    variant_product_ids.add(raw["product_id"])
+        except Exception:
+            continue
+
+    products_by_id = {}
+    if variant_product_ids:
+        rows = session.exec(
+            select(Product).where(Product.id.in_(variant_product_ids))
+        ).all()
+        products_by_id = {row.id: row for row in rows}
+
+    formatted_hotspots = [_format_hotspot(h, products_by_id) for h in sorted_hotspots]
+
+    return SchematicRead(
+        id=schematic.id,
+        title=schematic.title,
+        model=schematic.model,
+        generation=schematic.generation,
+        section=schematic.section,
+        subsystem=schematic.subsystem,
+        image_url=schematic.image_url,
+        sort_order=schematic.sort_order,
+        created_at=schematic.created_at,
+        hotspots=formatted_hotspots
+    )
+
+@router.post("", response_model=SchematicRead, dependencies=[Depends(get_current_admin)])
+def create_schematic(payload: SchematicCreate, session: Session = Depends(get_session)):
+    # TRIM на записі: зайвий пробіл у section/subsystem ламає точний фільтр
+    # списку схем на сайті (схема є в адмінці, а сайт дає «Схем не знайдено»).
+    schematic = Schematic(
+        title=payload.title.strip(),
+        model=payload.model.strip(),
+        generation=(payload.generation or '').strip(),
+        section=(payload.section or '').strip(),
+        subsystem=(payload.subsystem or '').strip(),
+        image_url=payload.image_url,
+        sort_order=payload.sort_order
+    )
+    session.add(schematic)
+    session.commit()
+    session.refresh(schematic)
+    
+    for h in payload.hotspots:
+        hotspot = SchematicHotspot(
+            schematic_id=schematic.id,
+            number=h.number,
+            x=h.x,
+            y=h.y,
+            part_number=h.part_number,
+            name=h.name,
+            product_id=h.product_id,
+            variants_json=h.variants_json,
+            sort_order=h.sort_order
+        )
+        session.add(hotspot)
+    
+    session.commit()
+    return get_schematic(schematic.id, session)
+
+@router.put("/{schematic_id}", response_model=SchematicRead, dependencies=[Depends(get_current_admin)])
+def update_schematic(schematic_id: int, payload: SchematicUpdate, session: Session = Depends(get_session)):
+    schematic = session.get(Schematic, schematic_id)
+    if not schematic:
+        raise HTTPException(status_code=404, detail="Схему не знайдено")
+    
+    if payload.title is not None:
+        schematic.title = payload.title.strip()
+    if payload.model is not None:
+        schematic.model = payload.model.strip()
+    if payload.generation is not None:
+        schematic.generation = (payload.generation or '').strip()
+    if payload.section is not None:
+        schematic.section = (payload.section or '').strip()
+    if payload.subsystem is not None:
+        schematic.subsystem = (payload.subsystem or '').strip()
+    if payload.image_url is not None:
+        schematic.image_url = payload.image_url
+    if payload.sort_order is not None:
+        schematic.sort_order = payload.sort_order
+        
+    session.add(schematic)
+    session.commit()
+    
+    # If hotspots were provided, replace them
+    if payload.hotspots is not None:
+        existing_hotspots = session.exec(
+            select(SchematicHotspot).where(SchematicHotspot.schematic_id == schematic_id)
+        ).all()
+        for eh in existing_hotspots:
+            session.delete(eh)
+        session.commit()
+        
+        for h in payload.hotspots:
+            hotspot = SchematicHotspot(
+                schematic_id=schematic.id,
+                number=h.number,
+                x=h.x,
+                y=h.y,
+                part_number=h.part_number,
+                name=h.name,
+                product_id=h.product_id,
+                variants_json=h.variants_json,
+                sort_order=h.sort_order
+            )
+            session.add(hotspot)
+        session.commit()
+        
+    return get_schematic(schematic.id, session)
+
+@router.delete("/{schematic_id}", dependencies=[Depends(get_current_admin)])
+def delete_schematic(schematic_id: int, session: Session = Depends(get_session)):
+    schematic = session.get(Schematic, schematic_id)
+    if not schematic:
+        raise HTTPException(status_code=404, detail="Схему не знайдено")
+    session.delete(schematic)
+    session.commit()
+    return {"message": "Схему успішно видалено"}
+
+@router.post("/upload-image-url", dependencies=[Depends(get_current_admin)])
+async def upload_schematic_image_from_url(payload: dict):
+    """Бере креслення за посиланням (напр. з EPC Tesla) і зберігає оригінал.
+
+    Корисно, коли треба велика картинка для глибокого наближення на сайті.
+    """
+    url = (payload or {}).get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Не вказано посилання")
+
+    result = await image_uploader.upload_from_url(url, folder="tesla-parts/schematics")
+    if not result:
+        blocked = "tesla.com" in url.lower()
+        detail = (
+            "Сервер джерела блокує автоматичне завантаження (403) — так робить epc.tesla.com. "
+            "Скопіюйте картинку в браузері (правою кнопкою → «Копіювати зображення») і вставте "
+            "її в адмінці через ⌘V / Ctrl+V, або збережіть файл і завантажте його."
+            if blocked
+            else "Не вдалося завантажити зображення за посиланням — перевірте, що це пряме посилання на картинку."
+        )
+        raise HTTPException(status_code=400, detail=detail)
+    return result
+
+
+@router.post("/reorder", dependencies=[Depends(get_current_admin)])
+def reorder_schematics(
+    request: dict,
+    session: Session = Depends(get_session)
+):
+    """Порядок схем у списку (як у каталозі).
+
+    Приймає {"schematic_ids": [...]} у тому порядку, у якому схеми мають
+    показуватись у магазині, і проставляє sort_order за індексом.
+    """
+    ids = request.get("schematic_ids") or []
+    if not ids:
+        return {"message": "Нічого змінювати", "updated": 0}
+
+    schematics = session.exec(
+        select(Schematic).where(col(Schematic.id).in_([int(i) for i in ids]))
+    ).all()
+    by_id = {item.id: item for item in schematics}
+
+    updated = 0
+    for index, schematic_id in enumerate(ids):
+        item = by_id.get(int(schematic_id))
+        if not item:
+            continue
+        item.sort_order = index
+        session.add(item)
+        updated += 1
+    session.commit()
+    return {"message": "Порядок схем збережено", "updated": updated}
+
+
+@router.post("/upload-image", dependencies=[Depends(get_current_admin)])
+async def upload_schematic_image(file: UploadFile = File(...)):
+    url = await image_uploader.upload_image(file, folder="tesla-parts/schematics")
+    if not url:
+        raise HTTPException(status_code=500, detail="Помилка завантаження зображення")
+    return {"image_url": url}
