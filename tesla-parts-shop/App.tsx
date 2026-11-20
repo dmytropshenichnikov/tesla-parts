@@ -10,21 +10,33 @@ import {
   Link,
 } from 'react-router-dom';
 import { useAuth } from './context/AppContext';
+import { retryImport } from './utils/lazyImport';
 import Header from './components/Header';
+import CookieConsent from './components/CookieConsent';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
 // Не потрібні на першому екрані головної — окремі чанки (менший стартовий JS).
 const SubcategoryScheme = React.lazy(() =>
-  import('./components/SubcategoryScheme').then((m) => ({ default: m.SubcategoryScheme }))
+  retryImport(() => import('./components/SubcategoryScheme')).then((m) => ({
+    default: m.SubcategoryScheme,
+  }))
 );
-const CartDrawer = React.lazy(() => import('./components/CartDrawer'));
-const SubcategoryCard = React.lazy(() => import('./components/SubcategoryCard'));
+const CartDrawer = React.lazy(() =>
+  retryImport(() => import('./components/CartDrawer'))
+);
+const SubcategoryCard = React.lazy(() =>
+  retryImport(() => import('./components/SubcategoryCard'))
+);
 import { ReviewsPage } from './components/ReviewsPage';
 const lazyNamed = (loader: () => Promise<Record<string, any>>, name: string) =>
-  React.lazy(() => loader().then((m: any) => ({ default: m[name] })));
+  React.lazy(() =>
+    retryImport(loader).then((m: any) => ({ default: m[name] }))
+  );
 
 // Важкі сторінки — окремі чанки (код-сплітинг): Lighthouse «unused JavaScript».
-const Checkout = React.lazy(() => import('./components/Checkout'));
+const Checkout = React.lazy(() =>
+  retryImport(() => import('./components/Checkout'))
+);
 const ProductPage = lazyNamed(() => import('./components/ProductPage'), 'default');
 const StaticPage = lazyNamed(() => import('./components/StaticPage'), 'default');
 const SchemesCatalog = lazyNamed(() => import('./components/SchemesCatalog'), 'SchemesCatalog');
@@ -251,6 +263,9 @@ const App: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [uahPerUsd, setUahPerUsd] = useState(DEFAULT_EXCHANGE_RATE_UAH_PER_USD);
+  // Чи вже прийшов курс з бекенду: checkout-події не мають рахувати суму
+  // за fallback-курсом 40, поки реальний 48.5 ще вантажиться.
+  const [rateReady, setRateReady] = useState(false);
   const [socialLinks, setSocialLinks] = useState({
     instagram: '',
     telegram: '',
@@ -357,6 +372,8 @@ const App: React.FC = () => {
         }
       } catch (e) {
         console.error('Failed to load exchange rate', e);
+      } finally {
+        setRateReady(true);
       }
     };
     fetchRate();
@@ -635,6 +652,7 @@ const App: React.FC = () => {
                   cartItems={cart}
                   currency={currency}
                   uahPerUsd={uahPerUsd}
+                  rateReady={rateReady}
                   totalUSD={cartTotalUSD}
                   onSuccess={() => {
                     clearCart();
@@ -649,6 +667,8 @@ const App: React.FC = () => {
               path="/info/:slug"
               element={<StaticPageRoute seoRecords={staticSeo} />}
             />
+            <Route path="/privacy-policy" element={<Navigate to="/info/privacy-policy" replace />} />
+            <Route path="/terms-of-service" element={<Navigate to="/info/terms-of-service" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify" element={<Verify />} />
@@ -710,6 +730,16 @@ const App: React.FC = () => {
               <li>
                 <Link to="/info/contacts" className="hover:text-white block">
                   Контакти
+                </Link>
+              </li>
+              <li>
+                <Link to="/info/privacy-policy" className="hover:text-white block">
+                  Політика конфіденційності
+                </Link>
+              </li>
+              <li>
+                <Link to="/info/terms-of-service" className="hover:text-white block">
+                  Умови сервісу
                 </Link>
               </li>
             </ul>
@@ -799,6 +829,9 @@ const App: React.FC = () => {
         isOpen={isDrawerOpen}
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
       />
+
+      {/* Cookie Consent Notice (GDPR / Privacy Policy) */}
+      <CookieConsent />
 
       {isCartMounted && (
         <React.Suspense fallback={null}>
@@ -900,7 +933,7 @@ const HomeView: React.FC<HomeViewProps> = ({
       {/* Герой з'являється одразу (категорії вже є з серверного HTML) —
           не чекаємо завантаження популярних товарів, бо тоді плитки стрибають */}
       {showHero && (
-        <div className="w-full min-h-[280px] md:min-h-[400px] lg:min-h-[500px]">
+        <div className="w-full min-h-[180px] md:min-h-[240px] lg:min-h-[300px]">
           <Hero />
         </div>
       )}
