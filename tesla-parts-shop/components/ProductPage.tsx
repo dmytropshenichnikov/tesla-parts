@@ -724,7 +724,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <div className="grid grid-cols-2 gap-2.5 pt-4 border-t border-gray-100 text-[11px] sm:text-xs text-gray-600">
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
                   <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
-                  <span>Гарантія 14 днів</span>
+                  <span>Гарантія</span>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
                   <Truck size={16} className="text-tesla-red flex-shrink-0" />
@@ -820,7 +820,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
             <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
               <span className="text-gray-500 font-medium">Гарантія:</span>
               <span className="text-gray-900 font-medium">
-                14 днів на перевірку та встановлення
+                Гарантія виробника
               </span>
             </div>
           </div>
