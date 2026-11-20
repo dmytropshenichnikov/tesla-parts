@@ -56,14 +56,14 @@ export const ReviewsPage: React.FC = () => {
   return (
     <div className="bg-white">
       <SeoHead
-        title="Відгуки клієнтів | Tesla Parts Center"
+        title="Відгуки про магазин | Tesla Parts Center"
         description="Що про нас кажуть клієнти. Переглядайте скріншоти відгуків про запчастини Tesla від нашого магазину."
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Відгуки</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-12">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">Відгуки про магазин</h1>
+          <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto">
             Ми цінуємо довіру наших клієнтів. Тут ви можете переглянути реальні
             відгуки з месенджерів про нашу роботу та запчастини.
           </p>

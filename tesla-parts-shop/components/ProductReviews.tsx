@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, PenLine, Star, X } from 'lucide-react';
+import { ArrowRight, PenLine, Star, Store, X } from 'lucide-react';
 import { ProductReview } from '../types';
 import { api } from '../services/api';
+import { Link } from 'react-router-dom';
 
 interface ProductReviewsProps {
   productId: string;
@@ -205,28 +206,46 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={openForm}
-              className="w-full flex items-center justify-center gap-1.5 border-t border-gray-200/80 py-2 text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-white/70 transition-colors cursor-pointer"
-            >
-              <PenLine size={12} />
-              Залишити свій відгук
-            </button>
+            <div className="flex items-stretch divide-x divide-gray-200/80 border-t border-gray-200/80">
+              <button
+                type="button"
+                onClick={openForm}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-white/70 transition-colors cursor-pointer"
+              >
+                <PenLine size={12} />
+                Залишити відгук
+              </button>
+              <Link
+                to="/reviews"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-white/70 transition-colors"
+              >
+                <Store size={12} />
+                Відгуки про магазин
+              </Link>
+            </div>
           </>
         ) : (
           <div className="px-4 pt-1 pb-4">
             <p className="text-[13px] text-gray-500">
               Ще немає відгуків на цю деталь.
             </p>
-            <button
-              type="button"
-              onClick={openForm}
-              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-[11px] font-semibold hover:border-gray-300 hover:text-gray-900 transition-colors cursor-pointer"
-            >
-              <PenLine size={12} />
-              Залишити відгук
-            </button>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <Link
+                to="/reviews"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-[11px] font-semibold hover:border-gray-300 hover:text-gray-900 transition-colors"
+              >
+                <Store size={12} />
+                Відгуки про магазин
+              </Link>
+              <button
+                type="button"
+                onClick={openForm}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-[11px] font-semibold hover:border-gray-300 hover:text-gray-900 transition-colors cursor-pointer"
+              >
+                <PenLine size={12} />
+                Залишити відгук
+              </button>
+            </div>
           </div>
         )}
       </section>

@@ -500,7 +500,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
           <div className="md:w-1/2 p-3 sm:px-6 sm:pt-5 sm:pb-6 bg-[#fafafa] flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
             <div>
               <div
-                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-square touch-pan-y"
+                className="relative group cursor-zoom-in rounded-2xl overflow-hidden bg-white p-2 sm:p-4 border border-gray-100 shadow-2xs flex items-center justify-center aspect-[4/3] sm:aspect-square touch-pan-y"
                 onClick={handleGalleryClick}
                 onTouchStart={handleGalleryTouchStart}
                 onTouchEnd={handleGalleryTouchEnd}
@@ -567,7 +567,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
               {/* Thumbnails row */}
               {allImages.length > 1 && (
-                <div className="flex gap-2.5 overflow-x-auto pt-3 pb-1 custom-scrollbar">
+                <div className="hidden sm:flex gap-2.5 overflow-x-auto pt-3 pb-1 custom-scrollbar">
                   {allImages.map((img, idx) => (
                     <button
                       key={idx}
@@ -612,7 +612,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   кожну модель. На вузькому екрані модельний ряд — це довгий
                   «шум», тому тут лише тихий підпис із машиною. */}
               {models.length > 0 && (
-                <div className="flex items-start gap-1.5 mb-1.5">
+                <div className="flex items-start gap-1.5 mb-1 sm:mb-1.5">
                   <Car size={13} className="text-gray-400 shrink-0 mt-0.5" />
                   <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed line-clamp-2">
                     <span className="text-gray-400">Tesla</span>{' '}
@@ -622,7 +622,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               )}
 
               {/* Product Title (Clean, human-readable) */}
-              <h1 className="text-[17px] sm:text-xl md:text-[22px] font-bold text-gray-900 tracking-tight leading-snug mb-3">
+              <h1 className="text-[17px] sm:text-xl md:text-[22px] font-bold text-gray-900 tracking-tight leading-snug mb-2 sm:mb-3">
                 {cleanTitle}
               </h1>
 
@@ -630,9 +630,9 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   можна виділити й скопіювати вручну; окрема кнопка копіювання
                   є лише в артикула, бо крос-номери копіюють поштучно. */}
               {(product.detail_number || crossNumbers.length > 0) && (
-                <div className="mb-4 rounded-xl border border-gray-200/80 divide-y divide-gray-100 overflow-hidden">
+                <div className="mb-3 sm:mb-4 rounded-xl border border-gray-200/80 divide-y divide-gray-100 overflow-hidden">
                   {product.detail_number && (
-                    <div className="w-full flex items-start gap-2.5 px-3 py-2">
+                    <div className="w-full flex items-start gap-2.5 px-3 py-1.5 sm:py-2">
                       <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
                         Артикул
                       </span>
@@ -663,7 +663,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                         type="button"
                         onClick={() => setShowCrossNumbers((open) => !open)}
                         aria-expanded={showCrossNumbers}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 sm:py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
                       >
                         <span className="w-[52px] sm:w-[64px] shrink-0 text-[10px] uppercase tracking-wide font-semibold text-gray-400">
                           Крос
@@ -707,7 +707,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               )}
 
               {/* Price Block */}
-              <div className="bg-gray-50/90 rounded-2xl p-3.5 sm:p-4 border border-gray-100 mb-4">
+              <div className="bg-gray-50/90 rounded-2xl p-3 sm:p-4 border border-gray-100 mb-3 sm:mb-4">
                 <div className="flex items-baseline justify-between flex-wrap gap-2">
                   <div>
                     <div className="text-xs text-gray-600 font-medium mb-0.5">Ціна:</div>
