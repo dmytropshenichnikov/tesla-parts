@@ -990,7 +990,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
               <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                 <span className="text-gray-500 font-medium">Налаштування:</span>
                 <span className="text-gray-900">
-                  Прописуються самі після 10 км їзди
+                  Прописуються самі після 2-5 км їзди
                 </span>
               </div>
             )}
