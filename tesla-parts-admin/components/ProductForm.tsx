@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ApiService } from '../services/api';
-import { ArrowLeft, Upload, X, Plus, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, X, Plus, Star, Trash2, Eye, EyeOff, Pencil } from 'lucide-react';
 import { Category, Subcategory, ProductReview } from '../types';
 
 interface CategoryAssignment {
@@ -114,6 +114,15 @@ export const ProductForm: React.FC = () => {
   });
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewDate, setReviewDate] = useState('');
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState({
+    author: '',
+    rating: 5,
+    text: '',
+    isPublished: true,
+    createdAt: '',
+  });
 
   const loadProductReviews = async (productId: string) => {
     try {
@@ -415,6 +424,75 @@ export const ProductForm: React.FC = () => {
     });
   };
 
+  const toDateTimeLocal = (value: string): string => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+      date.getDate()
+    )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const startEditReview = (review: ProductReview) => {
+    setEditingReviewId(review.id);
+    setEditDraft({
+      author: review.author,
+      rating: review.rating,
+      text: review.text,
+      isPublished: review.is_published,
+      createdAt: toDateTimeLocal(review.created_at),
+    });
+  };
+
+  const cancelEditReview = () => {
+    setEditingReviewId(null);
+  };
+
+  const handleSaveReview = async (reviewId: number) => {
+    if (!editDraft.author.trim() || !editDraft.text.trim()) {
+      setReviewError('Заповніть імʼя та текст відгуку');
+      return;
+    }
+    setReviewSaving(true);
+    setReviewError(null);
+    try {
+      const updated = await ApiService.updateProductReview(reviewId, {
+        author: editDraft.author.trim(),
+        rating: editDraft.rating,
+        text: editDraft.text.trim(),
+        is_published: editDraft.isPublished,
+        ...(editDraft.createdAt
+          ? { created_at: `${editDraft.createdAt}:00` }
+          : {}),
+      });
+      setProductReviews((prev) =>
+        prev.map((item) => (item.id === reviewId ? updated : item))
+      );
+      setEditingReviewId(null);
+    } catch (e) {
+      console.error('Failed to update product review', e);
+      setReviewError('Не вдалося зберегти зміни');
+    } finally {
+      setReviewSaving(false);
+    }
+  };
+
+  const handleTogglePublish = async (review: ProductReview) => {
+    setReviewError(null);
+    try {
+      const updated = await ApiService.updateProductReview(review.id, {
+        is_published: !review.is_published,
+      });
+      setProductReviews((prev) =>
+        prev.map((item) => (item.id === review.id ? updated : item))
+      );
+    } catch (e) {
+      console.error('Failed to change visibility', e);
+      setReviewError('Не вдалося змінити видимість відгуку');
+    }
+  };
+
   const handleAddReview = async () => {
     if (!id) return;
     const author = reviewDraft.author.trim();
@@ -431,9 +509,11 @@ export const ProductForm: React.FC = () => {
         author,
         rating: reviewDraft.rating,
         text,
+        ...(reviewDate ? { created_at: `${reviewDate}:00` } : {}),
       });
       setProductReviews((prev) => [created, ...prev]);
       setReviewDraft({ author: '', rating: 5, text: '' });
+      setReviewDate('');
     } catch (e) {
       console.error('Failed to create product review', e);
       setReviewError('Не вдалося зберегти відгук. Спробуйте ще раз.');
@@ -526,6 +606,10 @@ export const ProductForm: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const publishedCount = productReviews.filter(
+    (review) => review.is_published
+  ).length;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -683,7 +767,7 @@ export const ProductForm: React.FC = () => {
               )}
               <p className="text-xs text-gray-400">
                 Модель береться з каталогу, а підкатегорія визначає розділ. Окреме
-                текстове поле моделі не потрібне — воно формується автоматично.
+                текстове поле моделі не потрібне, воно формується автоматично.
               </p>
             </div>
           </div>
@@ -931,12 +1015,13 @@ export const ProductForm: React.FC = () => {
                   Відгуки на товар
                 </h2>
                 <span className="text-xs text-gray-500 mt-1">
-                  {productReviews.length} шт.
+                  {publishedCount} з {productReviews.length} на сайті
                 </span>
               </div>
               <p className="text-xs text-gray-500 mb-4">
-                Показуються в картці товару під кнопкою купівлі. Додаються
-                одразу, зберігати товар для цього не потрібно.
+                Показуються в картці товару під кнопкою купівлі. Відгуки покупців
+                приходять прихованими: опублікуйте після перевірки. Дату й час
+                можна змінити вручну.
               </p>
 
               {productReviews.length > 0 ? (
@@ -946,44 +1031,176 @@ export const ProductForm: React.FC = () => {
                       key={review.id}
                       className="bg-white border border-gray-200 rounded-lg p-3"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="flex items-center gap-0.5">
-                              {[0, 1, 2, 3, 4].map((index) => (
-                                <Star
-                                  key={index}
-                                  size={13}
-                                  className={
-                                    index < review.rating
-                                      ? 'fill-amber-400 text-amber-400'
-                                      : 'fill-gray-200 text-gray-200'
-                                  }
-                                />
+                      {editingReviewId === review.id ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={editDraft.author}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  author: e.target.value,
+                                })
+                              }
+                              className="border border-gray-300 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                              placeholder="Імʼя"
+                            />
+                            <select
+                              value={editDraft.rating}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  rating: Number(e.target.value),
+                                })
+                              }
+                              className="border border-gray-300 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                            >
+                              {[5, 4, 3, 2, 1].map((value) => (
+                                <option key={value} value={value}>
+                                  {value} з 5
+                                </option>
                               ))}
-                            </span>
-                            <span className="text-sm font-semibold text-gray-900">
-                              {review.author}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(review.created_at).toLocaleDateString(
-                                'uk-UA'
-                              )}
-                            </span>
+                            </select>
+                            <input
+                              type="datetime-local"
+                              value={editDraft.createdAt}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  createdAt: e.target.value,
+                                })
+                              }
+                              className="border border-gray-300 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                            />
                           </div>
-                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">
-                            {review.text}
-                          </p>
+                          <textarea
+                            rows={3}
+                            value={editDraft.text}
+                            onChange={(e) =>
+                              setEditDraft({
+                                ...editDraft,
+                                text: e.target.value,
+                              })
+                            }
+                            className="w-full border border-gray-300 rounded-md px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          />
+                          <label className="flex items-center gap-2 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={editDraft.isPublished}
+                              onChange={(e) =>
+                                setEditDraft({
+                                  ...editDraft,
+                                  isPublished: e.target.checked,
+                                })
+                              }
+                              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                            />
+                            Опублікований на сайті
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveReview(review.id)}
+                              disabled={reviewSaving}
+                              className="bg-gray-900 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800 transition disabled:opacity-50"
+                            >
+                              {reviewSaving ? 'Збереження...' : 'Зберегти'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditReview}
+                              className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+                            >
+                              Скасувати
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteReview(review.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          aria-label="Видалити відгук"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="flex items-center gap-0.5">
+                                {[0, 1, 2, 3, 4].map((index) => (
+                                  <Star
+                                    key={index}
+                                    size={13}
+                                    className={
+                                      index < review.rating
+                                        ? 'fill-amber-400 text-amber-400'
+                                        : 'fill-gray-200 text-gray-200'
+                                    }
+                                  />
+                                ))}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900">
+                                {review.author}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {new Date(review.created_at).toLocaleString(
+                                  'uk-UA',
+                                  {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )}
+                              </span>
+                              {!review.is_published && (
+                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                                  Прихований
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">
+                              {review.text}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePublish(review)}
+                              className="p-1.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                              title={
+                                review.is_published
+                                  ? 'Приховати з сайту'
+                                  : 'Опублікувати на сайті'
+                              }
+                              aria-label={
+                                review.is_published
+                                  ? 'Приховати відгук'
+                                  : 'Опублікувати відгук'
+                              }
+                            >
+                              {review.is_published ? (
+                                <EyeOff size={16} />
+                              ) : (
+                                <Eye size={16} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => startEditReview(review)}
+                              className="p-1.5 text-gray-400 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                              title="Редагувати відгук"
+                              aria-label="Редагувати відгук"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReview(review.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              aria-label="Видалити відгук"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1031,19 +1248,35 @@ export const ProductForm: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Текст відгуку
-                </label>
-                <textarea
-                  rows={3}
-                  value={reviewDraft.text}
-                  onChange={(e) =>
-                    setReviewDraft({ ...reviewDraft, text: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Коротко: що сподобалось, чи підійшло, як працює"
-                />
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Текст відгуку
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reviewDraft.text}
+                    onChange={(e) =>
+                      setReviewDraft({ ...reviewDraft, text: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Коротко: що сподобалось, чи підійшло, як працює"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Дата й час
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={reviewDate}
+                    onChange={(e) => setReviewDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Порожнє поле - поточна дата.
+                  </p>
+                </div>
               </div>
 
               {reviewError && (

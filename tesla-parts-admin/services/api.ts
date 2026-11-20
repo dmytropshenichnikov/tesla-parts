@@ -999,10 +999,29 @@ export const ApiService = {
   // Відгуки на конкретний товар — окремо від галереї фото-відгуків.
   getProductReviews: async (productId: string): Promise<ProductReview[]> => {
     const res = await _authenticatedFetch(
-      `${API_URL}/product-reviews/?product_id=${encodeURIComponent(productId)}`,
+      `${API_URL}/product-reviews/all?product_id=${encodeURIComponent(productId)}`,
       { headers: getHeaders() }
     );
     if (!res.ok) throw new Error('Failed to fetch product reviews');
+    return res.json();
+  },
+
+  updateProductReview: async (
+    id: number,
+    payload: {
+      author?: string;
+      rating?: number;
+      text?: string;
+      is_published?: boolean;
+      created_at?: string;
+    }
+  ): Promise<ProductReview> => {
+    const res = await _authenticatedFetch(`${API_URL}/product-reviews/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to update product review');
     return res.json();
   },
 
@@ -1012,6 +1031,8 @@ export const ApiService = {
     rating: number;
     text: string;
     sort_order?: number;
+    is_published?: boolean;
+    created_at?: string;
   }): Promise<ProductReview> => {
     const res = await _authenticatedFetch(`${API_URL}/product-reviews/`, {
       method: 'POST',

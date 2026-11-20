@@ -192,6 +192,19 @@ class ProductReviewCreate(BaseModel):
     rating: int = 5
     text: str
     sort_order: int | None = 0
+    is_published: bool = True
+    created_at: datetime | None = None
+
+
+class ProductReviewPublicCreate(BaseModel):
+    """Відгук покупця з картки товару. Публікується після перевірки адміном."""
+
+    product_id: str
+    author: str
+    rating: int = 5
+    text: str
+    # Пастка для ботів: люди це поле не бачать і не заповнюють.
+    website: str | None = None
 
 
 class ProductReviewUpdate(BaseModel):
@@ -199,6 +212,8 @@ class ProductReviewUpdate(BaseModel):
     rating: int | None = None
     text: str | None = None
     sort_order: int | None = None
+    is_published: bool | None = None
+    created_at: datetime | None = None
 
 
 class ProductReviewRead(BaseModel):
@@ -209,6 +224,7 @@ class ProductReviewRead(BaseModel):
     text: str
     created_at: datetime
     sort_order: int
+    is_published: bool
 
 class CustomerRegisterRequest(BaseModel):
     email: str

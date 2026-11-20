@@ -200,6 +200,7 @@ export interface SchematicUsage {
   subsystem: string;
   number: number;
   part_number?: string | null;
+  image_url?: string;
 }
 
 export interface SchematicMatchedPart {
@@ -301,4 +302,5 @@ export interface ProductReview {
   text: string;
   created_at: string;
   sort_order: number;
+  is_published: boolean;
 }

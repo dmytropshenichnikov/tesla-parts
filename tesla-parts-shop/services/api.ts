@@ -219,6 +219,35 @@ export const api = {
     }
   },
 
+  // Відгук покупця з картки товару. Публікується після перевірки адміном,
+  // тому успіх не змінює список на сторінці - показуємо подяку.
+  createProductReview: async (payload: {
+    product_id: string;
+    author: string;
+    rating: number;
+    text: string;
+    website?: string;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const res = await apiFetch(`/product-reviews/public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return { ok: true };
+      let message = 'Не вдалося надіслати відгук. Спробуйте ще раз.';
+      try {
+        const data = await res.json();
+        if (typeof data?.detail === 'string') message = data.detail;
+      } catch {
+        // Відповідь без JSON - лишаємо загальний текст.
+      }
+      return { ok: false, error: message };
+    } catch {
+      return { ok: false, error: 'Немає звʼязку. Спробуйте ще раз.' };
+    }
+  },
+
   // --- Customer Authentication ---
   registerCustomer: async (email: string) => {
     const res = await apiFetch(`/customers/register`, {

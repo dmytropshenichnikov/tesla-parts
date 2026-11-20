@@ -173,7 +173,7 @@ class ProductReview(SQLModel, table=True):
     """Відгук на конкретний товар.
 
     Окремі відгуки на товар не змішуються з галереєю фото-відгуків (Review):
-    галерея показує магазин загалом, а тут — оцінка й текст саме про цю
+    галерея показує магазин загалом, а тут - оцінка й текст саме про цю
     деталь, які менеджер додає з адмінки.
     """
 
@@ -184,6 +184,9 @@ class ProductReview(SQLModel, table=True):
     text: str
     created_at: datetime = naive_created_at()
     sort_order: int = Field(default=0, index=True)
+    # Відгук покупця з сайту приходить прихованим: спершу його бачить адмін
+    # і вирішує, публікувати чи ні.
+    is_published: bool = Field(default=True, index=True)
 
 class CustomerPromoCodeLink(SQLModel, table=True):
     customer_id: int = Field(foreign_key="customer.id", primary_key=True)

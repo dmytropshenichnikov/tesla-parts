@@ -88,7 +88,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
-  // Відгуки на цю деталь — керуються з адмінки, тому вантажимо окремо.
+  // Відгуки на цю деталь керуються з адмінки, тому вантажимо окремо.
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   // Модель, з якої прийшли в каталог. Раніше передавали ?model=... у URL —
   // це псувало SEO-адресу. Тепер модель летить у react-router state, а query
@@ -624,7 +624,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 {product.inStock && (
                   <div className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[11px] sm:text-xs font-semibold text-amber-800">
                     <Clock size={14} className="text-amber-600 shrink-0" />
-                    <span>Замовте до 15:00 — відправимо сьогодні</span>
+                    <span>Замовте до 15:00 - відправимо сьогодні</span>
                   </div>
                 )}
 
@@ -762,7 +762,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 </div>
               </div>
 
-              <ProductReviews reviews={reviews} />
+              <ProductReviews reviews={reviews} productId={product.id} />
             </div>
           </div>
         </div>

@@ -178,4 +178,5 @@ export interface ProductReview {
   text: string;
   created_at: string;
   sort_order: number;
+  is_published: boolean;
 }
