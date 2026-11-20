@@ -623,59 +623,50 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 {cleanTitle}
               </h1>
 
-              {/* Артикули: два тихі рядки замість великих пігулок. Значення
-                  моноширинні й переносяться, щоб номер було видно повністю;
-                  клік по рядку копіює його. */}
+              {/* Артикули: два тихі рядки замість великих пігулок. Текст
+                  можна виділити й скопіювати вручну; окрема кнопка копіювання
+                  є лише в артикула, бо крос-номери копіюють поштучно. */}
               {(product.detail_number || crossNumbers.length > 0) && (
                 <div className="mb-4 rounded-xl border border-gray-200/80 divide-y divide-gray-100 overflow-hidden">
                   {product.detail_number && (
-                    <button
-                      onClick={() => handleCopy(product.detail_number, 'part')}
-                      className="group w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                      title="Натисніть, щоб скопіювати артикул"
-                    >
+                    <div className="w-full flex items-start gap-2.5 px-3 py-2">
                       <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
                         Артикул
                       </span>
                       <span className="flex-1 min-w-0 flex items-start gap-2">
-                        <span className="font-mono text-[11px] sm:text-xs font-medium text-gray-900 leading-snug break-words">
+                        <span className="select-text font-mono text-[11px] sm:text-xs font-medium text-gray-900 leading-snug break-words">
                           {displayPartNumbers(product.detail_number)}
                         </span>
-                        {copiedField === 'part' ? (
-                          <Check size={13} className="text-emerald-600 shrink-0 mt-0.5" />
-                        ) : (
-                          <Copy
-                            size={13}
-                            className="text-gray-300 group-hover:text-gray-600 transition-colors shrink-0 mt-0.5"
-                          />
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(product.detail_number, 'part')}
+                          className="p-1.5 -m-1.5 rounded text-gray-300 hover:text-gray-700 transition-colors shrink-0 cursor-pointer"
+                          aria-label="Скопіювати артикул"
+                          title="Скопіювати артикул"
+                        >
+                          {copiedField === 'part' ? (
+                            <Check size={14} className="text-emerald-600" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
                       </span>
-                    </button>
+                    </div>
                   )}
 
                   {crossNumbers.length > 0 && (
-                    <button
-                      onClick={() => handleCopy(crossNumbers.join(', '), 'cross')}
-                      className="group w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                      title="Натисніть, щоб скопіювати крос-номери"
-                    >
+                    <div className="w-full flex items-start gap-2.5 px-3 py-2">
                       <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
                         Крос
                       </span>
-                      <span className="flex-1 min-w-0 flex items-start gap-2">
-                        <span className="font-mono text-[11px] sm:text-xs text-gray-600 leading-snug break-words">
-                          {crossNumbers.map(withAlternate).join(', ')}
-                        </span>
-                        {copiedField === 'cross' ? (
-                          <Check size={13} className="text-emerald-600 shrink-0 mt-0.5" />
-                        ) : (
-                          <Copy
-                            size={13}
-                            className="text-gray-300 group-hover:text-gray-600 transition-colors shrink-0 mt-0.5"
-                          />
-                        )}
+                      <span className="flex-1 min-w-0 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] sm:text-xs text-gray-600 leading-snug">
+                        {crossNumbers.map((number, index) => (
+                          <span key={`${number}-${index}`} className="select-text whitespace-nowrap">
+                            {withAlternate(number)}
+                          </span>
+                        ))}
                       </span>
-                    </button>
+                    </div>
                   )}
                 </div>
               )}
