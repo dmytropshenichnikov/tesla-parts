@@ -1,4 +1,4 @@
-import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption, ProductReview } from '../types';
+import { Product, Order, Category, Subcategory, Schematic, SchematicSummary, SchematicModelOption, SchematicSectionOption, ProductReview, ProductReviewQueue } from '../types';
 import { trimImageFile } from '../utils/trimImageFile';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -1003,6 +1003,18 @@ export const ApiService = {
       { headers: getHeaders() }
     );
     if (!res.ok) throw new Error('Failed to fetch product reviews');
+    return res.json();
+  },
+
+  // Черга модерації відгуків на товари: нові, опубліковані або всі.
+  getProductReviewQueue: async (
+    status: 'pending' | 'published' | 'all' = 'pending'
+  ): Promise<ProductReviewQueue> => {
+    const res = await _authenticatedFetch(
+      `${API_URL}/product-reviews/moderation?status=${status}`,
+      { headers: getHeaders() }
+    );
+    if (!res.ok) throw new Error('Failed to fetch review queue');
     return res.json();
   },
 

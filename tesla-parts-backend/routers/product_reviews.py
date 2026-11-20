@@ -62,6 +62,53 @@ def read_product_reviews(
     ).all()
 
 
+@router.get("/moderation", dependencies=[Depends(get_current_admin)])
+def review_moderation_queue(
+    status: str = Query(default="pending"),
+    limit: int = Query(default=200, le=500),
+    session: Session = Depends(get_session),
+):
+    """Черга модерації: усі відгуки на товари з назвою товару.
+
+    status: pending (на перевірці), published (на сайті), all.
+    """
+    every = session.exec(select(ProductReview)).all()
+    counts = {
+        "pending": sum(1 for review in every if not review.is_published),
+        "published": sum(1 for review in every if review.is_published),
+    }
+
+    query = select(ProductReview, Product).join(
+        Product, Product.id == ProductReview.product_id
+    )
+    if status == "pending":
+        query = query.where(ProductReview.is_published == False)  # noqa: E712
+    elif status == "published":
+        query = query.where(ProductReview.is_published == True)  # noqa: E712
+    # У «всіх» спершу те, що чекає рішення, далі найновіші.
+    query = query.order_by(
+        ProductReview.is_published.asc(), ProductReview.created_at.desc()
+    ).limit(limit)
+
+    rows = session.exec(query).all()
+    items = [
+        {
+            "id": review.id,
+            "product_id": review.product_id,
+            "product_name": product.name,
+            "product_slug": product.slug,
+            "author": review.author,
+            "rating": review.rating,
+            "text": review.text,
+            "created_at": review.created_at,
+            "sort_order": review.sort_order,
+            "is_published": review.is_published,
+        }
+        for review, product in rows
+    ]
+    return {"items": items, "counts": counts}
+
+
 @router.get(
     "/all",
     response_model=list[ProductReviewRead],

@@ -15,7 +15,7 @@ import { Login } from './components/Login';
 import CategoryList from './components/CategoryList';
 import { SettingsPage } from './pages/SettingsPage';
 import { CMSPage } from './pages/CMSPage';
-import { ReviewManager } from './components/ReviewManager';
+import { ReviewsHub } from './components/ReviewsHub';
 import { CustomerList } from './components/CustomerList';
 import { CustomerProfile } from './components/CustomerProfile';
 import { PromoCodeList } from './components/PromoCodeList';
@@ -74,7 +74,7 @@ const App: React.FC = () => {
                     element={<ResetPasswordPage />}
                   />
                   <Route path="/cms" element={<CMSPage />} />
-                  <Route path="/reviews" element={<ReviewManager />} />
+                  <Route path="/reviews" element={<ReviewsHub />} />
                   <Route path="/customers" element={<CustomerList />} />
                   <Route path="/customers/:id" element={<CustomerProfile />} />
                   <Route path="/promocodes" element={<PromoCodeList />} />

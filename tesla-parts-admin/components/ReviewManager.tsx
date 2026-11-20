@@ -114,7 +114,7 @@ export const ReviewManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Відгуки</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Фото-відгуки</h2>
           <p className="text-gray-500">
             Керування скріншотами відгуків клієнтів
           </p>

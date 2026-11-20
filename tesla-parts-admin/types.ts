@@ -180,3 +180,13 @@ export interface ProductReview {
   sort_order: number;
   is_published: boolean;
 }
+
+export interface ProductReviewQueueItem extends ProductReview {
+  product_name: string;
+  product_slug: string | null;
+}
+
+export interface ProductReviewQueue {
+  items: ProductReviewQueueItem[];
+  counts: { pending: number; published: number };
+}

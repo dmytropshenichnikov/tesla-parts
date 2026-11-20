@@ -23,6 +23,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
+import { ApiService } from '../services/api';
 import { SessionExpiredModal } from './SessionExpiredModal';
 
 interface LayoutProps {
@@ -35,17 +36,19 @@ const SidebarItem = ({
   label,
   active,
   collapsed,
+  badge,
 }: {
   to: string;
   icon: any;
   label: string;
   active: boolean;
   collapsed: boolean;
+  badge?: number;
 }) => (
   <Link
     to={to}
     title={collapsed ? label : undefined}
-    className={`flex items-center rounded-lg transition-all duration-200 ${collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'} ${
+    className={`relative flex items-center rounded-lg transition-all duration-200 ${collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'} ${
       active
         ? 'bg-red-600 text-white'
         : 'text-gray-400 hover:bg-gray-800 hover:text-white'
@@ -53,10 +56,24 @@ const SidebarItem = ({
   >
     <Icon size={20} className="shrink-0" />
     {!collapsed && (
-      <span className="font-medium whitespace-nowrap overflow-hidden transition-all duration-200">
-        {label}
-      </span>
+      <>
+        <span className="font-medium whitespace-nowrap overflow-hidden transition-all duration-200">
+          {label}
+        </span>
+        {badge ? (
+          <span
+            className={`ml-auto min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+              active ? 'bg-white text-red-600' : 'bg-red-600 text-white'
+            }`}
+          >
+            {badge}
+          </span>
+        ) : null}
+      </>
     )}
+    {collapsed && badge ? (
+      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
+    ) : null}
   </Link>
 );
 
@@ -65,6 +82,27 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);
+  const [pendingReviews, setPendingReviews] = React.useState(0);
+
+  // Скільки відгуків чекає рішення: показуємо цифру біля «Відгуки», щоб
+  // нові відгуки не губились. Оновлюємо при переході й раз на хвилину.
+  React.useEffect(() => {
+    let alive = true;
+    const loadPending = async () => {
+      try {
+        const data = await ApiService.getProductReviewQueue('pending');
+        if (alive) setPendingReviews(data.counts.pending);
+      } catch {
+        // Бейдж не критичний для роботи адмінки.
+      }
+    };
+    loadPending();
+    const timer = window.setInterval(loadPending, 60000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [location.pathname]);
   const { logout } = useAuth();
 
   const handleLogout = () => {
@@ -152,6 +190,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             label="Відгуки"
             active={location.pathname === '/reviews'}
             collapsed={collapsed}
+            badge={pendingReviews}
           />
           <SidebarItem
             to="/products"
