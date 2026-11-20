@@ -389,10 +389,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
   const messageLines = [
     `Доброго дня! Мене цікавить запчастина:`,
-    `🚗 ${cleanTitle}`,
-    product.detail_number ? `🔢 Артикул: ${product.detail_number}` : null,
-    `💰 Ціна: ${displayMainPrice}`,
-    `🔗 ${productUrl}`,
+    cleanTitle,
+    product.detail_number ? `Артикул: ${product.detail_number}` : null,
+    `Ціна: ${displayMainPrice}`,
+    productUrl,
     ``,
     `Підкажіть, будь ласка, чи є в наявності та коли можлива відправка?`,
   ].filter((line) => line !== null) as string[];
@@ -460,20 +460,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
           <span>Назад</span>
         </button>
 
-        {/* Model tags on desktop */}
-        {models.length > 0 && (
-          <div className="hidden sm:flex items-center gap-1.5 flex-wrap justify-end">
-            {models.map((model, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200/60"
-              >
-                <Car size={12} className="text-gray-400" />
-                {model}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Main Product Card */}
@@ -506,12 +492,13 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 {/* Badges on photo: Stock & Part Type together in top-left */}
                 <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-wrap items-center gap-1.5">
                   {product.inStock ? (
-                    <span className="inline-flex items-center gap-1 bg-emerald-600/90 backdrop-blur-xs text-white text-xs font-semibold px-2.5 py-0.5 rounded-full shadow-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-xs text-gray-800 text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                       В наявності
                     </span>
                   ) : (
-                    <span className="inline-flex items-center bg-gray-700/90 backdrop-blur-xs text-gray-200 text-xs font-medium px-2.5 py-0.5 rounded-full shadow-xs">
+                    <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-xs text-gray-500 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-200 shadow-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
                       Під замовлення
                     </span>
                   )}
@@ -590,72 +577,80 @@ const ProductPage: React.FC<ProductPageProps> = ({
           {/* Right Column: Product Details & Purchase */}
           <div className="md:w-1/2 p-4 pt-3 sm:p-6 sm:pt-4 md:px-8 md:pt-5 md:pb-8 flex flex-col justify-between">
             <div>
-              {/* Бейджі «В наявності» / «Аналог» тут більше не дублюємо - вони вже
-                  є на фото. Лишаємо тільки мобільні теги моделей. */}
-              <div className="sm:hidden flex flex-wrap items-center gap-2 mb-2.5">
-                {/* Mobile models tags */}
-                {models.map((model, idx) => (
-                  <span
-                    key={idx}
-                    className="sm:hidden inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                  >
-                    <Car size={11} className="text-gray-400" />
-                    {model}
-                  </span>
-                ))}
-              </div>
+              {/* Сумісність одним рядком: список моделей замість пігулки на
+                  кожну модель. На вузькому екрані модельний ряд — це довгий
+                  «шум», тому тут лише тихий підпис із машиною. */}
+              {models.length > 0 && (
+                <div className="flex items-start gap-1.5 mb-1.5">
+                  <Car size={13} className="text-gray-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed line-clamp-2">
+                    <span className="text-gray-400">Tesla</span>{' '}
+                    {models.join(' · ')}
+                  </p>
+                </div>
+              )}
 
               {/* Product Title (Clean, human-readable) */}
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 tracking-tight leading-snug mb-2">
+              <h1 className="text-[17px] sm:text-xl md:text-[22px] font-bold text-gray-900 tracking-tight leading-snug mb-3">
                 {cleanTitle}
               </h1>
 
-              {/* Part # & Cross # Copyable Chips */}
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                {product.detail_number && (
-                  <button
-                    onClick={() => handleCopy(product.detail_number, 'part')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200/80 transition-all active:scale-95 cursor-pointer text-xs font-mono font-medium group"
-                    title="Натисніть, щоб скопіювати артикул"
-                  >
-                    <span className="text-gray-600 font-sans font-normal text-[11px]">
-                      Артикул OEM:
-                    </span>
-                    <span className="font-bold">{displayPartNumbers(product.detail_number)}</span>
-                    {copiedField === 'part' ? (
-                      <Check size={13} className="text-emerald-600" />
-                    ) : (
-                      <Copy
-                        size={13}
-                        className="text-gray-400 group-hover:text-gray-700 transition-colors"
-                      />
-                    )}
-                  </button>
-                )}
+              {/* Артикули: два тихі рядки замість великих пігулок. Значення
+                  моноширинні й переносяться, щоб номер було видно повністю;
+                  клік по рядку копіює його. */}
+              {(product.detail_number || crossNumbers.length > 0) && (
+                <div className="mb-4 rounded-xl border border-gray-200/80 divide-y divide-gray-100 overflow-hidden">
+                  {product.detail_number && (
+                    <button
+                      onClick={() => handleCopy(product.detail_number, 'part')}
+                      className="group w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                      title="Натисніть, щоб скопіювати артикул"
+                    >
+                      <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
+                        Артикул
+                      </span>
+                      <span className="flex-1 min-w-0 flex items-start gap-2">
+                        <span className="font-mono text-[11px] sm:text-xs font-medium text-gray-900 leading-snug break-words">
+                          {displayPartNumbers(product.detail_number)}
+                        </span>
+                        {copiedField === 'part' ? (
+                          <Check size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <Copy
+                            size={13}
+                            className="text-gray-300 group-hover:text-gray-600 transition-colors shrink-0 mt-0.5"
+                          />
+                        )}
+                      </span>
+                    </button>
+                  )}
 
-                {crossNumbers.length > 0 && (
-                  <button
-                    onClick={() => handleCopy(crossNumbers.join(', '), 'cross')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200/70 transition-all active:scale-95 cursor-pointer text-xs font-mono group"
-                    title="Натисніть, щоб скопіювати крос-номери"
-                  >
-                    <span className="text-gray-500 font-sans font-normal text-[11px]">
-                      Крос:
-                    </span>
-                    <span className="font-medium truncate max-w-[180px] sm:max-w-[320px]">
-                      {crossNumbers.map(withAlternate).join(', ')}
-                    </span>
-                    {copiedField === 'cross' ? (
-                      <Check size={13} className="text-emerald-600" />
-                    ) : (
-                      <Copy
-                        size={13}
-                        className="text-gray-400 group-hover:text-gray-700 transition-colors"
-                      />
-                    )}
-                  </button>
-                )}
-              </div>
+                  {crossNumbers.length > 0 && (
+                    <button
+                      onClick={() => handleCopy(crossNumbers.join(', '), 'cross')}
+                      className="group w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                      title="Натисніть, щоб скопіювати крос-номери"
+                    >
+                      <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
+                        Крос
+                      </span>
+                      <span className="flex-1 min-w-0 flex items-start gap-2">
+                        <span className="font-mono text-[11px] sm:text-xs text-gray-600 leading-snug break-words">
+                          {crossNumbers.map(withAlternate).join(', ')}
+                        </span>
+                        {copiedField === 'cross' ? (
+                          <Check size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+                        ) : (
+                          <Copy
+                            size={13}
+                            className="text-gray-300 group-hover:text-gray-600 transition-colors shrink-0 mt-0.5"
+                          />
+                        )}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Price Block */}
               <div className="bg-gray-50/90 rounded-2xl p-3.5 sm:p-4 border border-gray-100 mb-4">
@@ -720,7 +715,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     для «під замовлення» вона була б неправдою. */}
                 {product.inStock && (
                   <div className="flex items-center justify-center gap-1.5 pt-0.5 text-[11px] sm:text-xs font-medium text-gray-500">
-                    <Clock size={13} className="text-amber-500 shrink-0" />
+                    <Clock size={13} className="text-gray-400 shrink-0" />
                     <span>Замовте до 15:00 - відправимо сьогодні</span>
                   </div>
                 )}
@@ -738,7 +733,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                       className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-gray-50 transition-colors text-left group cursor-pointer"
                     >
                       <span className="flex items-center gap-2 min-w-0">
-                        <Layers size={16} className="text-tesla-red shrink-0" />
+                        <Layers size={16} className="text-gray-400 shrink-0" />
                         <span className="text-xs font-semibold text-gray-900 truncate">
                           {sortedSchematics.length === 1
                             ? `Ця деталь є на схемі (${sortedSchematics[0].model})`
@@ -833,41 +828,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
           </h2>
 
           <div className="divide-y divide-gray-100 text-sm">
-            {product.detail_number && (
-              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                <span className="text-gray-500 font-medium">Оригінальний номер (OEM):</span>
-                <span className="font-mono font-bold text-gray-900 bg-gray-100 px-2.5 py-0.5 rounded-md inline-block self-start sm:self-auto">
-                  {displayPartNumbers(product.detail_number)}
-                </span>
-              </div>
-            )}
-
-            {crossNumbers.length > 0 && (
-              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                <span className="text-gray-500 font-medium">Крос-номери / Аналоги:</span>
-                <span className="font-mono text-gray-800 text-xs sm:text-sm">
-                  {crossNumbers.map(withAlternate).join(', ')}
-                </span>
-              </div>
-            )}
-
-            {models.length > 0 && (
-              <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                <span className="text-gray-500 font-medium">Сумісність з Tesla:</span>
-                <span className="font-semibold text-gray-900">
-                  {models.join(', ')}
-                </span>
-              </div>
-            )}
-
             {partType && (
               <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
                 <span className="text-gray-500 font-medium">Тип запчастини:</span>
-                <span
-                  className={`font-semibold inline-flex items-center gap-1.5 ${
-                    partType === 'original' ? 'text-blue-700' : 'text-amber-800'
-                  }`}
-                >
+                <span className="font-semibold inline-flex items-center gap-1.5 text-gray-900">
                   {partType === 'original' ? (
                     <>
                       <ShieldCheck size={15} className="text-blue-600" />
@@ -885,7 +849,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
 
             <div className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
               <span className="text-gray-500 font-medium">Стан:</span>
-              <span className="text-emerald-700 font-semibold">
+              <span className="text-gray-900 font-medium">
                 Нова деталь
               </span>
             </div>

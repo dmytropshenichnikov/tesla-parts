@@ -20,29 +20,27 @@ export const PartTypeBadge: React.FC<PartTypeBadgeProps> = ({
   const isOriginal = type === 'original';
 
   if (variant === 'floating') {
-    return isOriginal ? (
+    // На фото товару бейдж має бути тихим: біла плашка з тонкою рамкою,
+    // колір лишається тільки в іконці — щоб не сперечатися з фото.
+    return (
       <span
-        className={`inline-flex items-center gap-1 bg-blue-600/90 text-white backdrop-blur-xs font-bold rounded-full shadow-xs border border-blue-400/30 select-none ${
-          size === 'md'
-            ? 'text-xs px-2.5 py-0.5'
-            : 'text-[10px] px-2 py-0.5'
+        className={`inline-flex items-center gap-1 bg-white/95 backdrop-blur-xs text-gray-800 font-semibold rounded-full shadow-xs border border-gray-200 select-none ${
+          size === 'md' ? 'text-xs px-2.5 py-1' : 'text-[10px] px-2 py-0.5'
         } ${className}`}
-        title="Оригінальна деталь Tesla"
+        title={isOriginal ? 'Оригінальна деталь Tesla' : 'Аналог високої якості'}
       >
-        <ShieldCheck size={size === 'md' ? 12 : 10.5} className="text-blue-100 flex-shrink-0" />
-        <span>Оригінал</span>
-      </span>
-    ) : (
-      <span
-        className={`inline-flex items-center gap-1 bg-amber-500/95 text-neutral-900 backdrop-blur-xs font-bold rounded-full shadow-xs border border-amber-300/40 select-none ${
-          size === 'md'
-            ? 'text-xs px-2.5 py-0.5'
-            : 'text-[10px] px-2 py-0.5'
-        } ${className}`}
-        title="Аналог високої якості"
-      >
-        <Layers size={size === 'md' ? 12 : 10.5} className="text-neutral-800 flex-shrink-0" />
-        <span>Аналог</span>
+        {isOriginal ? (
+          <ShieldCheck
+            size={size === 'md' ? 12 : 10.5}
+            className="text-blue-600 flex-shrink-0"
+          />
+        ) : (
+          <Layers
+            size={size === 'md' ? 12 : 10.5}
+            className="text-amber-500 flex-shrink-0"
+          />
+        )}
+        <span>{isOriginal ? 'Оригінал' : 'Аналог'}</span>
       </span>
     );
   }

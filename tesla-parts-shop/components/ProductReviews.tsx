@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Star, X } from 'lucide-react';
+import { ArrowRight, PenLine, Star, X } from 'lucide-react';
 import { ProductReview } from '../types';
 import { api } from '../services/api';
 
@@ -12,20 +12,22 @@ type ModalView = 'list' | 'form' | 'thanks';
 
 /**
  * Оцінка у зірках. Порожні зірки потрібні, щоб рядок не стрибав між
- * відгуками з різною оцінкою.
+ * відгуками з різною оцінкою. Зірки нейтральні (темно-сірі), щоб не додавати
+ * ще один колір до картки: кольором тут лишається тільки статус.
  */
 const Stars: React.FC<{ rating: number; size?: number }> = ({
   rating,
-  size = 13,
+  size = 12,
 }) => (
   <span className="flex items-center gap-0.5" aria-hidden="true">
     {[0, 1, 2, 3, 4].map((index) => (
       <Star
         key={index}
         size={size}
+        strokeWidth={1.5}
         className={
           index < Math.round(rating)
-            ? 'fill-amber-400 text-amber-400'
+            ? 'fill-gray-800 text-gray-800'
             : 'fill-gray-200 text-gray-200'
         }
       />
@@ -42,6 +44,14 @@ const formatDate = (value: string): string => {
     year: 'numeric',
   });
 };
+
+const initials = (name: string): string =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
 
 const pluralReviews = (count: number): string => {
   if (count === 1) return 'відгук';
@@ -141,58 +151,85 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
 
   return (
     <>
-      <div className="mt-4 rounded-xl border border-gray-100 bg-white overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-3.5 pt-3">
-          <span className="text-xs font-semibold text-gray-900">
-            Відгуки на цю деталь
+      <section className="mt-4 rounded-2xl border border-gray-200/80 bg-gray-50/60 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3.5">
+          <span className="text-[13px] font-semibold text-gray-900">
+            Відгуки покупців
           </span>
           {count > 0 && (
             <button
               type="button"
               onClick={openList}
-              className="text-[11px] font-semibold text-tesla-red hover:underline cursor-pointer shrink-0"
+              className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer shrink-0"
             >
-              Усі відгуки ({count})
+              Усі
+              <ArrowRight size={13} />
             </button>
           )}
         </div>
 
         {latest ? (
-          <button
-            type="button"
-            onClick={openList}
-            className="w-full text-left px-3.5 pt-1.5 pb-3 cursor-pointer group"
-          >
-            <span className="flex items-center gap-1.5 flex-wrap">
-              <Stars rating={latest.rating} />
-              <span className="text-[11px] font-semibold text-gray-900">
-                {latest.author}
+          <>
+            <div className="flex items-center gap-1.5 px-4 pt-2">
+              <Stars rating={average} size={13} />
+              <span className="text-xs font-bold text-gray-900">
+                {averageText}
               </span>
-              {latest.created_at && (
-                <span className="text-[11px] text-gray-400">
-                  · {formatDate(latest.created_at)}
+              <span className="text-[11px] text-gray-400">
+                · {count} {pluralReviews(count)}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={openList}
+              className="mt-2.5 w-full text-left px-4 pb-3 flex items-start gap-2.5 cursor-pointer group"
+            >
+              <span className="w-9 h-9 rounded-full bg-white border border-gray-200 text-[11px] font-bold text-gray-500 flex items-center justify-center shrink-0">
+                {initials(latest.author)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs font-semibold text-gray-900 truncate">
+                    {latest.author}
+                  </span>
+                  {latest.created_at && (
+                    <span className="text-[10px] text-gray-400 shrink-0">
+                      {formatDate(latest.created_at)}
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span className="block mt-1.5 text-[13px] leading-relaxed text-gray-700 line-clamp-2 group-hover:text-gray-900 transition-colors">
-              {latest.text}
-            </span>
-          </button>
+                <span className="mt-0.5 block text-[13px] leading-relaxed text-gray-600 line-clamp-2 group-hover:text-gray-900 transition-colors">
+                  {latest.text}
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openForm}
+              className="w-full flex items-center justify-center gap-1.5 border-t border-gray-200/80 py-2 text-[11px] font-medium text-gray-500 hover:text-gray-900 hover:bg-white/70 transition-colors cursor-pointer"
+            >
+              <PenLine size={12} />
+              Залишити свій відгук
+            </button>
+          </>
         ) : (
-          <div className="px-3.5 pt-1.5 pb-3">
+          <div className="px-4 pt-1 pb-4">
             <p className="text-[13px] text-gray-500">
-              Відгуків ще немає. Розкажіть, як деталь стала.
+              Ще немає відгуків на цю деталь.
             </p>
             <button
               type="button"
               onClick={openForm}
-              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 text-[11px] font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700 text-[11px] font-semibold hover:border-gray-300 hover:text-gray-900 transition-colors cursor-pointer"
             >
+              <PenLine size={12} />
               Залишити відгук
             </button>
           </div>
         )}
-      </div>
+      </section>
 
       {isOpen && (
         <div
@@ -218,7 +255,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
                 {view === 'list' && count > 0 && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Stars rating={average} size={14} />
-                    <span className="text-xs font-semibold text-gray-900">
+                    <span className="text-xs font-bold text-gray-900">
                       {averageText}
                     </span>
                     <span className="text-xs text-gray-500">
@@ -241,21 +278,28 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
               <>
                 <div className="overflow-y-auto divide-y divide-gray-100">
                   {reviews.map((review) => (
-                    <div key={review.id} className="px-5 py-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Stars rating={review.rating} />
-                        <span className="text-xs font-semibold text-gray-900">
-                          {review.author}
-                        </span>
-                        {review.created_at && (
-                          <span className="text-[11px] text-gray-400">
-                            · {formatDate(review.created_at)}
+                    <div key={review.id} className="px-5 py-4 flex items-start gap-3">
+                      <span className="w-9 h-9 rounded-full bg-gray-50 border border-gray-200 text-[11px] font-bold text-gray-500 flex items-center justify-center shrink-0">
+                        {initials(review.author)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold text-gray-900">
+                            {review.author}
                           </span>
-                        )}
+                          {review.created_at && (
+                            <span className="text-[11px] text-gray-400">
+                              · {formatDate(review.created_at)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1">
+                          <Stars rating={review.rating} />
+                        </div>
+                        <p className="mt-1.5 text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+                          {review.text}
+                        </p>
                       </div>
-                      <p className="mt-1.5 text-sm leading-relaxed text-gray-700 whitespace-pre-line">
-                        {review.text}
-                      </p>
                     </div>
                   ))}
                   {count === 0 && (
@@ -294,9 +338,10 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
                       >
                         <Star
                           size={24}
+                          strokeWidth={1.5}
                           className={
                             value <= rating
-                              ? 'fill-amber-400 text-amber-400'
+                              ? 'fill-gray-800 text-gray-800'
                               : 'fill-gray-200 text-gray-200'
                           }
                         />
