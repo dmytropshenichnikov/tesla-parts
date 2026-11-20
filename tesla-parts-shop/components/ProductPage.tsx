@@ -16,6 +16,7 @@ import {
   ZoomIn,
   CreditCard,
   Clock,
+  FileText,
   Sparkles,
   CheckCircle2,
   Layers,
@@ -796,19 +797,19 @@ const ProductPage: React.FC<ProductPageProps> = ({
               {/* Trust Badges Grid */}
               <div className="grid grid-cols-2 gap-2.5 pt-4 border-t border-gray-100 text-[11px] sm:text-xs text-gray-600">
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
-                  <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
+                  <ShieldCheck size={16} className="text-gray-400 flex-shrink-0" />
                   <span>Гарантія</span>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
-                  <Truck size={16} className="text-tesla-red flex-shrink-0" />
+                  <Truck size={16} className="text-gray-400 flex-shrink-0" />
                   <span>Нова Пошта (1-2 дні)</span>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
-                  <CreditCard size={16} className="text-blue-500 flex-shrink-0" />
+                  <CreditCard size={16} className="text-gray-400 flex-shrink-0" />
                   <span>Оплата при отриманні</span>
                 </div>
                 <div className="flex items-center gap-2 p-2 rounded-xl bg-gray-50/70">
-                  <Clock size={16} className="text-amber-500 flex-shrink-0" />
+                  <Clock size={16} className="text-gray-400 flex-shrink-0" />
                   <span>Швидка відправка</span>
                 </div>
               </div>
@@ -904,12 +905,26 @@ const ProductPage: React.FC<ProductPageProps> = ({
             </div>
           </div>
 
+          {/* Опис деталі - перед схемами: спершу що це за деталь, потім
+              де вона стоїть. */}
+          {product.description && (
+            <div className="mt-8 pt-8 border-t border-gray-100">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <FileText size={18} className="text-gray-400" />
+                Опис деталі
+              </h3>
+              <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                {product.description}
+              </div>
+            </div>
+          )}
+
           {/* Схеми, де стоїть ця деталь - шлях «від деталі до вузла» */}
           {productSchematics.length > 0 && (
             <div id="product-schemes" className="mt-8 pt-8 border-t border-gray-100 scroll-mt-20">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                <h3 className="text-base sm:text-lg font-bold text-gray-950 flex items-center gap-2">
-                  <Layers size={20} className="text-tesla-red" />
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Layers size={18} className="text-gray-400" />
                   Де стоїть на схемі ({sortedSchematics.length})
                 </h3>
                 <span className="text-xs text-gray-400 font-manrope">
@@ -935,7 +950,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   <Link
                     key={`${usage.schematic_id}-${usage.number}-${index}`}
                     to={`/schemes/${usage.schematic_id}`}
-                    className="group flex flex-col bg-white border border-gray-200/90 hover:border-tesla-red rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200"
+                    className="group flex flex-col bg-white border border-gray-200/90 hover:border-gray-300 rounded-2xl overflow-hidden hover:shadow-md transition-all duration-200"
                   >
                     {/* Visual schematic preview */}
                     <div className="relative aspect-[4/3] w-full bg-gray-50/70 p-2.5 flex items-center justify-center border-b border-gray-100 overflow-hidden">
@@ -951,7 +966,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                           <Layers size={32} />
                         </div>
                       )}
-                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-xs text-tesla-red font-montserrat font-bold text-[10px] sm:text-xs shadow-2xs border border-red-100">
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-white/95 backdrop-blur-xs text-gray-500 font-montserrat font-bold text-[10px] sm:text-xs shadow-2xs border border-gray-200">
                         № {usage.number}
                       </span>
                     </div>
@@ -959,16 +974,16 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     {/* Card Content */}
                     <div className="p-3 flex flex-col flex-grow justify-between">
                       <div>
-                        <div className="font-montserrat font-bold text-xs sm:text-sm text-gray-950 group-hover:text-tesla-red transition-colors line-clamp-1">
+                        <div className="font-montserrat font-bold text-xs sm:text-sm text-gray-900 group-hover:text-tesla-red transition-colors line-clamp-1">
                           {usage.model} {usage.generation && usage.generation !== 'Стандартна' ? usage.generation : ''}
                         </div>
                         <div className="text-[11px] sm:text-xs text-gray-500 font-manrope line-clamp-1 mt-0.5">
                           {usage.title || usage.subsystem || usage.section}
                         </div>
                       </div>
-                      <div className="mt-2.5 pt-2 border-t border-gray-100/80 flex items-center justify-between text-[11px] font-semibold text-tesla-red">
+                      <div className="mt-2.5 pt-2 border-t border-gray-100/80 flex items-center justify-between text-[11px] font-semibold text-gray-500 group-hover:text-tesla-red transition-colors">
                         <span>Перейти до схеми</span>
-                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                        <ArrowRight size={13} className="text-gray-400 group-hover:text-tesla-red group-hover:translate-x-0.5 transition-all" />
                       </div>
                     </div>
                   </Link>
@@ -979,7 +994,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAllSchematics(!showAllSchematics)}
-                  className="mt-4 w-full py-2.5 px-4 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-tesla-red border border-gray-200 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="mt-4 w-full py-2.5 px-4 text-xs font-semibold text-gray-600 bg-white hover:bg-gray-50 hover:text-tesla-red border border-gray-200 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>
                     {showAllSchematics
@@ -989,15 +1004,6 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   {showAllSchematics ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
               )}
-            </div>
-          )}
-
-          {product.description && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <h3 className="text-base font-bold text-gray-900 mb-3">Опис деталі</h3>
-              <div className="text-gray-600 leading-relaxed text-sm sm:text-base whitespace-pre-line bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                {product.description}
-              </div>
             </div>
           )}
         </div>
