@@ -2,7 +2,7 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
 
     <!-- Google Tag Manager -->
     <!-- Must stay a classic (non-module) script above the importmap below: an
@@ -18,28 +18,13 @@
         w.dataLayer = w.dataLayer || [];
         w.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
         var started = false;
-        // Тестовий контейнер: ?gtm_test=GTM-XXXXXXX вмикає інший контейнер
-        // лише для цієї сторінки. Потрібно, щоб зібрати й перевірити новий
-        // контейнер у Preview на живому сайті, не чіпаючи робочий: звичайні
-        // відвідувачі без параметра отримують GTM-W2HKHCLB, як і раніше.
-        var testContainer = /[?&]gtm_test=(GTM-[A-Za-z0-9]+)/.exec(
-          w.location.search
-        );
-        var containerId = testContainer
-          ? testContainer[1].toUpperCase()
-          : 'GTM-W2HKHCLB';
         function loadGTM() {
           if (started) return;
           started = true;
           var j = d.createElement('script');
           j.async = true;
-          j.src = 'https://www.googletagmanager.com/gtm.js?id=' + containerId;
+          j.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-W2HKHCLB';
           d.head.appendChild(j);
-        }
-        // У тестовому режимі вантажимо одразу: інакше Preview не підключиться.
-        if (testContainer) {
-          loadGTM();
-          return;
         }
         // wheel, а не scroll: програматичний скрол (пререндер, скріншоти,
         // Lighthouse) не має запускати аналітику.
@@ -137,14 +122,6 @@
         }
       }
     </script>
-      <style>
-      /* Prevent iOS auto-zoom on input focus */
-      @media screen and (max-width: 768px) {
-        input, select, textarea {
-          font-size: 16px !important;
-        }
-      }
-    </style>
   </head>
 
   <body>
