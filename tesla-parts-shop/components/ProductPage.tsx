@@ -538,6 +538,43 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   )}
                 </div>
 
+                {/* На телефоні додаткові фото - маленькі кружечки поверх
+                    головного: ряд мініатюр під фото зсував ціну й кнопку
+                    купівлі за межі першого екрана. */}
+                {allImages.length > 1 && (
+                  <div className="sm:hidden absolute bottom-3 left-3 z-10 flex items-center gap-1.5 rounded-lg bg-white/75 backdrop-blur-xs p-1 shadow-xs">
+                    {allImages.slice(0, 4).map((img, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedImage(img);
+                        }}
+                        aria-label={`Фото ${idx + 1}`}
+                        aria-pressed={selectedImage === img}
+                        className={`w-7 h-7 rounded overflow-hidden border transition-colors cursor-pointer ${
+                          selectedImage === img
+                            ? 'border-tesla-red'
+                            : 'border-white/80 opacity-80'
+                        }`}
+                      >
+                        <img
+                          src={thumbUrl(mediaUrl(img))}
+                          alt=""
+                          loading="lazy"
+                          className="w-full h-full object-cover rounded-[3px]"
+                        />
+                      </button>
+                    ))}
+                    {allImages.length > 4 && (
+                      <span className="text-[10px] font-bold text-gray-700 bg-white/90 backdrop-blur-xs rounded px-1.5 py-1">
+                        +{allImages.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Tap to zoom hint */}
                 <div className="absolute bottom-2.5 right-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-[11px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 pointer-events-none transition-opacity opacity-80 group-hover:opacity-100">
                   <ZoomIn size={13} />
