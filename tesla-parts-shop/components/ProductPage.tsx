@@ -619,6 +619,15 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   )}
                 </button>
 
+                {/* Обіцянка відправки: показуємо лише для товарів у наявності —
+                    для «під замовлення» вона була б неправдою. */}
+                {product.inStock && (
+                  <div className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100 text-[11px] sm:text-xs font-semibold text-amber-800">
+                    <Clock size={14} className="text-amber-600 shrink-0" />
+                    <span>Замовте до 15:00 — відправимо сьогодні</span>
+                  </div>
+                )}
+
                 {/* Усі схеми, де стоїть деталь — одразу під кнопкою купівлі.
                     Раніше показували лише першу схему й підпис «та ще N», який
                     не був посиланням: з картки можна було піти тільки на одну
