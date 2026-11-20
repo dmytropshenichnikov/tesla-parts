@@ -221,11 +221,7 @@ const Header: React.FC<HeaderProps> = ({
   // Дропдаун для десктопа (коли категорій > 4)
   const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false);
 
-  // Дропдаун для мобільного/планшета
-  const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
-
   const desktopDropdownRef = useRef<HTMLDivElement>(null);
-  const mobileCategoryRef = useRef<HTMLDivElement>(null);
 
   // Закриття при кліку зовні
   useEffect(() => {
@@ -235,12 +231,6 @@ const Header: React.FC<HeaderProps> = ({
         !desktopDropdownRef.current.contains(event.target as Node)
       ) {
         setIsDesktopDropdownOpen(false);
-      }
-      if (
-        mobileCategoryRef.current &&
-        !mobileCategoryRef.current.contains(event.target as Node)
-      ) {
-        setIsMobileCategoryOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -304,20 +294,20 @@ const Header: React.FC<HeaderProps> = ({
                 className={`group flex items-center gap-1.5 px-3 py-2 rounded-xl font-montserrat font-bold transition-all cursor-pointer ${
                   isDesktopDropdownOpen
                     ? 'bg-gray-900 text-white shadow-xs'
-                    : 'text-gray-800 hover:text-tesla-red hover:bg-gray-50'
+                    : 'text-gray-800 hover:text-gray-950 hover:bg-gray-50'
                 }`}
               >
                 <Grid2x2
                   size={16}
                   className={`flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
-                    isDesktopDropdownOpen ? 'text-white' : 'text-tesla-red'
+                    isDesktopDropdownOpen ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'
                   }`}
                 />
                 <span>Каталог</span>
                 <ChevronDown
                   size={14}
                   className={`transition-transform duration-300 ${
-                    isDesktopDropdownOpen ? 'rotate-180 text-tesla-red' : 'text-gray-400'
+                    isDesktopDropdownOpen ? 'rotate-180 text-gray-300' : 'text-gray-400'
                   }`}
                 />
               </button>
@@ -384,9 +374,9 @@ const Header: React.FC<HeaderProps> = ({
             {/* Schemes Link */}
             <Link
               to="/schemes"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-gray-800 hover:text-tesla-red hover:bg-gray-50 font-montserrat font-bold transition-all text-sm group"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-gray-800 hover:text-gray-950 hover:bg-gray-50 font-montserrat font-bold transition-all text-sm group"
             >
-              <Layers size={16} className="text-tesla-red group-hover:scale-110 transition-transform" />
+              <Layers size={16} className="text-gray-400 group-hover:text-gray-600 group-hover:scale-110 transition-transform" />
               <span>Схеми</span>
             </Link>
 
@@ -396,11 +386,11 @@ const Header: React.FC<HeaderProps> = ({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-montserrat font-bold transition-all border text-xs shadow-2xs ${
                 activeCar
                   ? 'bg-red-50/80 text-gray-900 border-red-200 hover:bg-red-100'
-                  : 'bg-gray-50 text-gray-800 border-gray-200/80 hover:bg-gray-100 hover:text-tesla-red'
+                  : 'bg-gray-50 text-gray-800 border-gray-200/80 hover:bg-gray-100 hover:text-gray-950'
               }`}
               title={activeCar ? `Ваша Tesla: ${activeCar.model}` : 'Перейти в Мій Гараж'}
             >
-              <Car size={15} className="text-tesla-red flex-shrink-0" />
+              <Car size={15} className="text-gray-500 flex-shrink-0" />
               {activeCar ? (() => {
                 const target = getCarTargetInfo(activeCar);
                 return (
@@ -417,80 +407,6 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Right Action Block: Search, Currency, Phone, Profile, Cart */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 xl:gap-3 flex-shrink-0 ml-auto">
-            {/* Quick Catalog on Mobile */}
-            <div className="lg:hidden flex items-center gap-1">
-              <div className="relative" ref={mobileCategoryRef}>
-                <button
-                  onClick={() => setIsMobileCategoryOpen(!isMobileCategoryOpen)}
-                  className={`flex items-center gap-1 font-montserrat font-bold text-xs text-gray-800 hover:text-tesla-red transition-all whitespace-nowrap bg-gray-100 hover:bg-gray-200 py-1.5 px-2.5 rounded-xl border border-gray-200/80 shadow-xs active:scale-95 cursor-pointer ${
-                    isMobileCategoryOpen ? 'ring-2 ring-tesla-red/20 bg-white border-tesla-red/40 text-tesla-red' : ''
-                  }`}
-                >
-                  <Grid2x2 size={14} className="text-tesla-red flex-shrink-0" />
-                  <span>Каталог</span>
-                  <ChevronDown
-                    size={13}
-                    className={`text-gray-500 transition-transform duration-300 ${
-                      isMobileCategoryOpen ? 'rotate-180 text-tesla-red' : 'rotate-0'
-                    }`}
-                  />
-                </button>
-
-                {isMobileCategoryOpen && (
-                  <div className="fixed inset-x-3 top-[54px] sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100 z-50 animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-gray-100 max-w-sm sm:max-w-none ml-auto">
-                    {/* Garage & Schemes on Mobile */}
-                    <div className="p-2 bg-gradient-to-b from-gray-50/80 to-white space-y-1">
-                      <Link
-                        to="/garage"
-                        onClick={() => setIsMobileCategoryOpen(false)}
-                        className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-100 text-gray-900 transition-all text-left"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-red-50 text-tesla-red border border-red-100 flex items-center justify-center shrink-0">
-                          <Car size={16} />
-                        </div>
-                        <div>
-                          <div className="font-montserrat font-bold text-xs">
-                            {activeCar ? `Гараж: ${activeCar.plate || activeCar.model}` : 'Мій Гараж'}
-                          </div>
-                          <div className="text-[11px] text-gray-400 font-manrope">За номером авто або VIN</div>
-                        </div>
-                      </Link>
-
-                      <Link
-                        to="/schemes"
-                        onClick={() => setIsMobileCategoryOpen(false)}
-                        className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-50 text-gray-900 hover:text-tesla-red transition-all group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 border border-gray-200 flex items-center justify-center shrink-0">
-                          <Layers size={16} className="text-tesla-red" />
-                        </div>
-                        <div>
-                          <div className="font-montserrat font-bold text-xs">Схеми запчастин</div>
-                          <div className="text-[11px] text-gray-400 font-manrope">Схеми вузлів (EPC)</div>
-                        </div>
-                      </Link>
-                    </div>
-
-                    <div className="py-1 max-h-80 overflow-y-auto">
-                      <div className="px-4 py-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/70 border-b border-gray-100 font-montserrat">
-                        Моделі та категорії
-                      </div>
-                      {sortedCategories.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          to={`/category/${slugify(cat.name)}`}
-                          onClick={() => setIsMobileCategoryOpen(false)}
-                          className="block w-full text-left px-4 py-2.5 text-sm text-gray-800 hover:bg-red-50 hover:text-tesla-red border-b border-gray-50 last:border-0 font-medium transition-all hover:translate-x-1 duration-150"
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Expandable Search Form (Desktop) */}
             <form
               onSubmit={(e) => {
@@ -542,7 +458,7 @@ const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Search Button */}
             <button
-              className="md:hidden text-gray-700 p-2 rounded-xl hover:bg-gray-100 active:scale-90 transition-all cursor-pointer"
+              className="md:hidden w-10 h-10 flex items-center justify-center text-gray-700 rounded-full hover:bg-gray-100 active:scale-90 transition-all cursor-pointer"
               onClick={handleOpenMobileSearch}
               aria-label="Пошук"
             >
@@ -573,7 +489,7 @@ const Header: React.FC<HeaderProps> = ({
                 className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 hover:text-gray-950 transition-all text-xs font-semibold"
                 title="Зателефонувати нам"
               >
-                <Phone size={14} className="text-emerald-500" />
+                <Phone size={14} className="text-gray-500" />
                 <span className="font-mono">{phoneNumber}</span>
               </a>
             )}
@@ -599,12 +515,12 @@ const Header: React.FC<HeaderProps> = ({
                   ? `Кошик ${formatPrice(displayCartTotal)} (${cartCount} шт)`
                   : `Кошик ${formatPrice(displayCartTotal)}`
               }
-              className="flex items-center gap-2.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-gray-950 hover:bg-black text-white active:scale-95 transition-all shadow-sm cursor-pointer group select-none flex-shrink-0"
+              className="flex items-center justify-center sm:justify-start gap-2.5 w-10 h-10 sm:w-auto sm:h-auto p-0 sm:px-3.5 sm:py-2 rounded-full sm:rounded-xl bg-transparent sm:bg-gray-950 hover:bg-gray-100 sm:hover:bg-black text-gray-800 sm:text-white active:scale-95 transition-all sm:shadow-sm cursor-pointer group select-none flex-shrink-0"
             >
               <div className="relative flex items-center justify-center">
-                <ShoppingCart size={17} className="text-gray-300 group-hover:text-white transition-colors" />
+                <ShoppingCart size={20} className="text-gray-700 sm:text-gray-300 group-hover:text-gray-950 sm:group-hover:text-white transition-colors" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2.5 bg-tesla-red text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-gray-950 animate-in zoom-in duration-150">
+                  <span className="absolute -top-2 -right-2.5 bg-tesla-red text-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-white sm:ring-gray-950 animate-in zoom-in duration-150">
                     {cartCount}
                   </span>
                 )}
@@ -626,7 +542,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Mobile Burger Menu Button */}
             <button
               onClick={handleOpenDrawer}
-              className="lg:hidden p-2 text-gray-800 hover:text-tesla-red rounded-xl hover:bg-gray-100 active:scale-85 transition-all cursor-pointer"
+              className="lg:hidden w-10 h-10 flex items-center justify-center text-gray-800 rounded-full hover:bg-gray-100 active:scale-90 transition-all cursor-pointer"
               aria-label="Відкрити меню"
             >
               <Menu size={22} />
@@ -649,9 +565,10 @@ const Header: React.FC<HeaderProps> = ({
               }}
               className="flex items-center gap-2 w-full"
             >
-              <div className="relative flex-grow animate-input-wave-fluid">
+              <div className="relative flex-grow">
                 <input
-                  type="text"
+                  type="search"
+                  inputMode="search"
                   placeholder="Пошук запчастин..."
                   className="w-full bg-gray-100 focus:bg-white rounded-xl py-2.5 px-4 pl-10 pr-9 text-[16px] text-gray-900 placeholder:text-gray-400 outline-none border border-transparent focus:border-tesla-red/30 focus:ring-2 focus:ring-tesla-red/20 transition-colors shadow-inner"
                   value={searchQuery}
@@ -742,7 +659,26 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col">
+              <div className="mt-4">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                  Каталог
+                </div>
+                <div className="flex flex-col">
+                  {sortedCategories.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      to={`/category/${slugify(cat.name)}`}
+                      onClick={() => handleAnimatedCloseDrawer()}
+                      className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 rounded-xl transition-all hover:translate-x-1 group active:scale-[0.98]"
+                    >
+                      <span>{cat.name}</span>
+                      <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-all" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
                   Меню
                 </div>
