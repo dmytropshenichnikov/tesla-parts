@@ -56,6 +56,28 @@ interface ProductPageProps {
   phoneNumber?: string;
 }
 
+/**
+ * Дві колонки картки товару вмикаються з md (768px). Відгуки на широкому
+ * екрані стоять під фото, на телефоні - після кнопки купівлі, тому потрібно
+ * знати поточний режим у JS, а не ховати копію через CSS.
+ */
+const useWideLayout = (): boolean => {
+  const [isWide, setIsWide] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 768px)').matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = () => setIsWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return isWide;
+};
+
 const ProductPage: React.FC<ProductPageProps> = ({
   product,
   currency,
@@ -92,6 +114,7 @@ const ProductPage: React.FC<ProductPageProps> = ({
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
   // Відгуки на цю деталь керуються з адмінки, тому вантажимо окремо.
   const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const isWideLayout = useWideLayout();
   const [showAllSchematics, setShowAllSchematics] = useState(false);
   // Модель, з якої прийшли в каталог. Раніше передавали ?model=... у URL  - 
   // це псувало SEO-адресу. Тепер модель летить у react-router state, а query
@@ -491,6 +514,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
               )}
             </div>
 
+            {/* На широкому екрані відгуки стоять під фото: правий стовпчик
+                коротший, і картка виглядає рівніше. */}
+            {isWideLayout && (
+              <ProductReviews reviews={reviews} productId={product.id} />
+            )}
           </div>
 
           {/* Right Column: Product Details & Purchase */}
@@ -720,7 +748,11 @@ const ProductPage: React.FC<ProductPageProps> = ({
                 </div>
               </div>
 
-              <ProductReviews reviews={reviews} productId={product.id} />
+              {/* На телефоні відгуки лишаються під кнопкою купівлі: не
+                  відсуваємо ціну й кнопку вниз. */}
+              {!isWideLayout && (
+                <ProductReviews reviews={reviews} productId={product.id} />
+              )}
             </div>
           </div>
         </div>
