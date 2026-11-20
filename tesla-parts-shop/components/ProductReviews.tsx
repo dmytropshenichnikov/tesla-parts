@@ -146,21 +146,13 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({
           <span className="text-xs font-semibold text-gray-900">
             Відгуки на цю деталь
           </span>
-          {count > 0 ? (
+          {count > 0 && (
             <button
               type="button"
               onClick={openList}
               className="text-[11px] font-semibold text-tesla-red hover:underline cursor-pointer shrink-0"
             >
               Усі відгуки ({count})
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={openForm}
-              className="text-[11px] font-semibold text-tesla-red hover:underline cursor-pointer shrink-0"
-            >
-              Залишити відгук
             </button>
           )}
         </div>
