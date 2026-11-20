@@ -142,6 +142,9 @@ const ProductPage: React.FC<ProductPageProps> = ({
   } | null>(null);
   const gallerySwiped = useRef(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  // Крос-номери згорнуті: у списку буває 5-6 номерів, і в картці вони
+  // займали пів екрана. Розгортаються кнопкою зі стрілкою.
+  const [showCrossNumbers, setShowCrossNumbers] = useState(false);
   // Схеми, де використовується ця деталь (зворотний шлях: товар → вузол)
   const [productSchematics, setProductSchematics] = useState<SchematicUsage[]>([]);
   // Відгуки на цю деталь керуються з адмінки, тому вантажимо окремо.
@@ -655,17 +658,49 @@ const ProductPage: React.FC<ProductPageProps> = ({
                   )}
 
                   {crossNumbers.length > 0 && (
-                    <div className="w-full flex items-start gap-2.5 px-3 py-2">
-                      <span className="w-[52px] sm:w-[64px] shrink-0 pt-px text-[10px] uppercase tracking-wide font-semibold text-gray-400">
-                        Крос
-                      </span>
-                      <span className="flex-1 min-w-0 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] sm:text-xs text-gray-600 leading-snug">
-                        {crossNumbers.map((number, index) => (
-                          <span key={`${number}-${index}`} className="select-text whitespace-nowrap">
-                            {withAlternate(number)}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCrossNumbers((open) => !open)}
+                        aria-expanded={showCrossNumbers}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                      >
+                        <span className="w-[52px] sm:w-[64px] shrink-0 text-[10px] uppercase tracking-wide font-semibold text-gray-400">
+                          Крос
+                        </span>
+                        <span className="flex-1 min-w-0 text-[11px] sm:text-xs text-gray-600">
+                          {crossNumbers.length}{' '}
+                          {crossNumbers.length === 1
+                            ? 'номер'
+                            : crossNumbers.length < 5
+                              ? 'номери'
+                              : 'номерів'}
+                          {!showCrossNumbers && (
+                            <span className="hidden sm:inline text-gray-400">
+                              {' '}· натисніть, щоб показати
+                            </span>
+                          )}
+                        </span>
+                        <ChevronDown
+                          size={14}
+                          className={`text-gray-400 shrink-0 transition-transform ${
+                            showCrossNumbers ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {showCrossNumbers && (
+                        <div className="px-3 pb-2.5 flex items-start gap-2.5">
+                          <span className="w-[52px] sm:w-[64px] shrink-0" aria-hidden="true" />
+                          <span className="flex-1 min-w-0 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] sm:text-xs text-gray-600 leading-snug">
+                            {crossNumbers.map((number, index) => (
+                              <span key={`${number}-${index}`} className="select-text whitespace-nowrap">
+                                {withAlternate(number)}
+                              </span>
+                            ))}
                           </span>
-                        ))}
-                      </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
