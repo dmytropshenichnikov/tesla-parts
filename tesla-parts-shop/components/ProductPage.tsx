@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AppContext';
 import { trackViewItem } from '../utils/analytics';
 import { getProductPartType } from '../utils/partType';
+import ReviewStrip from './ReviewStrip';
 import {
   appendAlternates,
   displayPartNumbers,
@@ -605,6 +606,10 @@ const ProductPage: React.FC<ProductPageProps> = ({
                     </>
                   )}
                 </button>
+
+                {/* Компактний рядок довіри: оцінка магазину на АвтоПро і
+                    перехід до відгуків. Один рядок — картка не роздувається. */}
+                <ReviewStrip />
 
                 {/* Усі схеми, де стоїть деталь — одразу під кнопкою купівлі.
                     Раніше показували лише першу схему й підпис «та ще N», який
