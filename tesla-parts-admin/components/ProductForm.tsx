@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ApiService } from '../services/api';
 import { ArrowLeft, Upload, X, Plus, Star, Trash2, Eye, EyeOff, Pencil } from 'lucide-react';
@@ -18,6 +18,36 @@ const createEmptyAssignment = (): CategoryAssignment => ({
   categoryId: null,
   subcategoryPath: [],
 });
+
+// Текстове поле росте під весь текст: у довгого опису (10-20 рядків) не
+// треба скролити всередині маленького вікна, а висота сторінки підлаштовується
+// сама. Висоту перераховуємо на кожну зміну значення, при завантаженні товару
+// в редагуванні та при зміні ширини вікна.
+const useAutoGrow = (value: string) => {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const resize = () => {
+      el.style.height = 'auto';
+      // scrollHeight не враховує рамку, а box-sizing: border-box її включає —
+      // без цієї поправки останній рядок обрізався б на 2 px.
+      const border = el.offsetHeight - el.clientHeight;
+      el.style.height = `${el.scrollHeight + border}px`;
+    };
+    resize();
+    // Шрифт може підвантажитись після першого рендеру — міряємо ще раз.
+    const raf = window.requestAnimationFrame(resize);
+    window.addEventListener('resize', resize);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, [value]);
+
+  return ref;
+};
 
 const PLACEHOLDER_IMAGE_URL = 'https://via.placeholder.com/300';
 
@@ -103,6 +133,10 @@ export const ProductForm: React.FC = () => {
     part_type: '' as '' | 'original' | 'analog',
     pack_quantity: '' as string,
   });
+
+  // Поля опису ростуть під весь текст (див. useAutoGrow вище).
+  const descriptionRef = useAutoGrow(formData.description);
+  const metaDescriptionRef = useAutoGrow(formData.meta_description);
 
   const [exchangeRate, setExchangeRate] = useState<number>(40); // Default fallback
 
@@ -934,11 +968,12 @@ export const ProductForm: React.FC = () => {
             <textarea
               required
               rows={4}
+              ref={descriptionRef}
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none overflow-hidden"
               placeholder="Детальний опис товару..."
             />
           </div>
@@ -1012,6 +1047,7 @@ export const ProductForm: React.FC = () => {
                 </label>
                 <textarea
                   rows={3}
+                  ref={metaDescriptionRef}
                   value={formData.meta_description}
                   onChange={(e) =>
                     setFormData({
@@ -1019,7 +1055,7 @@ export const ProductForm: React.FC = () => {
                       meta_description: e.target.value,
                     })
                   }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none overflow-hidden"
                   placeholder="Короткий опис для пошукових систем"
                 />
                 <p className="text-xs text-gray-500 mt-1">
