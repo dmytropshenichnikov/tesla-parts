@@ -39,7 +39,28 @@ html,
 body {
   overflow-anchor: none;
 }
-/* Prevent iOS Safari auto-zoom on input focus while allowing manual pinch-zoom */
+/* Prevent iOS Safari auto-zoom on input focus */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+  touch-action: manipulation;
+}
+
+/* Сторінка не має горизонтального скролу: якщо він з'являвся, після
+   масштабування контент з'їжджав вліво і шапка виглядала обрізаною. */
+html,
+body {
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+/* clip не створює скрол-контейнер, тому липка шапка працює як раніше. */
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
 @media screen and (max-width: 768px) {
   input,
   select,

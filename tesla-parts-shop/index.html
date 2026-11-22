@@ -2,7 +2,44 @@
 <html lang="uk">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- Safari на iPhone майже не зважає на user-scalable=no: пінч або
+         авто-зум при фокусі поля залишали сторінку збільшеною назавжди.
+         Через це шапка з логотипом і кнопка зв'язку обрізались, а після
+         вибору відділення New Post контент з'їжджав вліво. Блокуємо саме
+         жестовий зум; вертикальний скрол і тапи працюють як раніше, а фото
+         товару мають власний зум у галереї. -->
+    <script>
+      (function () {
+        var block = function (e) { e.preventDefault(); };
+        document.addEventListener('gesturestart', block, { passive: false });
+        document.addEventListener('gesturechange', block, { passive: false });
+        document.addEventListener('gestureend', block, { passive: false });
+
+        // Страховка: якщо масштаб усе ж став більшим за 1 (системний зум,
+        // повернення з іншої програми) — повертаємо його після втрати фокуса.
+        var meta = document.querySelector('meta[name="viewport"]');
+        var reset = function () {
+          var vv = window.visualViewport;
+          if (!meta || !vv || vv.scale <= 1.01) return;
+          meta.setAttribute(
+            'content',
+            'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+          );
+          setTimeout(function () {
+            meta.setAttribute(
+              'content',
+              'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+            );
+            window.scrollTo(0, window.scrollY);
+          }, 120);
+        };
+        document.addEventListener('focusout', function () {
+          setTimeout(reset, 200);
+        });
+      })();
+    </script>
 
     <!-- Google Tag Manager -->
     <!-- Must stay a classic (non-module) script above the importmap below: an
