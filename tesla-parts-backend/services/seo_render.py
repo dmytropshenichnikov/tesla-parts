@@ -21,6 +21,7 @@ from models import (
     Category,
     Page,
     Product,
+    ProductSlugAlias,
     ProductSubcategoryLink,
     Schematic,
     SchematicHotspot,
@@ -38,12 +39,12 @@ ITEM_CONDITION = "https://schema.org/NewCondition"
 
 SHOP_INDEX_URL = os.getenv("SHOP_INDEX_URL", "http://shop:80/index.html")
 INDEX_TTL_SECONDS = 5
-# Понад цю кількість товарів посів не вбудовуємо — HTML був би завеликим,
+# Понад цю кількість товарів посів не вбудовуємо - HTML був би завеликим,
 # у такому разі фронт, як і раніше, завантажить дані сам.
 MAX_SEED_PRODUCTS = 300
 
 MAX_LINKS = 300
-# H1 головної — той самий у shop utils/seoTemplates.ts (HOME_H1)
+# H1 головної - той самий у shop utils/seoTemplates.ts (HOME_H1)
 HOME_H1 = "Запчастини для Tesla"
 
 STATIC_TITLES = {
@@ -52,6 +53,8 @@ STATIC_TITLES = {
     "returns": "Повернення",
     "faq": "Часті питання",
     "contacts": "Контакти",
+    "privacy-policy": "Політика конфіденційності",
+    "terms-of-service": "Умови сервісу",
 }
 
 
@@ -100,11 +103,11 @@ def _is_model(name: str) -> bool:
 def category_meta(name: str) -> tuple:
     if _is_model(name):
         return (
-            f"Запчастини Tesla {name} — купити з доставкою по Україні | {SITE_NAME}",
+            f"Запчастини Tesla {name} - купити з доставкою по Україні | {SITE_NAME}",
             f"Запчастини для Tesla {name}: нові деталі з номерами, ціни й наявність, підбір за схемами. Доставка по Україні.",
         )
     return (
-        f"{name} для Tesla — купити з доставкою по Україні | {SITE_NAME}",
+        f"{name} для Tesla - купити з доставкою по Україні | {SITE_NAME}",
         f"{name} для Tesla: нові товари, ціни й наявність. Доставка по Україні.",
     )
 
@@ -117,7 +120,7 @@ def subcategory_meta(name: str, category_name: str) -> tuple:
             f"{sub} для Tesla: нові товари, ціни й наявність. Доставка по Україні.",
         )
     return (
-        f"{sub} Tesla {category_name} — запчастини | {SITE_NAME}",
+        f"{sub} Tesla {category_name} - запчастини | {SITE_NAME}",
         f"{sub} для Tesla {category_name}: нові запчастини з номерами деталей, ціни й наявність. Доставка по Україні.",
     )
 
@@ -153,7 +156,7 @@ def _media(url: str) -> str:
 
 
 def _home_hero_card(category: Category, position: int) -> str:
-    """Плитка моделі — рівно та сама розмітка, що й у Hero.tsx (компонент магазину).
+    """Плитка моделі - рівно та сама розмітка, що й у Hero.tsx (компонент магазину).
 
     Однакова геометрія = React після старту перемальовує ті самі блоки,
     тому контент не «стрибає» (CLS), а Google/LCP бачить картинки одразу в HTML.
@@ -166,7 +169,7 @@ def _home_hero_card(category: Category, position: int) -> str:
         else ' loading="lazy" decoding="async"'
     )
     card = (
-        f'<a href="{_e(href)}" class="group relative h-64 md:h-96 rounded-2xl overflow-hidden '
+        f'<a href="{_e(href)}" class="group relative h-44 sm:h-48 md:h-52 lg:h-56 rounded-xl md:rounded-2xl border border-black/5 overflow-hidden '
         'cursor-pointer shadow-md hover:shadow-xl transition-shadow duration-300 ease-out '
         'active:scale-[0.98]" style="WebkitTapHighlightColor:transparent">'
         '<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10 '
@@ -174,7 +177,7 @@ def _home_hero_card(category: Category, position: int) -> str:
     )
     if image:
         # 480w-варіант (генерується поряд з оригіналом): картка ~400 px завширшки,
-        # тому 900-піксельний файл — це +50 КБ на картку і повільніший LCP.
+        # тому 900-піксельний файл - це +50 КБ на картку і повільніший LCP.
         image = _media(image)
         srcset = ""
         # Варіанти існують лише для локальних файлів (/static/...). Для зовнішніх
@@ -190,12 +193,12 @@ def _home_hero_card(category: Category, position: int) -> str:
     else:
         card += '<div class="absolute inset-0 bg-white"></div>'
     card += (
-        '<div class="absolute bottom-0 left-0 p-6 z-20 text-white w-full">'
-        f'<h2 class="text-xl md:text-2xl font-bold mb-1">{_e(category.name)}</h2>'
-        '<div class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider '
+        '<div class="absolute bottom-0 left-0 p-4 md:p-5 z-20 text-white w-full">'
+        f'<h2 class="text-lg md:text-xl font-bold mb-0.5">{_e(category.name)}</h2>'
+        '<div class="flex items-center gap-2 text-xs md:text-sm font-semibold uppercase tracking-wider '
         'text-gray-200 group-hover:text-white transition-colors">'
         '<span>Переглянути каталог</span>'
-        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" '
+        '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" '
         'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
         'stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path>'
         '<path d="m12 5 7 7-7 7"></path></svg>'
@@ -206,17 +209,17 @@ def _home_hero_card(category: Category, position: int) -> str:
 
 def _home(session: Session) -> PageSeo:
     seo = _static_seo(session, "home")
-    # Порядок і склад — як у GET /categories/ (sort_order desc, id), щоб дані,
+    # Порядок і склад - як у GET /categories/ (sort_order desc, id), щоб дані,
     # які підвантажить React, збіглися з тим, що вже намальовано сервером.
     categories = session.exec(
         select(Category).order_by(Category.sort_order.desc(), Category.id)
     ).all()
     cards = "".join(_home_hero_card(c, i) for i, c in enumerate(categories))
     hero = (
-        '<div class="mb-12">'
-        f'<h1 class="text-3xl md:text-4xl font-bold text-center mb-2 text-tesla-dark">{HOME_H1}</h1>'
-        '<p class="text-center text-lg text-gray-500 mb-8 font-manrope">Оберіть модель вашого Tesla</p>'
-        f'<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">{cards}</div>'
+        '<div class="mb-8 md:mb-10">'
+        f'<h1 class="text-2xl md:text-3xl font-bold text-center mb-1 text-tesla-dark">{HOME_H1}</h1>'
+        '<p class="text-center text-sm md:text-base text-gray-500 mb-5 font-manrope">Оберіть модель вашого Tesla</p>'
+        f'<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 md:gap-4 lg:gap-5">{cards}</div>'
         "</div>"
     )
 
@@ -277,7 +280,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
             .where(Subcategory.category_id == category.id, Subcategory.parent_id == None)  # noqa: E711
             .order_by(Subcategory.sort_order)
         ).all()
-        # як у products.read_products: у самій категорії — лише товари без підкатегорії
+        # як у products.read_products: у самій категорії - лише товари без підкатегорії
         products = session.exec(
             select(Product)
             .where(Product.category.contains(category.name), Product.subcategory_id == None)  # noqa: E711
@@ -318,7 +321,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
         body += "".join(f"<p>{_e(p)}</p>" for p in paragraphs)
 
     # Перші дві картинки (плитки підкатегорій або картки товарів) стартують
-    # разом із HTML — вони ж і є LCP на сторінці категорії.
+    # разом із HTML - вони ж і є LCP на сторінці категорії.
     head_extra = []
     for item in list(children) + list(products):
         if not item.image:
@@ -344,12 +347,12 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
 
     # Посів даних у HTML: React при ПЕРШОМУ рендері одразу має плитки підкатегорій
     # і товари. Без нього після першого фарбування вміст з'являвся з фази
-    # завантаження (крутілка/скелет) і сторінка стрибала — Lighthouse CLS 0.45
-    # на сторінках підкатегорій. Якщо дані вже в HTML — фронт не робить повторних
+    # завантаження (крутілка/скелет) і сторінка стрибала - Lighthouse CLS 0.45
+    # на сторінках підкатегорій. Якщо дані вже в HTML - фронт не робить повторних
     # запитів, тож вміст більше ніколи не змінюється.
     if len(products) <= MAX_SEED_PRODUCTS:
         try:
-            from routers.categories import (  # noqa: WPS433 — ліниво, щоб не було циклу
+            from routers.categories import (  # noqa: WPS433 - ліниво, щоб не було циклу
                 _serialize_subcategory_tree_no_products,
                 _sort_subcategories,
             )
@@ -367,14 +370,14 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
                 for root in roots
             ]
             seed = {
-                # шлях без домену — саме так його порівнює фронт (location.pathname)
+                # шлях без домену - саме так його порівнює фронт (location.pathname)
                 "path": canonical.removeprefix(SITE_URL),
                 "category": category_payload,
                 "products": [item.model_dump(exclude={"created_at"}) for item in products],
             }
             if sub_id:
                 # Блок «Схема цього вузла» завантажувався після фарбування і
-                # зсував товари вниз (залишковий CLS ~0.25) — вбудовуємо в HTML.
+                # зсував товари вниз (залишковий CLS ~0.25) - вбудовуємо в HTML.
                 from routers.schematics import get_schematics_for_subcategory  # noqa: WPS433
 
                 seed["subcategoryId"] = sub_id
@@ -383,7 +386,7 @@ def _category(session: Session, slug: str, sub_id: Optional[int]) -> Optional[Pa
                 )
             payload = json.dumps(seed, ensure_ascii=False, default=str).replace("<", "\\u003c")
             head_extra.append(f"<script>window.__CATEGORY_PAGE__={payload};</script>")
-        except Exception as exc:  # noqa: BLE001 — поіт не має ламати рендеринг SEO
+        except Exception as exc:  # noqa: BLE001 - поіт не має ламати рендеринг SEO
             print(f"category seed skipped: {exc}")
 
     return PageSeo(
@@ -428,7 +431,7 @@ def _product(session: Session, identifier: str) -> Optional[PageSeo]:
         og_type="product",
         json_ld=[_product_json_ld(product)] + _product_breadcrumb_json_ld(product),
         body=_product_body(product),
-        # Головне фото товару — LCP сторінки: завантажується одразу з HTML,
+        # Головне фото товару - LCP сторінки: завантажується одразу з HTML,
         # не чекаючи бандл і відповіді API.
         head_extra=(
             [_product_preload(product.image)] if product.image else []
@@ -441,7 +444,7 @@ def _category_cards(products: list[Product]) -> str:
     """Перші фото товарів у тій самій сітці, що й ProductList.
 
     Навіщо: картки малює React, тож LCP-фото з'являлось аж після виконання
-    бандла (~0.7-0.9 с). Розмітка й класи — як у ProductList.tsx, щоб після
+    бандла (~0.7-0.9 с). Розмітка й класи - як у ProductList.tsx, щоб після
     заміни нічого не стрибало.
     """
     if not products:
@@ -493,7 +496,7 @@ def _product_preload(image: str) -> str:
 
 
 def _product_seed(product: Product) -> str:
-    """window.__PRODUCT__ — щоб React малював сторінку одразу, без /api/products/{id}.
+    """window.__PRODUCT__ - щоб React малював сторінку одразу, без /api/products/{id}.
 
     Раніше сторінка показувала скелет, поки не прийде відповідь API: головне
     фото (LCP) з'являлось аж на ~0.9-1.9 с.
@@ -516,14 +519,14 @@ def _product_seed(product: Product) -> str:
             ).first() or product
             try:
                 rate = get_exchange_rate(session)
-            except Exception:  # noqa: BLE001 — курс не критичний для посіву
+            except Exception:  # noqa: BLE001 - курс не критичний для посіву
                 rate = 0
             payload = _build_product_response(fresh, rate).model_dump(mode="json")
 
         seed = {"path": _product_path(product), "product": payload}
         data = json.dumps(seed, ensure_ascii=False, default=str).replace("<", "\\u003c")
         return f"<script>window.__PRODUCT__={data};</script>"
-    except Exception as exc:  # noqa: BLE001 — посів не має ламати сторінку
+    except Exception as exc:  # noqa: BLE001 - посів не має ламати сторінку
         print(f"product seed skipped: {exc}")
         return ""
 
@@ -550,7 +553,7 @@ def _product_body(product: Product) -> str:
     """Серверний HTML товару в ТІЙ САМІЙ геометрії, що й ProductPage.tsx.
 
     Так перший екран малюється з HTML (LCP не чекає бандла), а коли React
-    замінює розмітку — елементи не стрибають (CLS). Google при цьому бачить
+    замінює розмітку - елементи не стрибають (CLS). Google при цьому бачить
     повний текст без виконання JS.
     """
     parts = ['<nav aria-label="breadcrumbs">']
@@ -658,7 +661,7 @@ def _info(session: Session, slug: str) -> Optional[PageSeo]:
     title = (page and page.title) or STATIC_TITLES.get(slug) or SITE_NAME
     text = re.sub(r"<[^>]+>", " ", page.content).strip() if page else ""
     if not text:
-        fallback_description = "Tesla Parts Center — інтернет-магазин запчастин для Tesla."
+        fallback_description = "Tesla Parts Center - інтернет-магазин запчастин для Tesla."
     elif len(text) > 160:
         fallback_description = text[:157].rstrip() + "..."
     else:
@@ -667,7 +670,7 @@ def _info(session: Session, slug: str) -> Optional[PageSeo]:
         title=_first(seo and seo.meta_title, f"{title} | {SITE_NAME}"),
         description=_first(seo and seo.meta_description, fallback_description),
         canonical=f"{SITE_URL}/info/{slug}",
-        # контент сторінок з адмінки — так само, як його виводить StaticPage
+        # контент сторінок з адмінки - так само, як його виводить StaticPage
         body=f"<h1>{_e(title)}</h1>" + (page.content.replace("\n", "<br>") if page else ""),
     )
 
@@ -687,12 +690,12 @@ def _schematic(session: Session, schematic_id: int) -> Optional[PageSeo]:
         return None
     car = f"Tesla {schematic.model} {schematic.generation}".strip()
     return PageSeo(
-        title=f"{schematic.title} — схема {car} | {SITE_NAME}",
+        title=f"{schematic.title} - схема {car} | {SITE_NAME}",
         description=f"Схема «{schematic.title}» для {car}: номери деталей і запчастини з цієї схеми.",
         canonical=f"{SITE_URL}/schemes/{schematic.id}",
         image=schematic.image_url,
         body=_schematic_body(session, schematic),
-        # Схема — LCP сторінки: вантажимо одразу з HTML, не чекаючи бандла.
+        # Схема - LCP сторінки: вантажимо одразу з HTML, не чекаючи бандла.
         head_extra=(
             [f'<link rel="preload" as="image" href="{_e(_media(schematic.image_url))}" fetchpriority="high">']
             if schematic.image_url
@@ -735,7 +738,7 @@ def _schematic_body(session: Session, schematic: Schematic) -> str:
             f'<img src="{_e(_media(schematic.image_url))}"{dims} alt="{_e(schematic.title)}" '
             'loading="eager" fetchpriority="high" style="width:100%;height:auto">'
             '<p class="mt-2.5 text-[11px] text-gray-500 font-manrope px-1">'
-            'Натисніть на червоний номер — деталь підсвітиться у списку</p></div>'
+            'Натисніть на червоний номер - деталь підсвітиться у списку</p></div>'
         )
     items_html = ''.join(items)
     list_html = f'<ul class="lg:col-span-6 xl:col-span-5">{items_html}</ul>' if items_html else ""
@@ -748,7 +751,7 @@ def _schematic_body(session: Session, schematic: Schematic) -> str:
     )
 
 
-# маршрути магазину без власних SEO-даних — віддаємо як є, з кодом 200
+# маршрути магазину без власних SEO-даних - віддаємо як є, з кодом 200
 SPA_ROUTES = {
     "/search",
     "/garage",
@@ -778,15 +781,29 @@ def legacy_redirect(session: Session, path: str) -> Optional[str]:
       переніс вагу на нову людиночитану адресу);
     - /model-3, /аксесуари тощо -> /category/<slug>.
     """
+    norm_path = "/" + path.strip("/")
+    if norm_path == "/privacy-policy":
+        return "/info/privacy-policy"
+    if norm_path == "/terms-of-service":
+        return "/info/terms-of-service"
     match = re.fullmatch(r"/product/([^/]+)", "/" + path.strip("/"))
     if match:
+        requested = match.group(1)
         product = session.exec(
             select(Product).where(
-                or_(Product.slug == match.group(1), Product.id == match.group(1))
+                or_(Product.slug == requested, Product.id == requested)
             )
         ).first()
-        if product and product.slug and product.slug != match.group(1):
+        if product and product.slug and product.slug != requested:
             return _product_path(product)
+        if not product:
+            # Стара адреса після виправлення slug (наприклад, копія товару з
+            # «kopiia» в адресі) — ведемо на актуальну сторінку.
+            alias = session.get(ProductSlugAlias, requested)
+            if alias:
+                aliased = session.get(Product, alias.product_id)
+                if aliased and aliased.slug:
+                    return _product_path(aliased)
         return None
 
     match = re.fullmatch(r"/([^/]+)", "/" + path.strip("/"))
@@ -796,7 +813,7 @@ def legacy_redirect(session: Session, path: str) -> Optional[str]:
 
 
 def resolve(session: Session, path: str) -> Optional[PageSeo]:
-    """SEO сторінки за шляхом без query; None — якщо сторінки не існує."""
+    """SEO сторінки за шляхом без query; None - якщо сторінки не існує."""
     path = "/" + path.strip("/")
     if path == "/":
         return _home(session)
@@ -881,13 +898,13 @@ def render(index_html: str, seo: PageSeo) -> str:
         count=1,
         flags=re.S,
     )
-    # head_extra — одразу після <head>: preload LCP-картинки має бути знайдено
+    # head_extra - одразу після <head>: preload LCP-картинки має бути знайдено
     # до інлайн-CSS і скриптів, інакше браузер виявляє його на 10-20 мс пізніше.
     preloads = [t for t in seo.head_extra if t.startswith("<link")]
     scripts = [t for t in seo.head_extra if not t.startswith("<link")]
     if preloads:
         page = page.replace("<head>", "<head>\n    " + "\n    ".join(preloads), 1)
-    # _head_tags сам додає head_extra — тут він не потрібен, інакше теги дублюються
+    # _head_tags сам додає head_extra - тут він не потрібен, інакше теги дублюються
     base_seo = dataclasses.replace(seo, head_extra=[])
     extra = scripts + [t for t in _head_tags(base_seo).split("\n    ") if t.strip()]
     page = page.replace("</head>", "    " + "\n    ".join(extra) + "\n  </head>", 1)

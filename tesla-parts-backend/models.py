@@ -60,6 +60,18 @@ class Subcategory(SQLModel, table=True):
         link_model=ProductSubcategoryLink,
     )
 
+class ProductSlugAlias(SQLModel, table=True):
+    """Старі адреси товару після виправлення slug.
+
+    /product/<old_slug> -> 301 на актуальний slug, щоб уже проіндексовані
+    сторінки й зовнішні посилання не втрачали вагу.
+    """
+
+    old_slug: str = Field(primary_key=True)
+    product_id: str = Field(foreign_key="product.id", index=True)
+    created_at: datetime = naive_created_at()
+
+
 class Product(SQLModel, table=True):
     id: str = Field(primary_key=True)
     # Людиночитаний URL: /product/<slug>. Генерується один раз, не змінюється

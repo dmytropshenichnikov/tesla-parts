@@ -35,6 +35,10 @@ def clean_title(name: Optional[str], detail_number: Optional[str] = None) -> str
     number = (detail_number or "").strip()
     if number and value.lower().startswith(number.lower()):
         value = re.sub(r"^[\s\-–—:]+", "", value[len(number):])
+    # Копія товару в адмінці отримує назву «... (Копія)». У URL це слово
+    # зайве: slug має описувати товар, а не історію його створення.
+    value = re.sub(r"\(?\s*(копія|kopiia|copy)\s*\)?", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s{2,}", " ", value).strip(" -–—")
     return value.strip() or (name or "").strip()
 
 

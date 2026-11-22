@@ -37,3 +37,17 @@ def test_build_slug_shortens_long_names():
 
 def test_build_slug_falls_back_to_product_id():
     assert build_slug("", None, "prod-2147187f") == "product-2147187f"
+
+
+def test_copy_marker_never_reaches_slug():
+    # Копія товару в адмінці отримує «(Копія)» в назві — в URL цього слова
+    # бути не має, інакше адреса описує історію створення, а не товар.
+    assert clean_title("Датчик тиску TPMS (Копія)", None) == "Датчик тиску TPMS"
+    assert clean_title("Датчик тиску TPMS (копія)", None) == "Датчик тиску TPMS"
+    slug = build_slug(
+        "149070101C - Комплект датчиків тиску в шинах TPMS Tesla 4 шт. Оригінал (Копія)",
+        "149070101C",
+        "prod-0085998e",
+    )
+    assert "kopiia" not in slug
+    assert slug.endswith("-149070101c")

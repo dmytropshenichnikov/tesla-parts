@@ -7,7 +7,7 @@ import re
 from sqlalchemy.orm import selectinload
 from sqlalchemy import func, case
 from database import get_session
-from models import Product, ProductImage, ProductSubcategoryLink, Category
+from models import Product, ProductImage, ProductSubcategoryLink, Category, ProductSlugAlias
 from schemas import ProductCreate, ProductRead, ProductBulkDeleteRequest, ProductReorderRequest
 from services.image_uploader import image_uploader
 from services.pricing import get_exchange_rate, compute_price_fields
@@ -297,6 +297,12 @@ def read_product(product_id: str, session: Session = Depends(get_session)):
         )
     ).first()
     if not product:
+        # Стара адреса після виправлення slug — віддаємо товар, щоб
+        # клієнтський перехід по старому посиланню не показував 404.
+        alias = session.get(ProductSlugAlias, product_id)
+        if alias:
+            product = session.get(Product, alias.product_id)
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     
     rate = get_exchange_rate(session)
@@ -576,9 +582,12 @@ def copy_product(
     rate = get_exchange_rate(session)
     
     copy_name = f"{product.name} (Копія)"
+    # slug будуємо з ОРИГІНАЛЬНОЇ назви: інакше в адресу потрапляє «kopiia»
+    # і лишається там назавжди, навіть після перейменування копії.
+
     new_product = Product(
         id=new_id,
-        slug=_make_unique_slug(session, copy_name, product.detail_number, new_id),
+        slug=_make_unique_slug(session, product.name, product.detail_number, new_id),
         name=copy_name,
         category=product.category,
         subcategory_id=product.subcategory_id,
