@@ -37,6 +37,7 @@ interface CheckoutProps {
   cartItems: CartItem[];
   currency: Currency;
   uahPerUsd: number;
+  rateReady: boolean;
   onSuccess: () => void;
   totalUSD: number;
 }
@@ -45,6 +46,7 @@ const Checkout: React.FC<CheckoutProps> = ({
   cartItems,
   currency,
   uahPerUsd,
+  rateReady,
   onSuccess,
   totalUSD,
 }) => {
@@ -109,6 +111,25 @@ const Checkout: React.FC<CheckoutProps> = ({
   } | null>(null);
 
   const [processing, setProcessing] = useState(false);
+
+  // Після вибору відділення підсвічуємо наступний крок: інакше блок оплати
+  // лишається за межами екрана і покупцю треба вгадувати, що гортати далі.
+  const paymentSectionRef = useRef<HTMLElement | null>(null);
+  const lastBranchRef = useRef<string | null>(null);
+  useEffect(() => {
+    const ref = deliveryData?.ref ?? null;
+    if (!ref || ref === lastBranchRef.current) return;
+    const isFirstChoice = lastBranchRef.current === null;
+    lastBranchRef.current = ref;
+    // Даємо модалці закритись і висоті блоку доставки перерахуватись.
+    const timer = window.setTimeout(() => {
+      paymentSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, isFirstChoice ? 350 : 150);
+    return () => window.clearTimeout(timer);
+  }, [deliveryData?.ref]);
 
   // GA4 checkout funnel: один begin_checkout за захід, далі — по зміні
   // способу доставки/оплати, без дублів на кожен ре-рендер.
@@ -325,12 +346,13 @@ const Checkout: React.FC<CheckoutProps> = ({
 
   // 1.1. Відкрили оформлення з непорожнім кошиком — один раз за захід.
   useEffect(() => {
-    if (beginCheckoutSent.current || cartItems.length === 0) return;
+    if (!rateReady || beginCheckoutSent.current || cartItems.length === 0) return;
     beginCheckoutSent.current = true;
     trackBeginCheckout(cartItems, effectiveRate, checkoutValueUAH);
-    // Навмисно один раз на монтування сторінки оформлення.
+    // Чекаємо реальний курс, а не fallback 40, інакше value у GA4 буде
+    // 1200 замість 1455. Далі — один раз за захід.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rateReady]);
 
   // 1.2. Обрали доставку — фіксуємо спосіб (відділення/поштомат/кур'єр).
   useEffect(() => {
@@ -469,7 +491,10 @@ const Checkout: React.FC<CheckoutProps> = ({
             </section>
 
             {/* 3. Payment */}
-            <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <section
+              ref={paymentSectionRef}
+              className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 scroll-mt-24"
+            >
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600">
                   3

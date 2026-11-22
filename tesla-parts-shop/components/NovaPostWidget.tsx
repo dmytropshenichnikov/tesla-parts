@@ -200,10 +200,19 @@ const NovaPostWidget: React.FC<NovaPostWidgetProps> = ({ onSelect }) => {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-0 md:p-4">
           <div className="bg-white w-full h-full md:w-[90%] md:h-[90%] md:rounded-lg overflow-hidden flex flex-col relative shadow-2xl">
             {/* Modal Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b bg-white">
-              <h2 className="text-xl font-bold text-gray-800">
-                Вибрати відділення
-              </h2>
+            <div className="flex justify-between items-start gap-3 px-4 sm:px-6 py-3 border-b bg-white">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                  Вибрати відділення
+                </h2>
+                {/* У селах і смт відділення не знаходяться пошуком по вулиці:
+                    спершу треба змінити населений пункт. Підказуємо це одразу,
+                    інакше покупець бачить порожній список. */}
+                <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+                  Село або смт? Змініть населений пункт — кнопка з назвою міста
+                  вгорі списку.
+                </p>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-gray-500 hover:text-gray-800 text-4xl leading-none"
