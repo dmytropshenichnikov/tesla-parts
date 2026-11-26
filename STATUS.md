@@ -937,3 +937,11 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
 
 
 - Лист верифікації: Вітаємо в Tesla Parts Center (було Shop, залишок Максима). Коміт b099c94.
+
+## Назва сайту в Google — «Tesla Parts Center» (26.11)
+- Симптом: у видачі над URL показувався домен teslapartscenter.com.ua, а в конкурента — красива назва. Розмітка WebSite/og:site_name була ще з 29.10, але сигнали суперечили: title головної — просто «Tesla Parts Center», а H1 — «Запчастини для Tesla» без бренду; у WebSite-вузлі зайві поля (potentialAction/SearchBox прибрано Google з видачі ще у 2024).
+- Рішення (4 файли): один чистий WebSite-вузол (name + alternateName + url), title головної «Tesla Parts Center | Магазин запчастин для Tesla», H1 «Tesla Parts Center — Запчастини для Tesla» (shop seoTemplates.ts + backend seo_render.py HOME_H1), додано application-name / apple-mobile-web-app-title / author. Тест test_schematic_and_home_body оновлено під новий H1 і актуальні класи обгортки.
+- Деплой: новий сервер 176.117.79.17 (backend+shop перезібрано, кеш Cloudflare для / і /index.html очищено). Адмінка старого сервера не чіпалась.
+- Перевірка: головна 200 (і для Googlebot desktop/mobile), title/H1/og:site_name/meta/канонікал на місці, обидва JSON-LD валідні, категорія/схема/sitemap/robots 200, товар редіректить 301 на slug і віддається 200. pytest: 36 passed, 6 failed — усі 6 старі (розсинхрон тестів з кодом: em-dash «—» в очікуваннях проти «-» у коді + 2 стилізовані h1; на старому сервері ті ж 2 падають).
+- Важливо: рішення за Google, переобхід — від днів до тижнів. Дмитру: Search Console → Перевірка URL → «Запросить индексирование» для головної, щоб прискорити.
+- Коміт 8bd6704 у maximdziuba/tesla-parts (GitHub каже, що репозиторій переїхав на dmytropshenichnikov/tesla-parts — remote не міняв).
