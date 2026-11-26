@@ -45,7 +45,7 @@ MAX_SEED_PRODUCTS = 300
 
 MAX_LINKS = 300
 # H1 головної - той самий у shop utils/seoTemplates.ts (HOME_H1)
-HOME_H1 = "Запчастини для Tesla"
+HOME_H1 = "Tesla Parts Center — Запчастини для Tesla"
 
 STATIC_TITLES = {
     "about": "Про нас",

@@ -325,8 +325,8 @@ def test_schematic_and_home_body(session):
     home = _root(session, "/")
     assert 'href="/category/model-3"' in home
     assert home.startswith(
-        '<div class="mb-12"><h1 class="text-3xl md:text-4xl font-bold text-center mb-2 '
-        'text-tesla-dark">Запчастини для Tesla</h1>'
+        '<div class="mb-8 md:mb-10"><h1 class="text-2xl md:text-3xl font-bold text-center mb-1 '
+        'text-tesla-dark">Tesla Parts Center — Запчастини для Tesla</h1>'
     )
     assert home.count("<h1") == 1
     # плитки моделей: сервер віддає їх одразу, у тому ж порядку, що й GET /categories/
