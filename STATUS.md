@@ -945,3 +945,10 @@ ssh dmytropshenichnikov 'cd /var/www/tesla-parts && git fetch -q origin && git r
 - Перевірка: головна 200 (і для Googlebot desktop/mobile), title/H1/og:site_name/meta/канонікал на місці, обидва JSON-LD валідні, категорія/схема/sitemap/robots 200, товар редіректить 301 на slug і віддається 200. pytest: 36 passed, 6 failed — усі 6 старі (розсинхрон тестів з кодом: em-dash «—» в очікуваннях проти «-» у коді + 2 стилізовані h1; на старому сервері ті ж 2 падають).
 - Важливо: рішення за Google, переобхід — від днів до тижнів. Дмитру: Search Console → Перевірка URL → «Запросить индексирование» для головної, щоб прискорити.
 - Коміт 8bd6704 у maximdziuba/tesla-parts (GitHub каже, що репозиторій переїхав на dmytropshenichnikov/tesla-parts — remote не міняв).
+
+## GTM: свой контейнер GTM-56NNJKTK (27.11)
+- По сообщению Дмитрия: всё ведём в своём контейнере GTM-56NNJKTK, старый GTM-W2HKHCLB не трогали пока шёл учёт. Замена на сайте — одна строка в tesla-parts-shop/index.html.
+- Сделано: замена ID, shop пересобран и поднят на новом сервере, кеш Cloudflare для / и /index.html очищен (снаружи новый ID появился после истечения nginx-микрокеша ~60 c).
+- Проверка: живой сайт отдаёт GTM-56NNJKTK, gtm.js грузится 200, dataLayer жив, ошибок консоли нет.
+- Cloudflare: кастомных firewall-правил нет, Bot Fight Mode выкл, crawler protection выкл; за 19–27.11 блоки только сканеров (wp-config.php и т.п.), от Googlebot/Google-StoreBot — ноль. Правило Known Bots - Skip не требуется.
+- Открытое (не наше): включение кампании 13_PMax «Ходовая Tesla» 300 грн/день — решение Дмитрия.
